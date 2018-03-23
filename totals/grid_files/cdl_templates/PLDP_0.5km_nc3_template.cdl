@@ -1,0 +1,68 @@
+netcdf NY_1km_nc4_template {
+dimensions:
+	lon = 79 ;
+	lat = 45 ;
+	time = UNLIMITED ; // (0 currently)
+variables:
+	double time(time) ;
+		time:longname = "Time" ;
+		time:units = "days since 2001-01-01 00:00:00" ;
+	float lon(lon) ;
+		lon:longname = "Longitude" ;
+		lon:shortname = "lon" ;
+		lon:units = "degrees_east" ;
+		lon:_FillValue = -999.f ;
+	float lat(lat) ;
+		lat:longname = "Latitude" ;
+		lat:shortname = "lat" ;
+		lat:units = "degrees_north" ;
+		lat:_FillValue = -999.f ;
+	float u(time, lat, lon) ;
+		u:longname = "Eastward Velocity" ;
+		u:standard_name = "eastward_surface_velocity" ;
+		u:shortname = "u" ;
+		u:units = "cm/s" ;
+		u:_FillValue = -999.f ;
+	float v(time, lat, lon) ;
+		v:longname = "Northward Velocity" ;
+		v:standard_name = "northward_surface_velocity" ;
+		v:shortname = "v" ;
+		v:units = "cm/s" ;
+		v:_FillValue = -999.f ;
+	float u_err(time, lat, lon) ;
+		u_err:_FillValue = -999.f ;
+	float v_err(time, lat, lon) ;
+		v_err:_FillValue = -999.f ;
+	int num_radials(time, lat, lon) ;
+		num_radials:_FillValue = -999 ;
+	int site_code(time, lat, lon) ;
+		site_code:_FillValue = -999 ;
+
+// global attributes:
+		:history = "Converted into netCDF by process_codar_totals_into_netcdf" ;
+		:source = "/Users/codar/Desktop/Data/mara/oi/ascii/*" ;
+		:header = "\n",
+			"%TimeStamp: 2009 01 01 00 00\n",
+			"%TimeZone: GMT+0.000\n",
+			"%Domain: NYH\n",
+			"%Type: OI\n",
+			"%DataCreationInfo: Rutgers/NYH Domain\n",
+			"%DataCreationTimeStamp: 01-Apr-2009 23:12:51\n",
+			"%DataCreationTimeZone: GMT\n",
+			"%ProcessingProgram: TUVstruct2ascii_OI 06-Apr-2009 17:54:14\n",
+			"%TUV_structVersion: SVN $Rev: 396 $ $Date: 2007-04-02 16:56:29 +0000 (Mon, 02 Apr 2007) $\n",
+			"%MinNumSites:    2\n",
+			"%MinNumRads:   3\n",
+			"%mdlvar: 420.00\n",
+			"%errvar:  66.00\n",
+			"%sx:  5.00\n",
+			"%sy:  8.00\n",
+			"%tempthresh: 0.020833\n";
+			
+			data: 
+			
+			lon = ;
+			
+			lat = 5;
+			
+}
