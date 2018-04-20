@@ -1,10 +1,10 @@
 import glob
 import os
 import pandas as pd
-from tools import mat_to_netcdf4
+from functions import mat_to_netcdf4
 
-main_dir = '/home/codaradm/data/totals/maracoos/oi/mat/5MHz'
-save_dir = '/home/michaesm/codar/nc/maracoos'
+main_dir = '/Volumes/home/codaradm/data/totals/maracoos/oi/mat/5MHz'
+save_dir = '/Volumes/home/michaesm/codar/nc/maracoos'
 hfr_grid = '../totals/grid_files/OI_6km_Grid_Extend.txt'
 
 avoid = ('ideal', 'measured') # avoid these subfolders

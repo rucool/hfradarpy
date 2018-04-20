@@ -1,11 +1,11 @@
-import functions.common as cf
+import hfr_processing.common as cf
 import functions.radials as rf
 import numpy as np
 import os
 import re
 import pandas as pd
 import xarray as xr
-from functions.calc import gridded_index, reckon
+from hfr_processing.calc import gridded_index, reckon
 
 
 def main(radial):

@@ -4,3 +4,7 @@
 *.xml
 
 *.xml
+
+configs/configs.py
+
+*.pyc

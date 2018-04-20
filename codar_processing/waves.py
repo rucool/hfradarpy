@@ -1,0 +1,58 @@
+import datetime as dt
+import re
+from codar_processing.common import LLUVParser
+
+
+class Waves(LLUVParser):
+
+    def file_type(self):
+        """Return a string representing the type of file this is."""
+        return 'wave'
+
+    def clean_wave_header(self):
+        """
+        Cleans the header data from the wave data for proper input into MySQL database
+        :param head_dict: dictionary containing the header data
+        :return: dictionary containing the cleaned header data
+        :rtype:
+        """
+
+        keep = ['TimeCoverage', 'WaveMinDopplerPoints', 'AntennaBearing', 'DopplerCells', 'TransmitCenterFreqMHz',
+                'CTF', 'TableColumnTypes', 'TimeZone', 'WaveBraggPeakDropOff', 'RangeResolutionKMeters',
+                'CoastlineSector', 'WaveMergeMethod', 'RangeCells', 'WaveBraggPeakNull', 'WaveUseInnerBragg',
+                'BraggSmoothingPoints', 'Manufacturer', 'TimeStamp', 'FileType', 'TableRows', 'BraggHasSecondOrder',
+                'Origin', 'MaximumWavePeriod', 'UUID', 'WaveBraggNoiseThreshold', 'TransmitBandwidthKHz', 'Site',
+                'TransmitSweepRateHz', 'WaveBearingLimits', 'WavesFollowTheWind', 'CurrentVelocityLimit']
+
+        key_list = list(self.header.keys())
+        for key in key_list:
+            if not key in keep:
+                del self.header[key]
+
+        for k, v in self.header.items():
+            if 'Site' in k:
+                self.header[k] = ''.join(e for e in v if e.isalnum())
+            elif 'TimeStamp' in k:
+                t_list = v.split()
+                t_list = [int(s) for s in t_list]
+                self.header[k] = dt.datetime(t_list[0], t_list[1], t_list[2], t_list[3], t_list[4], t_list[5]).strftime(
+                    '%Y-%m-%d %H:%M:%S')
+            elif k in ('TimeCoverage', 'RangeResolutionKMeters'):
+                self.header[k] = re.findall("\d+\.\d+", v)[0]
+            elif k in ('WaveMergeMethod', 'WaveUseInnerBragg', 'WavesFollowTheWind'):
+                self.header[k] = re.search(r'\d+', v).group()
+            elif 'TimeZone' in k:
+                self.header[k] = re.search('"(.*)"', v).group(1)
+            elif k in ('WaveBearingLimits', 'CoastlineSector'):
+                bearings = re.findall(r"[-+]?\d*\.\d+|\d+", v)
+                self.header[k] = ', '.join(e for e in bearings)
+            else:
+                self.header
+
+    def flag_wave_heights(self, wave_min=0.2, wave_max=5):
+        self.data['mwht_flag'] = 1
+        boolean = self.data['MWHT'].between(wave_min, wave_max)
+        self.data['mwht_flag'] = self.data['mwht_flag'].where(boolean, other=4)
+
+    def remove_bad_data(self):
+        self.data = self.data.dropna()
