@@ -1,13 +1,14 @@
-import glob
-import os
 import pandas as pd
+from codar_processing.common import list_files, list_to_dataframe
 from functions import mat_to_netcdf4
 
-main_dir = '/Volumes/home/codaradm/data/totals/maracoos/oi/mat/5MHz'
-save_dir = '/Volumes/home/michaesm/codar/data/nc'
+data_dir = '/home/codaradm/data/totals/maracoos/oi/mat/5MHz'
+save_dir = '/home/michaesm/codar/data/nc'
 hfr_grid = '../totals/grid_files/OI_6km_Grid_Extend.txt'
+start_time = pd.Timestamp(2009, 11, 7, 0, 0, 0)
+end_time = pd.Timestamp(2018, 4, 26, 0, 0, 0)
 
-avoid = ('ideal', 'measured') # avoid these subfolders
+avoid = ('ideal', 'measured')  # avoid these subfolders
 types = ['*.mat']  # find only files with these types
 
 user_attributes = dict(title='MARACOOS 6km Sea Surface Currents',
@@ -39,19 +40,14 @@ user_attributes = dict(title='MARACOOS 6km Sea Surface Currents',
                        publisher_email='ncei.info@noaa.gov',
                        publisher_url='www.ncei.noaa.gov')
 
-sub_dirs = [os.path.join(main_dir, o) for o in os.listdir(main_dir) if os.path.isdir(os.path.join(main_dir, o)) and o not in avoid]
 
 # load csv file containing the grid
 grid = pd.read_csv(hfr_grid, sep=',', header=None, names=['lon', 'lat'], delim_whitespace=True)
 
-# create empty list for finding files
-files_grabbed = []
+file_list = list_files(types, data_dir, avoid)
+df = list_to_dataframe(file_list)
 
-for sub in sub_dirs:
-    for ext in types:
-        files_grabbed.extend(glob.glob(os.path.join(sub, ext)))
+df = df[start_time: end_time]
 
-
-files = sorted(files_grabbed)
-for fname in files:
-    mat_to_netcdf4.main(grid, fname, save_dir, user_attributes)
+for row in df.itertuples():
+    mat_to_netcdf4.main(grid, row.file, save_dir, user_attributes)

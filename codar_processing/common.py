@@ -1,4 +1,5 @@
 import datetime as dt
+import glob
 import io
 import logging
 import numpy as np
@@ -64,6 +65,32 @@ def create_dir(new_dir):
             else:
                 raise
 
+
+def list_files(types, main_dir, avoid_sub_directories):
+    """
+
+    :param types: file extension that you want to find
+    :param main_dir: main directory that you want to recursively search for files
+    :param avoid_sub_directories: Tuple containing strings of subdirectories you want to avoid
+    :return:  file list
+    """
+    file_list = []  # create empty list for finding files
+
+    sub_dirs = [os.path.join(main_dir, o) for o in os.listdir(main_dir) if os.path.isdir(os.path.join(main_dir, o)) and o not in avoid_sub_directories]
+
+    for sub in sub_dirs:
+        for ext in types:
+            file_list.extend(glob.glob(os.path.join(sub, ext)))
+    file_list = sorted(file_list)
+    return file_list
+
+
+def list_to_dataframe(list):
+    df = pd.DataFrame(list, columns=['file'])
+    df['time'] = df['file'].str.extract(r'(\d{4}_\d{2}_\d{2}_\d{4})')
+    df['time'] = df['time'].apply(lambda x: dt.datetime.strptime(x, '%Y_%m_%d_%H%M'))
+    df = df.set_index(['time'])
+    return df
 
 # def dateparse(yr, mo, da, hr, mn, ss):
 #     dt = '{} {} {} {} {} {}'.format(yr, mo, da, hr, mn, ss)
