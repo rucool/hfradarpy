@@ -6,16 +6,24 @@ Convert CODAR Totals MATLAB .mat files generated using the HFRProgs toolbox into
 @purpose Convert MAT files into netCDF4 files
 """
 import datetime as dt
+import logging
 import numpy as np
 import os
 import pandas as pd
 import re
+import sys
 import xarray as xr
 from scipy.io import loadmat
 from codar_processing.common import create_dir
 from codar_processing.calc import gridded_index
 from codar_processing.common import make_encoding
 from configs import configs_default as configs
+
+# Set up the parse_wave_files logger
+logger = logging.getLogger(__name__)
+log_level = 'INFO'
+log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
+logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
 
 def matlab2datetime(matlab_time):
@@ -34,10 +42,13 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     :param flags: dictionary of the thresholds at which we should filter data above
     :return:
     """
+    fname = os.path.basename(mat_file)
     try:
         # load .mat file
         data = loadmat(mat_file, squeeze_me=True, struct_as_record=False)
-    except ValueError:
+        logging.info('{} - MAT file successfully loaded '.format(fname))
+    except (ValueError, OSError) as err:
+        logging.error('{} - {}. MAT file could not be loaded.'.format(fname, err))
         return
     regex = re.compile('\d{4}_\d{2}_\d{2}_\d{4}')
     mat_time = regex.search(mat_file).group()
@@ -49,32 +60,37 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     file_name = 'RU_{}_{}.nc'.format(data['TUV'].DomainName, time_string)
     file_and_path = os.path.join(save_dir, file_name)
 
-    # load longitude and latitude data associated with variables
-    lonlat = data['TUV'].LonLat.astype(np.float32)
+    try:
+        logging.debug('{} - Saving file data to variables'.format(fname))
+        # load longitude and latitude data associated with variables
+        lonlat = data['TUV'].LonLat.astype(np.float32)
 
-    # create variables for eastward velocities and associated error values
-    u = data['TUV'].U.astype(np.float32)
-    u_units = data['TUV'].UUnits
-    u_err = data['TUV'].ErrorEstimates.Uerr.astype(np.float32)
+        # create variables for eastward velocities and associated error values
+        u = data['TUV'].U.astype(np.float32)
+        u_units = data['TUV'].UUnits
+        u_err = data['TUV'].ErrorEstimates.Uerr.astype(np.float32)
 
-    # create variables for northward velocities and associated error values
-    v = data['TUV'].V.astype(np.float32)
-    v_units = data['TUV'].VUnits
-    v_err = data['TUV'].ErrorEstimates.Verr.astype(np.float32)
+        # create variables for northward velocities and associated error values
+        v = data['TUV'].V.astype(np.float32)
+        v_units = data['TUV'].VUnits
+        v_err = data['TUV'].ErrorEstimates.Verr.astype(np.float32)
 
-    # create variable for uv covariance
-    uv_covariance = data['TUV'].ErrorEstimates.UVCovariance
-    # uv_covariance_units = data['TUV'].ErrorEstimates.UVCovarianceUnits
+        # create variable for uv covariance
+        uv_covariance = data['TUV'].ErrorEstimates.UVCovariance
+        # uv_covariance_units = data['TUV'].ErrorEstimates.UVCovarianceUnits
 
-    # Data Processing Information
-    num_rads = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsNumRads.astype(int)
+        # Data Processing Information
+        num_rads = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsNumRads.astype(int)
 
-    mdlvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.mdlvar
-    errvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.errvar
-    sx = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sx
-    sy = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sy
-    tempthresh = data['TUV'].OtherMetadata.makeTotalsOI.parameters.tempthresh
-    maxspd = data['TUV'].OtherMetadata.cleanTotals.maxspd
+        mdlvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.mdlvar
+        errvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.errvar
+        sx = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sx
+        sy = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sy
+        tempthresh = data['TUV'].OtherMetadata.makeTotalsOI.parameters.tempthresh
+        maxspd = data['TUV'].OtherMetadata.cleanTotals.maxspd
+    except AttributeError as err:
+        logging.error('{} - {}. MAT file missing variable needed to create netCDF4 file'.format(fname, err))
+        return
     # encoded_sites = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsSiteCode
 
     # # load site ids that are set in our mysqldb
@@ -118,6 +134,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
                      uv_covariance=uv_covariance,)
                      # site_code_flags=new_encoded_sites)
 
+    logging.debug('{} - Gridding data to 2d grid'.format(fname))
     # convert 1d data into 2d gridded form. data_dict must be a dictionary.
     x_ind, y_ind = gridded_index(x, y, lonlat[:, 0], lonlat[:, 1])
 
@@ -131,6 +148,8 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
             temp_data = np.expand_dims(temp_data, axis=0)
             count = count + 1
             data_dict[key] = temp_data
+
+    logging.debug('{} - Loading data into xarray dataset'.format(fname))
 
     # initialize xarray dataset. Add variables. Add coordinates
     ds = xr.Dataset()
@@ -162,6 +181,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     global_attributes['geospatial_lon_min'] = lon.min()
     global_attributes['geospatial_lon_max'] = lon.max()
 
+    logging.debug('{} - Assigning global attributes to dataset'.format(fname))
     ds = ds.assign_attrs(global_attributes)
 
     # add optimal interpolation global attributes
@@ -172,6 +192,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     ds.attrs['oi_tempthresh'] = np.int32(tempthresh)
     ds.attrs['oi_maxspd'] = np.int32(maxspd)
 
+    logging.debug('{} - Assigning local attributes to each variable in dataset'.format(fname))
     # set time attribute
     ds['time'].attrs['standard_name'] = 'time'
 
@@ -258,6 +279,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     # ds['site_code_flags'].attrs['flag_meanings'] = flag_meanings
     # ds['site_code_flags'].attrs['comment'] = 'Values are binary sums. Must be converted to binary representation to interpret flag_masks and flag_meanings'
 
+    logging.debug('{} - Setting variable encoding and fill values for netCDF4 output'.format(fname))
     # encode variables for export to netcdf
     encoding = make_encoding(ds)
     encoding['lon'] = dict(zlib=False, _FillValue=False)
@@ -281,11 +303,13 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     ds['instrument'].attrs['make_model'] = 'CODAR SeaSonde'
     ds['instrument'].attrs['serial_number'] = 1
 
-
     # Create save directory if it doesn't exist.
     create_dir(save_dir)
 
+    logging.debug('{} - Saving dataset to netCDF4 file: {}'.format(fname, file_and_path))
     ds.to_netcdf(file_and_path, encoding=encoding, format='netCDF4', engine='netcdf4', unlimited_dims=['time'])
+    logging.info('{} - netCDF4 file successfully created: {}'.format(fname, file_and_path))
+
     # else:
     #     print('{} already exists. Skipping file'.format(file_and_path))
 
