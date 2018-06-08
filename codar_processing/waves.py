@@ -1,9 +1,27 @@
 import datetime as dt
+import pandas as pd
 import re
 from codar_processing.common import LLUVParser
 
 
 class Waves(LLUVParser):
+    """
+    Waves Subclass.
+
+    This class should be used when loading a CODAR wave (.wls) file. This class utilizes the generic LLUV class from
+    ~/codar_processing/common.py in order to load CODAR wave files
+    """
+
+    def __init__(self, fname):
+        LLUVParser.__init__(self, fname)
+        if self.tables['1']['data']['DIST'].isnull().all():
+            self.data = self.tables['1']['data']
+        else:
+            data_tables = []
+            for key in self.tables.keys():
+                data_tables.append(self.tables[key]['data'])
+            self.data = pd.concat(data_tables, axis=0)
+        self.data['datetime'] = self.data[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
 
     def file_type(self):
         """Return a string representing the type of file this is."""
@@ -50,9 +68,31 @@ class Waves(LLUVParser):
                 self.header
 
     def flag_wave_heights(self, wave_min=0.2, wave_max=5):
+        """
+        Flag bad wave heights in Wave instance. This method labels wave heights between wave_min and wave_max good,
+        while labeling anything else bad
+        :param wave_min: Minimum Wave Height - Waves above this will be considered good
+        :param wave_max: Maximum Wave Height - Waves less than this will be considered good
+        :return:
+        """
         self.data['mwht_flag'] = 1
-        boolean = self.data['MWHT'].between(wave_min, wave_max)
+        boolean = self.data['MWHT'].between(wave_min, wave_max, inclusive=True)
         self.data['mwht_flag'] = self.data['mwht_flag'].where(boolean, other=4)
 
     def remove_bad_data(self):
+        """
+        Remove any data that contains NaN. In the original RUV file, these usually refer to data with 999 or 1080 values
+        :return:
+        """
         self.data = self.data.dropna()
+
+    def remove_bad_wave_heights(self, wave_min=0.2, wave_max=5):
+        """
+        Remove any data that lies outside of wave heights at wave_min and wave_max
+        :param wave_min: Minimum Wave Height - Waves above this will be considered good
+        :param wave_max: Maximum Wave Height - Waves less than this will be considered good
+        :return:
+        """
+        self.flag_wave_heights(wave_min, wave_max)
+        self.data = self.data[self.data['mwht_flag'] == 1]
+        self.data = self.data.drop(['mwht_flag'], axis=1)

@@ -9,7 +9,8 @@ from codar_processing.common import create_dir
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from oceans import uv2spdir, spdir2uv
 
-file = '/Users/mikesmith/Documents/2018_codar_reprocess/nc/RU_MARA_2017_03_aggregated.nc'
+# file = '/Users/mikesmith/Documents/2018_codar_reprocess/nc/RU_MARA_2017_03_aggregated.nc'
+file = '/Volumes/home/codaradm/data/totals/maracoos/oi/nc/5MHz/RU_5MHz_2017_03_31_1800.totals.nc'
 save_dir = '/Users/mikesmith/Documents/2018_codar_reprocess/images/'
 regions = dict(OuterBanks=[-76.5, -73, 34, 37], Massachusetts=[-70.5, -68, 40, 43], Rhode_Island=[-72, -70, 39, 41.5],
               New_Jersey=[-75, -72, 39, 41], EasternShores=[-76, -72, 37, 39])
@@ -33,7 +34,9 @@ fig = plt.figure()
 ds = xr.open_dataset(file)
 
 for t in ds.time.data:
-    temp = ds.sel(time=t, z=0)
+    # temp = ds.sel(time=t, z=0) # Works with CF/NCEI compliant netCDF files created in 2018
+    temp = ds.sel(time=t)
+
     timestamp = pd.Timestamp(t).strftime('%Y%m%dT%H%M%SZ')
 
     for key, values in regions.items():

@@ -16,7 +16,7 @@ def main(radial):
     #     header_dict = cf.clean_radial_header(header_dict)
 
     df = radial_file_data['tables']['1']['data']
-    header_dict = rf.clean_radial_header(radial_file_data['header'])
+    header_dict = rf.validate_header(radial_file_data['header'])
 
     # range cells in this radial
     range_dim = np.arange(df.RNGE.min(), df.RNGE.max()+float(header_dict['RangeResolutionKMeters']), float(header_dict['RangeResolutionKMeters']))

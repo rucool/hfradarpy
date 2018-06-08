@@ -92,14 +92,6 @@ def list_to_dataframe(list):
     df = df.set_index(['time'])
     return df
 
-# def dateparse(yr, mo, da, hr, mn, ss):
-#     dt = '{} {} {} {} {} {}'.format(yr, mo, da, hr, mn, ss)
-#     return pd.datetime.strptime(dt, '%Y %m %d %H %M %S')
-#
-# def dateparse(yr, mo, da, hr, mn, ss):
-#     dt = '{} {} {} {} {} {}'.format(yr, mo, da, hr, mn, ss)
-#     return dt.datetime.strptime(dt, '%Y %m %d %H %M %S')
-
 
 def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=1, chunksize=10000, fillvalue=-999.00):
     encoding = {}
@@ -130,14 +122,6 @@ def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=1,
     return encoding
 
 
-def path_within_module(file_path=None):
-    if file_path:
-        complete_path = os.path.join(os.path.dirname(__file__), '..', file_path)
-    else:
-        complete_path = os.path.join(os.path.dirname(__file__), '..')
-    return complete_path
-
-
 class LLUVParser(object):
     """
     A generic parser for the CODAR LLUV file format.
@@ -149,7 +133,8 @@ class LLUVParser(object):
         """
         Return an LLUVParser object whose
         """
-        self.fname = fname
+        self.file_path = fname
+        self.file_name = os.path.basename(fname)
         self.header = OrderedDict()
         self.tables = OrderedDict()
         self.footer = OrderedDict()
@@ -159,7 +144,7 @@ class LLUVParser(object):
         table = False  # Set table to False. Once a table is found, switch to True.
         processing_info = []
 
-        with open(self.fname, 'r') as open_file:
+        with open(self.file_path, 'r', encoding='ISO-8859-1') as open_file:
             open_lluv = open_file.readlines()
 
             # Parse header and footer metadata
@@ -207,36 +192,45 @@ class LLUVParser(object):
                                                   sep=' ',
                                                   header=None,
                                                   names=self.tables[str(table_count)]['TableColumnTypes'].split(),
-                                                  skipinitialspace=True,
-                                                  na_values=['999.000'])
+                                                  skipinitialspace=True,)
+                                                  # na_values=['999.000'])
 
-                                if self.file_type() == 'radial':
-                                    if table_count > 1:
-                                        tdf.insert(0, '%%', '%')
-                                    else:
-                                        tdf.insert(0, '%%', '')
                                 self.tables[str(table_count)]['data'] = tdf
                                 table = False
                             else:
                                 self.tables[str(table_count)][key] = value
                     else:  # Uncommented lines are the main data table.
                         table_data += '{}'.format(line)
-        if self.file_type() == 'wave':
-            if self.tables['1']['data']['DIST'].isnull().all():
-                # pass
-                self.data = self.tables['1']['data']
-            else:
-                data_tables = []
-                for key in self.tables.keys():
-                    data_tables.append(self.tables[key]['data'])
-                self.data = pd.concat(data_tables, axis=0)
-                del self.tables
-            self.data['datetime'] = self.data[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
-        elif self.file_type() == 'radial':
-            self.data = self.tables['1']['data']
+        # if self.file_type() == 'wave':
+        #     if self.tables['1']['data']['DIST'].isnull().all():
+        #         # pass
+        #         self.data = self.tables['1']['data']
+        #     else:
+        #         data_tables = []
+        #         for key in self.tables.keys():
+        #             data_tables.append(self.tables[key]['data'])
+        #         self.data = pd.concat(data_tables, axis=0)
+        #         # del self.tables
+        #     self.data['datetime'] = self.data[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+        # elif self.file_type() == 'radial':
+        #     # self.tables['1']['data'] = self.tables['1']['data']
+        #     self.data = self.tables['1']['data']
+        #     self.diags_radial = self.tables['2']['data']
+        #     self.diags_hardware = self.tables['3']['data']
+        #     self.diags_radial['datetime'] = self.diags_radial[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+        #     self.diags_hardware['datetime'] = self.diags_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1
 
-    def is_valid(self):
-        return not self.data.empty
+    def is_valid(self, table='1'):
+        """
+        Check if the data table for the file contains data
+        :param table: string containing the table number to validate. Defaults to the primary data table '1'
+        :return: True or False
+        """
+        try:
+            return not self.tables[table]['data'].empty
+        except:
+            return False
+
 
     @staticmethod
     def _parse_header_line(line):

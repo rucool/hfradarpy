@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+"""
+@author Mike Smith
+@email michaesm@marine.rutgers.edu
+@purpose Convert Rutgers generated MARACOOS Unweighted Least Squares Surface Current MAT files to NetCDF4 format
+"""
 import logging
 import os
 import pandas as pd
@@ -11,11 +17,11 @@ log_level = 'INFO'
 log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
-data_dir = '/home/codaradm/data/totals/maracoos/oi/mat/5MHz'
-save_dir = '/home/michaesm/codar/data/nc'
+data_dir = '/home/codaradm/data_reprocessed/totals/maracoos/lsq/5MHz/'
+save_dir = '/home/codaradm/data_reprocessed/totals/maracoos/nc_lsq/5MHz/'
 hfr_grid = '../totals/grid_files/OI_6km_Grid_Extend.txt'
-start_time = pd.Timestamp(2014, 7, 7, 0, 0, 0)
-end_time = pd.Timestamp(2018, 4, 26, 0, 0, 0)
+start_time = pd.Timestamp(2017, 1, 1, 0, 0, 0)
+end_time = pd.Timestamp(2017, 1, 1, 1, 0, 0)
 
 avoid = ('ideal', 'measured')  # avoid these subfolders
 types = ['*.mat']  # find only files with these types
@@ -38,7 +44,7 @@ user_attributes = dict(title='MARACOOS 6km Sea Surface Currents',
                        platform='MARACOOS HF Radar 5MHz Network',
                        instrument='Network includes CODAR sites AMAG, ASSA, BLCK, BRIG, CEDR, CORE, DUCK, FARO, HATY, HEMP, HOOK, LISL, LOVE, MABO, MRCH, MVCO, NANT, NAUS, PYFC, and WILD',
                        references='http://maracoos.org/node/146 https://rucool.marine.rutgers.edu/facilities https://rucool.marine.rutgers.edu/data',
-                       summary='Optimally Interpolated Total Vectors calculated by HFRProgs toolbox using MATLAB. Mercator lat/lon projection',
+                       summary='Unweighted Least Squares Total Vectors calculated by HFRProgs toolbox using MATLAB. Mercator lat/lon projection',
                        ncei_template_version='NCEI_NetCDF_Grid_Template_v2.0',
                        history='Hourly codar radial data combined into one hourly file containing vectors.',
                        cdm_data_type='Grid',
@@ -62,4 +68,4 @@ df = df[start_time: end_time]
 
 for row in df.itertuples():
     logging.info('{} - Converting MAT file to netCDF4 format'.format(os.path.basename(row.file)))
-    mat_to_netcdf4.main(grid, row.file, save_dir, user_attributes)
+    mat_to_netcdf4.main(grid, row.file, save_dir, user_attributes, method='lsq')

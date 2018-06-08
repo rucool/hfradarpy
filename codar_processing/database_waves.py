@@ -7,22 +7,18 @@ logger = logging.getLogger(__name__)
 
 def iterate_through_data(session, df, site_info, file_id):
     """
-    Loop through the data contained in the text file
-    :param data: .readlines() data from an open text file
-    :param site_id:  id for the hfr site
-    :param file_id: id for the file metadata that was updated
-    :param bulk: boolean whether to upload the entire file in bulk (completed wave files) or each line separately (for files still being written).
-    :return: nothing
+    Loop through the data contained in the pandas dataframe
+    :param session: SQLAlchemy database session instance
+    :param df: Pandas dataframe containing codar data
+    :param site_info:  ID of codar site in hfrSites table
+    :param file_id: ID for the file metadata that was updated to hfrWaveFilesMetadata
+    :return: Number of rows of data committed to hfrWaveData table
     """
     round_dict = dict(MWHT=2, MWPD=2, WAVB=2, WNDB=2, PMWH=2, DIST=4, WHSD=2)
 
     bulk_list = []
 
-    # make sure that we only grab valid keys from the datasets that exist in the mysql database
-    # valid_keys = [x for x in database_tables.WaveData.__table__.columns.keys() if
-    #               x not in ('id', 'site_id', 'file_id', 'mwht_flag')]
-
-    # Need to convert datetime from a pandas timestamp to a string because mysql-connector doesn't recognize 'Timestamp' objects
+    # Convert pandas timestamp to a string because mysql-connector doesn't recognize 'Timestamp' objects
     df['datetime'] = df['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
     for row in df.itertuples():
@@ -46,10 +42,11 @@ def iterate_through_data(session, df, site_info, file_id):
 def data_route(session, df, site_info, file_id, fname, initial_upload=True):
     """
 
-    :param df:
-    :param site_id:
-    :param file_id:
-    :param initial_upload:
+    :param session: SQLAlchemy database session instance
+    :param df: Pandas dataframe containing CODAR data
+    :param site_id: ID of CODAR site in hfrSites table
+    :param file_id: ID for the file metadata that was updated to hfrWaveFilesMetadata
+    :param initial_upload: True for initial upload of Wave File to database. False for recurring update
     :return:
     """
 

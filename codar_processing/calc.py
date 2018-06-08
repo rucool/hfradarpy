@@ -3,6 +3,11 @@ from numpy.matlib import tile
 
 
 def bool2int(x):
+    """
+
+    :param x:
+    :return:
+    """
     y = 0
     for i,j in enumerate(x):
         y += j << i
@@ -41,7 +46,6 @@ def reckon(lat, lon, bearing, distance):
     :return: latitude, longitude of calculated coordinates from o
     """
     # standard earth radius
-
     EARTH_RADIUS = 6371.00
 
     # convert Latitude and Longitude
@@ -61,9 +65,7 @@ def reckon(lat, lon, bearing, distance):
                                              np.cos(distance/EARTH_RADIUS) - np.sin(latitude) * np.sin(next_latitude)))
 
     # convert points into decimal degrees
-    new_lat = np.degrees(next_latitude)
-    new_lon = np.degrees(next_longitude)
+    new_lat = round(np.degrees(next_latitude), 4)
+    new_lon = round(np.degrees(next_longitude), 4)
 
     return new_lat, new_lon
-
-

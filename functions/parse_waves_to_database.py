@@ -15,10 +15,6 @@ log_level = 'INFO'
 log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
-wave_dir='/home/codaradm/data/waves/'
-sites = ['BRAD', 'BRMR', 'BRNT', 'RATH', 'SEAB', 'SPRK', 'WOOD', 'BISL', 'CMPT', 'CAPE', 'CPHN', 'GCAP', 'HLPN', 'MISQ',
-         'MNTK', 'OLDB', 'PALM', 'PORT', 'SILD', 'STLI', 'SUNS', 'VIEW']
-
 global session
 session = db.db_session()
 
@@ -42,6 +38,7 @@ def parse_wave_file(wave_file, upload_file_id=None):
     w.clean_wave_header()  # Clean up header information for entry into mysql database
     w.header['filename'] = os.path.splitext(os.path.basename(wave_file))[0]
     w.header['TableWaveMode'] = mode
+    w.header['TableRows'] = w.tables['1']['TableRows']
 
     # Check to see if the site has been uploaded to the HfrSites table of the MySQL database and get site_id info
     site_info = db.site_check(session, w.header['Site'], w.header['TransmitCenterFreqMHz'], w.header['Origin'])
@@ -50,7 +47,7 @@ def parse_wave_file(wave_file, upload_file_id=None):
     # Upload file data to database
     if not upload_file_id:
         # Upload file information to database
-        ref = database_tables.WaveFile(**w.header)
+        ref = database_tables.WaveFileHeader(**w.header)
         session.add(ref)
         session.commit()
         session.flush()
@@ -62,19 +59,34 @@ def parse_wave_file(wave_file, upload_file_id=None):
     logging.info('{} - Upload complete.'.format(fname))
 
 
-for site in sites:
-    site_dir = os.path.join(wave_dir, site)
-    for fname in sorted(glob.glob(os.path.join(site_dir, '*.wls')), key=os.path.getmtime):
-        logging.debug('{} - Checking if file is uploaded to MySQL database.'.format(fname))
-        uploaded = db.check_file_upload(session, fname, database_tables.WaveFile)
-        if not uploaded:  # Check if the file has been uploaded already. If it hasn't, upload it completely.
-            logging.debug('{} - Loading'.format(fname))
-            parse_wave_file(fname)
-        else:  # If it has, check to see if the file has been updated since the last time it was uploaded.
-            logging.debug('{} - Already uploaded.'.format(fname))
-            one_month_ago = dt.datetime.now() - dt.timedelta(days=30)
-            mod_time = dt.datetime.utcfromtimestamp(os.path.getmtime(fname))
+if __name__ == '__main__':
+    wave_dir = '/home/codaradm/data/waves/'
+    time_delta = 30
+    sites = ['BRAD', 'BRMR', 'BRNT', 'RATH', 'SEAB', 'SPRK', 'WOOD', 'BISL', 'CMPT', 'CAPE', 'CPHN', 'GCAP', 'HLPN',
+             'MISQ', 'MNTK', 'OLDB', 'PALM', 'PORT', 'SILD', 'STLI', 'SUNS', 'VIEW']
 
-            if mod_time > one_month_ago:
-                logging.info('{} - Modified within past month ({}). Updating database'.format(fname, mod_time))
-                parse_wave_file(fname, upload_file_id=uploaded.id)
+    from glob import glob
+    paths = glob(wave_dir)
+    now = dt.datetime.now()
+    ago = now - dt.timedelta(days=time_delta)
+
+    for site in sites:
+        logging.info('Checking {} wave archive for files modified in the past {} days'.format(site, time_delta))
+        site_dir = os.path.join(wave_dir, site)
+        for fname in sorted(glob(os.path.join(site_dir, '*.wls')), key=os.path.getmtime):
+            st = os.stat(fname)
+            mtime = dt.datetime.fromtimestamp(st.st_mtime)
+            if mtime > ago:
+                logging.debug('{} - Checking if file is uploaded to MySQL database.'.format(fname))
+                uploaded = db.check_file_upload(session, fname, database_tables.WaveFileHeader)
+                if not uploaded:  # Check if the file has been uploaded already. If it hasn't, upload it completely.
+                    logging.debug('{} - Loading'.format(fname))
+                    parse_wave_file(fname)
+                else:  # If it has, check to see if the file has been updated since the last time it was uploaded.
+                    logging.debug('{} - Already uploaded.'.format(fname))
+                    one_month_ago = dt.datetime.now() - dt.timedelta(days=30)
+                    mod_time = dt.datetime.utcfromtimestamp(os.path.getmtime(fname))
+
+                    if mod_time > one_month_ago:
+                        logging.info('{} - Modified within past month ({}). Updating database'.format(fname, mod_time))
+                        parse_wave_file(fname, upload_file_id=uploaded.id)

@@ -3,7 +3,7 @@
 Convert CODAR Totals MATLAB .mat files generated using the HFRProgs toolbox into Climate Forecasting compliant netcdf files
 @author Mike Smith
 @email michaesm@marine.rutgers.edu
-@purpose Convert MAT files into netCDF4 files
+@purpose Convert MAT files created using the hfrProgs MATLAB toolbox into CF-1.6/NCEI Grid 2.0 compliant netCDF4 files
 """
 import datetime as dt
 import logging
@@ -27,29 +27,42 @@ logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
 
 def matlab2datetime(matlab_time):
+    """
+    Convert Matlab time to Python datetime
+    :param matlab_time: MATLAB datenum integer
+    :return: Python Datetime
+    """
     day = dt.datetime.fromordinal(int(matlab_time))
     day_frac = dt.timedelta(days=matlab_time % 1) - dt.timedelta(days=366)
     return day + day_frac
 
 
-def main(grid, mat_file, save_dir, user_attributes, flags=None):
+def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], method='oi'):
     """
-
-    :param grid:
-    :param mat_file:
-    :param save_dir:
-    :param user_attributes:
-    :param flags: dictionary of the thresholds at which we should filter data above
-    :return:
+    Convert MAT files created using the hfrProgs MATLAB toolbox into CF-1.6/NCEI Grid 2.0 compliant netCDF4 files
+    :param grid: CSV file containing lon,lat grid information
+    :param mat_file: Filepath to MAT file containing HFRProgs
+    :param save_dir: Directory to save netCDF files to
+    :param user_attributes: User defined dataset attributes for netCDF global attribute. Required for CF/NCEI compliance
+    :param flags: Dictionary of thresholds at which we should filter data above
+    :param method: 'oi' or 'lsq'. OI is optimal interpolation. LSQ is unweighted least squares
     """
     fname = os.path.basename(mat_file)
     try:
         # load .mat file
         data = loadmat(mat_file, squeeze_me=True, struct_as_record=False)
-        logging.info('{} - MAT file successfully loaded '.format(fname))
-    except (ValueError, OSError) as err:
+        logging.debug('{} - MAT file successfully loaded '.format(fname))
+    except Exception as err:
         logging.error('{} - {}. MAT file could not be loaded.'.format(fname, err))
         return
+
+    if not domain:
+        domain = data['TUV'].DomainName
+        if not domain:
+            domain = 'MARA'
+    else:
+        domain = 'MARA'
+
     regex = re.compile('\d{4}_\d{2}_\d{2}_\d{4}')
     mat_time = regex.search(mat_file).group()
 
@@ -57,7 +70,8 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     time = dt.datetime.strptime(mat_time, '%Y_%m_%d_%H00')
     time_index = pd.date_range(time.strftime('%Y-%m-%d %H:%M:%S'), periods=1)  # create pandas datetimeindex from time
     time_string = time.strftime('%Y%m%dT%H%M%SZ')  # create timestring from time
-    file_name = 'RU_{}_{}.nc'.format(data['TUV'].DomainName, time_string)
+
+    file_name = 'RU_{}_{}.nc'.format(domain, time_string)
     file_and_path = os.path.join(save_dir, file_name)
 
     try:
@@ -65,60 +79,60 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
         # load longitude and latitude data associated with variables
         lonlat = data['TUV'].LonLat.astype(np.float32)
 
-        # create variables for eastward velocities and associated error values
+        # create variables for eastward and northward velocities
         u = data['TUV'].U.astype(np.float32)
-        u_units = data['TUV'].UUnits
-        u_err = data['TUV'].ErrorEstimates.Uerr.astype(np.float32)
-
-        # create variables for northward velocities and associated error values
         v = data['TUV'].V.astype(np.float32)
+        u_units = data['TUV'].UUnits
         v_units = data['TUV'].VUnits
-        v_err = data['TUV'].ErrorEstimates.Verr.astype(np.float32)
 
-        # create variable for uv covariance
-        uv_covariance = data['TUV'].ErrorEstimates.UVCovariance
-        # uv_covariance_units = data['TUV'].ErrorEstimates.UVCovarianceUnits
-
-        # Data Processing Information
-        num_rads = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsNumRads.astype(int)
-
-        mdlvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.mdlvar
-        errvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.errvar
-        sx = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sx
-        sy = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sy
-        tempthresh = data['TUV'].OtherMetadata.makeTotalsOI.parameters.tempthresh
         maxspd = data['TUV'].OtherMetadata.cleanTotals.maxspd
+
+        if method == 'oi':
+            # create variables for associated error values
+            u_err = data['TUV'].ErrorEstimates.Uerr.astype(np.float32)
+            v_err = data['TUV'].ErrorEstimates.Verr.astype(np.float32)
+            uv_covariance = data['TUV'].ErrorEstimates.UVCovariance
+
+            # Data Processing Information
+            num_rads = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsNumRads.astype(int)
+            min_rads = data['TUV'].OtherMetadata.makeTotalsOI.parameters.MinNumRads
+            min_sites = data['TUV'].OtherMetadata.makeTotalsOI.parameters.MinNumSites
+            mdlvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.mdlvar
+            errvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.errvar
+            sx = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sx
+            sy = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sy
+            temporal_threshold = data['TUV'].OtherMetadata.makeTotalsOI.parameters.tempthresh
+            processing_parameters = [maxspd, min_sites, min_rads, temporal_threshold, sx, sy, mdlvar, errvar]
+            processing_parameters_info = '1) Maximum Total Speed Threshold (cm s-1)\n'
+            processing_parameters_info += '2) Minimum number of radial sites\n'
+            processing_parameters_info += '3) Minimum number of radial vectors\n'
+            processing_parameters_info += '4) Temporal search window for radial solutions (Fraction of a day)\n'
+            processing_parameters_info += '5) Decorrelation scales in the north direction\n'
+            processing_parameters_info += '6) Decorrelation scales in the east direction\n'
+            processing_parameters_info += '7) Signal variance of the surface current fields (cm2 s-2)\n'
+            processing_parameters_info += '8) Data error variance of the input radial velocities (cm2 s-2)\n'
+
+        elif method == 'lsq':
+            # create variables for associated error values
+            u_err = data['TUV'].ErrorEstimates[1].Uerr.astype(np.float32)
+            v_err = data['TUV'].ErrorEstimates[1].Verr.astype(np.float32)
+            uv_covariance = data['TUV'].ErrorEstimates[1].UVCovariance.astype(np.float32)
+
+            # Data Processing Information
+            num_rads = data['TUV'].OtherMatrixVars.makeTotals_TotalsNumRads.astype(int)
+            min_rads = data['TUV'].OtherMetadata.makeTotals.parameters.MinNumRads
+            min_sites = data['TUV'].OtherMetadata.makeTotals.parameters.MinNumSites
+            spatial_threshold = data['TUV'].OtherMetadata.makeTotals.parameters.spatthresh
+            temporal_threshold = data['TUV'].OtherMetadata.makeTotals.parameters.tempthresh
+            processing_parameters = [maxspd, min_sites, min_rads, temporal_threshold, spatial_threshold]
+            processing_parameters_info = '1) Maximum Total Speed Threshold (cm s-1)\n'
+            processing_parameters_info += '2) Minimum number of radial sites.\n'
+            processing_parameters_info += '3) Minimum number of radial vectors.\n'
+            processing_parameters_info += '4) Temporal search window for radial solutions (Fractions of a day)\n'
+            processing_parameters_info += '5) Spatial search radius for radial solutions (km)\n'
     except AttributeError as err:
         logging.error('{} - {}. MAT file missing variable needed to create netCDF4 file'.format(fname, err))
         return
-    # encoded_sites = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsSiteCode
-
-    # # load site ids that are set in our mysqldb
-    # query_obj = Session.query(tables.Sites)
-    # site_encoding = pd.read_sql(query_obj.statement, query_obj.session.bind)
-    #
-    # # convert site codes into binary numbers
-    # binary_positions_mat = data['conf'].Radials.Sites.shape[0]
-    #
-    # decoded_sites_mat = np.tile(0, (encoded_sites.shape[0], binary_positions_mat))
-    #
-    # for i, v in enumerate(encoded_sites):
-    #     decoded_sites_mat[i] = np.array(map(int, np.binary_repr(v, width=binary_positions_mat)))
-    #
-    # decoded_sites_mat = np.fliplr(decoded_sites_mat)
-    #
-    # decoded_sites_new = np.tile(0, (encoded_sites.shape[0], np.max(site_encoding['id'])))
-    #
-    # for site in data['RTUV']:
-    #     print site.SiteName + ' ' + str(np.log2(site.SiteCode))
-    #     ind_mat = np.log2(site.SiteCode)
-    #     ind_real = site_encoding['id'].loc[site_encoding['site'] == site.SiteName].values[0]
-    #     decoded_sites_new[:, ind_real] = decoded_sites_mat[:, int(ind_mat)]
-    #
-    # decoded_sites_new = np.fliplr(decoded_sites_new)
-    # new_encoded_sites = [bool2int(x[::-1]) for x in decoded_sites_new]
-    # flag_masks = [2 ** int(x) for x in site_encoding['id'].tolist()]
-    # flag_meanings = ' '.join(site_encoding['site'].tolist())
 
     # Create a grid to shape 1d data
     lon = np.unique(grid['lon'].as_matrix().astype(np.float32))
@@ -130,9 +144,8 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
                      v=v,
                      u_err=u_err,
                      v_err=v_err,
-                     num_radials=num_rads,
-                     uv_covariance=uv_covariance,)
-                     # site_code_flags=new_encoded_sites)
+                     uv_covariance=uv_covariance,
+                     num_radials=num_rads,)
 
     logging.debug('{} - Gridding data to 2d grid'.format(fname))
     # convert 1d data into 2d gridded form. data_dict must be a dictionary.
@@ -160,7 +173,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     ds['v_err'] = (coords, np.float32(data_dict['v_err']))
     ds['uv_covariance'] = (coords, np.float32(data_dict['uv_covariance']))
     ds['num_radials'] = (coords, data_dict['num_radials'])
-    # ds['site_code_flags'] = (coords, data_dict['site_code_flags'])
+
     ds.coords['lon'] = lon
     ds.coords['lat'] = lat
     ds.coords['z'] = np.array([np.float32(0)])
@@ -169,6 +182,8 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     if flags:
         for k, v in flags.items():
             ds = ds.where(ds[k] <= v)
+
+    ds['processing_parameters'] = (('parameters'), processing_parameters)
 
     # Grab min and max time in dataset for entry into global attributes for cf compliance
     time_start = ds['time'].min().data
@@ -180,17 +195,13 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     global_attributes['geospatial_lat_max'] = lat.max()
     global_attributes['geospatial_lon_min'] = lon.min()
     global_attributes['geospatial_lon_max'] = lon.max()
+    if method == 'oi':
+        global_attributes['method'] = 'Optimal Interpolation'
+    elif method == 'lsq':
+        global_attributes['method'] = 'Unweighted Least Squares'
 
     logging.debug('{} - Assigning global attributes to dataset'.format(fname))
     ds = ds.assign_attrs(global_attributes)
-
-    # add optimal interpolation global attributes
-    ds.attrs['oi_mdlvar'] = np.int32(mdlvar)
-    ds.attrs['oi_errvar'] = np.int32(errvar)
-    ds.attrs['oi_sx'] = np.int32(sx)
-    ds.attrs['oi_sy'] = np.int32(sy)
-    ds.attrs['oi_tempthresh'] = np.int32(tempthresh)
-    ds.attrs['oi_maxspd'] = np.int32(maxspd)
 
     logging.debug('{} - Assigning local attributes to each variable in dataset'.format(fname))
     # set time attribute
@@ -243,22 +254,29 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     ds['v'].attrs['grid_mapping'] = 'crs'
 
     # Set u_err attributes
-    ds['u_err'].attrs['long_name'] = 'Normalized uncertainty error associated with eastward velocity component'
     ds['u_err'].attrs['units'] = '1'
-    ds['u_err'].attrs['comment'] = 'velocity measurements with error values over 0.6 are of questionable quality'
     ds['u_err'].attrs['valid_min'] = np.float32(0)
     ds['u_err'].attrs['valid_max'] = np.float32(1)
     ds['u_err'].attrs['coordinates'] = 'lon lat'
     ds['u_err'].attrs['grid_mapping'] = 'crs'
 
     # Set v_err attributes
-    ds['v_err'].attrs['long_name'] = 'Normalized uncertainty error associated with northward velocity component'
     ds['v_err'].attrs['units'] = '1'
-    ds['v_err'].attrs['comment'] = 'velocity measurements with error values over 0.6 are of questionable quality'
     ds['v_err'].attrs['valid_min'] = np.float32(0)
     ds['v_err'].attrs['valid_max'] = np.float32(1)
     ds['v_err'].attrs['coordinates'] = 'lon lat'
     ds['v_err'].attrs['grid_mapping'] = 'crs'
+
+    if method == 'lsq':
+        ds['u_err'].attrs['long_name'] = 'Associated GDOP mapping error value associated with eastward velocity component'
+        ds['v_err'].attrs['long_name'] = 'Associated GDOP mapping error value associated with northward velocity component'
+        ds['u_err'].attrs['comment'] = 'velocity measurements with error values over 1.5 are of questionable quality'
+        ds['v_err'].attrs['comment'] = 'velocity measurements with error values over 1.5 are of questionable quality'
+    elif method == 'oi':
+        ds['u_err'].attrs['long_name'] = 'Normalized uncertainty error associated with eastward velocity component'
+        ds['v_err'].attrs['long_name'] = 'Normalized uncertainty error associated with northward velocity component'
+        ds['u_err'].attrs['comment'] = 'velocity measurements with error values over 0.6 are of questionable quality'
+        ds['v_err'].attrs['comment'] = 'velocity measurements with error values over 0.6 are of questionable quality'
 
     # Set uv_covariance attributes
     ds['uv_covariance'].attrs['long_name'] = 'Eastward and Northward covariance directional information of u and v'
@@ -273,6 +291,40 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     ds['num_radials'].attrs['coordinates'] = 'lon lat'
     ds['num_radials'].attrs['grid_mapping'] = 'crs'
 
+    # Set num_radials attributes
+    ds['processing_parameters'].attrs['long_name'] = 'General and method specific processing parameter information'
+    ds['processing_parameters'].attrs['comment'] = processing_parameters_info
+    # ds['processing_parameters'].attrs['coordinates'] = 'parameters'
+
+    # encoded_sites = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsSiteCode
+
+    # # load site ids that are set in our mysqldb
+    # query_obj = Session.query(tables.Sites)
+    # site_encoding = pd.read_sql(query_obj.statement, query_obj.session.bind)
+    #
+    # # convert site codes into binary numbers
+    # binary_positions_mat = data['conf'].Radials.Sites.shape[0]
+    #
+    # decoded_sites_mat = np.tile(0, (encoded_sites.shape[0], binary_positions_mat))
+    #
+    # for i, v in enumerate(encoded_sites):
+    #     decoded_sites_mat[i] = np.array(map(int, np.binary_repr(v, width=binary_positions_mat)))
+    #
+    # decoded_sites_mat = np.fliplr(decoded_sites_mat)
+    #
+    # decoded_sites_new = np.tile(0, (encoded_sites.shape[0], np.max(site_encoding['id'])))
+    #
+    # for site in data['RTUV']:
+    #     print site.SiteName + ' ' + str(np.log2(site.SiteCode))
+    #     ind_mat = np.log2(site.SiteCode)
+    #     ind_real = site_encoding['id'].loc[site_encoding['site'] == site.SiteName].values[0]
+    #     decoded_sites_new[:, ind_real] = decoded_sites_mat[:, int(ind_mat)]
+    #
+    # decoded_sites_new = np.fliplr(decoded_sites_new)
+    # new_encoded_sites = [bool2int(x[::-1]) for x in decoded_sites_new]
+    # flag_masks = [2 ** int(x) for x in site_encoding['id'].tolist()]
+    # flag_meanings = ' '.join(site_encoding['site'].tolist())
+
     # ds['site_code_flags'].attrs['long_name'] = 'Bitwise AND representation of site contributions to a radial point'
     # # ds['site_code_flags'].attrs['_FillValue'] = int(0)
     # ds['site_code_flags'].attrs['flag_masks'] = 'b '.join(map(str, flag_masks))
@@ -280,6 +332,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     # ds['site_code_flags'].attrs['comment'] = 'Values are binary sums. Must be converted to binary representation to interpret flag_masks and flag_meanings'
 
     logging.debug('{} - Setting variable encoding and fill values for netCDF4 output'.format(fname))
+
     # encode variables for export to netcdf
     encoding = make_encoding(ds)
     encoding['lon'] = dict(zlib=False, _FillValue=False)
@@ -309,9 +362,6 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None):
     logging.debug('{} - Saving dataset to netCDF4 file: {}'.format(fname, file_and_path))
     ds.to_netcdf(file_and_path, encoding=encoding, format='netCDF4', engine='netcdf4', unlimited_dims=['time'])
     logging.info('{} - netCDF4 file successfully created: {}'.format(fname, file_and_path))
-
-    # else:
-    #     print('{} already exists. Skipping file'.format(file_and_path))
 
 
 if __name__ == '__main__':
@@ -355,9 +405,5 @@ if __name__ == '__main__':
                            publisher_email='ncei.info@noaa.gov',
                            publisher_url='www.ncei.noaa.gov')
 
-    # global Session
-    # Session = common.db_session()
-
     for file in files:
-        print(file)
         main(grid, file, save_dir, user_attributes, threshold)
