@@ -2,13 +2,14 @@ import functions.mat_to_netcdf4
 import glob
 import codar_processing.common as cf
 import pandas as pd
+import os
 
-# Define test inputs
-files = sorted(glob.glob('/Volumes/home/codaradm/data_reprocessed/totals/maracoos/oi/mat/5MHz/2017_03/*.mat'))
-grid_file = '../totals/grid_files/OI_6km_Grid_Extend.txt'
-save_dir = '/Users/mikesmith/Documents/2018_codar_reprocess/nc/2017_03/'
+mat_dir = '/Volumes/home/codaradm/data_reprocessed/totals/maracoos/oi/mat/5MHz/'
+save_dir = '/Users/mikesmith/Documents/2018_codar_reprocess/oi/'
 threshold = dict(u_err=0.6, v_err=0.6, uv_covariance=0.6)
+grid_file = '../../totals/grid_files/OI_6km_Grid_Extend.txt'
 
+sub_dirs = ['2017_01', '2017_02', '2017_03', '2017_04', '2017_05', '2017_06']
 
 # load csv file containing the grid
 grid = pd.read_csv(grid_file, sep=',', header=None, names=['lon', 'lat'], delim_whitespace=True)
@@ -42,7 +43,12 @@ user_attributes = dict(title='MARACOOS 6km Sea Surface Currents',
                        publisher_email='ncei.info@noaa.gov',
                        publisher_url='www.ncei.noaa.gov')
 
-cf.create_dir(save_dir)
+for sub_dir in sub_dirs:
+    path = os.path.join(mat_dir, sub_dir)
+    save_path = os.path.join(save_dir, sub_dir)
+    cf.create_dir(save_dir)
 
-for f in files:
-    functions.mat_to_netcdf4.main(grid, f, save_dir, user_attributes, threshold)
+    files = sorted([f.path for f in os.scandir(path) if f.name.endswith('.mat')])
+
+    for mat_file in files:
+        functions.mat_to_netcdf4.main(grid, mat_file, save_path, user_attributes, threshold)

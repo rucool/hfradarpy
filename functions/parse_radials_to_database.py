@@ -75,17 +75,23 @@ def parse_radial_file(radial_file):
 
 
 if __name__ == '__main__':
-    radial_dir = '/home/codaradm/data/radials/*/'
+    radial_dir = '/home/codaradm/data/radials/'
     initial_loading = True
     time_delta = 30  # days
-
-    from glob import glob
-    paths = glob(radial_dir)
+    paths = [os.path.join(radial_dir, o) for o in os.listdir(radial_dir) if os.path.isdir(os.path.join(radial_dir, o))]
     now = dt.datetime.now()
     ago = now - dt.timedelta(days=time_delta)
-
     for site_path in paths:
-        for fname in sorted(glob(os.path.join(site_path, '**', '*.ruv'), recursive=True)):
+        files = []
+        for entry in os.scandir(site_path):
+            if entry.is_dir():
+                for f in os.scandir(entry.path):
+                    files.append(f.path)
+            elif entry.is_file():
+                files.append(entry.path)
+
+        for fname in sorted(files):
+            print(fname)
             st = os.stat(fname)
             mtime = dt.datetime.fromtimestamp(st.st_mtime)
             if mtime > ago:

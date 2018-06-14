@@ -4,7 +4,7 @@
 @email michaesm@marine.rutgers.edu
 @purpose Parse CODAR wave files utilizing the Wave subclass and convert to CF Compliant NetCDF4 files
 """
-import click
+# import click
 import logging
 import numpy as np
 import os
@@ -79,7 +79,8 @@ def main(wave_file, save_dir):
     if w.data['DIST'].isnull().all():
         w.data = w.data.drop(['TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC', 'ACNT', 'RCLL', 'WDPT', 'MTHD', 'FLAG', 'WHNM', 'WHSD', 'PMWH', 'DIST'], axis=1)
     else:
-        w.data = w.data.drop(['TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC', 'ACNT', 'RCLL', 'WDPT', 'MTHD', 'FLAG', 'WHNM', 'WHSD', 'PMWH'], axis=1)
+        # w.data = w.data.drop(['TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC', 'ACNT', 'RCLL', 'WDPT', 'MTHD', 'FLAG', 'WHNM', 'WHSD', 'PMWH'], axis=1)
+        return
 
     w.data = w.data.set_index('datetime')
 

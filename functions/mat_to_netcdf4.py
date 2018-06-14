@@ -10,11 +10,10 @@ import logging
 import numpy as np
 import os
 import pandas as pd
-import re
 import sys
 import xarray as xr
 from scipy.io import loadmat
-from codar_processing.common import create_dir
+from codar_processing.common import create_dir, timestamp_from_lluv_filename
 from codar_processing.calc import gridded_index
 from codar_processing.common import make_encoding
 from configs import configs_default as configs
@@ -63,11 +62,10 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     else:
         domain = 'MARA'
 
-    regex = re.compile('\d{4}_\d{2}_\d{2}_\d{4}')
-    mat_time = regex.search(mat_file).group()
+    time = timestamp_from_lluv_filename(mat_file)
 
     # convert matlab time to python datetime
-    time = dt.datetime.strptime(mat_time, '%Y_%m_%d_%H00')
+    # time = dt.datetime.strptime(mat_time, '%Y_%m_%d_%H00')
     time_index = pd.date_range(time.strftime('%Y-%m-%d %H:%M:%S'), periods=1)  # create pandas datetimeindex from time
     time_string = time.strftime('%Y%m%dT%H%M%SZ')  # create timestring from time
 

@@ -2,7 +2,7 @@
 import datetime as dt
 import codar_processing.database_common as db
 import codar_processing.database_waves as dbw
-import glob
+# import glob
 import logging
 import os
 import sys

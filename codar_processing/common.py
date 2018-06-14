@@ -5,6 +5,7 @@ import logging
 import numpy as np
 import os
 import pandas as pd
+import re
 import pprint
 import xarray as xr
 from abc import ABCMeta, abstractmethod
@@ -91,6 +92,13 @@ def list_to_dataframe(list):
     df['time'] = df['time'].apply(lambda x: dt.datetime.strptime(x, '%Y_%m_%d_%H%M'))
     df = df.set_index(['time'])
     return df
+
+
+def timestamp_from_lluv_filename(filename):
+    timestamp_regex = re.compile('\d{4}_\d{2}_\d{2}_\d{4}')
+    mat_time = timestamp_regex.search(filename).group()
+    timestamp = dt.datetime.strptime(mat_time, '%Y_%m_%d_%H00')
+    return timestamp
 
 
 def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=1, chunksize=10000, fillvalue=-999.00):
