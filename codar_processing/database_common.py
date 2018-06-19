@@ -42,7 +42,10 @@ def check_file_upload(session, f_name, tables):
 
     data_dict = dict(filename=os.path.splitext(os.path.basename(f_name))[0])
     uploaded = session.query(tables).filter_by(**data_dict).first()
-    logging.debug('{} - Database record found - File ID: {}'.format(f_name, uploaded))
+    if uploaded:
+        logging.debug('{} - Database record found - File ID: {}'.format(f_name, uploaded))
+    else:
+        logging.debug('{} - No database record found. Uploading to database'.format(f_name))
     return uploaded
 
 

@@ -40,6 +40,7 @@ def update_latest_radials(session, filename, timestamp, site_id, radial_id):
 
 def upload_diagnostics(session, table_object, data, id):
     data['datetime'] = data['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    data = data.where(data.notnull(), None)
     bulk_list = []
     for row in data.itertuples():
         (ret,), = session.query(exists().where(table_object.datetime == row.datetime).

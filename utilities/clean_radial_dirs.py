@@ -51,7 +51,7 @@ for site in site_dirs:
             if base_date > timestamp:  # if file is older than 30 days
                 if os.path.isfile(os.path.join(new_dir, basename)): # file archived already?
                     # if it is, remove the file from the main folder of the site directory
-                    logging.debug('{} is older than 30 days and already archived in {}. Deleting from source directory.'.format(basename, new_dir))
+                    logging.info('{} is older than 30 days and already archived in {}. Deleting from source directory.'.format(basename, new_dir))
                     os.remove(filename)
                 else:
                     # move it to the subdirectory, yyyy_mm
@@ -61,7 +61,7 @@ for site in site_dirs:
             else:  # file is newer than 30 days old.
                 if os.path.isfile(os.path.join(new_dir, basename)): # is the file archived already?
                     # if it is, leave it in the main folder of the site directory
-                    logging.debug('{} already archived.'.format(filename))
+                    logging.info('{} already archived.'.format(filename))
                     continue
                 else:  # file is not archived already
                     # copy the file to the yyyy_mm directory, but leave a copy in the main site directory
