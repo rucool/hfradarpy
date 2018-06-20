@@ -85,29 +85,37 @@ def parse_radial_file(radial_file):
                 dbr.upload_diagnostics(session, HardwareDiagnostics, r.diags_hardware, r.header['Site'])
             except:
                 pass
-            return logging.info('{} - Uploaded successfully'.format(r.header['filename']))
+            return 'File uploaded successfully'
         except:
-            return logging.error('{} - File failed to upload'.format(basename))
+            return 'File failed to upload'
 
 
 if __name__ == '__main__':
-    radial_dir = '/home/codaradm/data/radials/'
+    # radial_dir = '/Volumes/home/codaradm/data/radials/'
+    radial_dir = '/Users/mikesmith/Documents/git/rucool/codar_processing/data/radials/'
     initial_loading = True
-    time_delta = 535  # days
+    time_delta = 300  # days
+    max_workers = 8
 
     paths = [os.path.join(radial_dir, o) for o in os.listdir(radial_dir) if os.path.isdir(os.path.join(radial_dir, o))]
     now = dt.datetime.now()
     ago = now - dt.timedelta(days=time_delta)
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
-        for site_path in paths:
-            file_list = glob(os.path.join(site_path, '**', '*.ruv'), recursive=True)
-            # Convert to dataframe for faster index searching
-            df = pd.DataFrame(file_list, columns=['path'])
-            df['timestamp'] = df['path'].apply(timestamp_from_lluv_filename)
-            tdf = df[df['timestamp'] > ago]
+    for site_path in paths:
+        file_list = glob(os.path.join(site_path, '**', '*.ruv'), recursive=True)
+        # Convert to dataframe for faster index searching
+        df = pd.DataFrame(file_list, columns=['path'])
+        df['timestamp'] = df['path'].apply(timestamp_from_lluv_filename)
+        tdf = df[df['timestamp'] > ago]
 
-            # Convert back to list and sort by filename
-            recents = sorted(tdf['path'].tolist())
+        # Convert back to list and sort by filename
+        recents = sorted(tdf['path'].tolist())
 
-            res = executor.map(parse_radial_file, recents)
+        # for recent in recents:
+        #     result = parse_radial_file(recent)
+        #     logging.info('{} - {}'.format(recent, result))
+        #
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            for recent, result in zip(recents, executor.map(parse_radial_file, recents)):
+                logging.info('{} - {}'.format(recent, result))
+                # res = executor.map(parse_radial_file, recents)
