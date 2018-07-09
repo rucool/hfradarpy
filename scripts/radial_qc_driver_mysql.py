@@ -53,6 +53,7 @@ for site in qc_values.keys():
     qc_arguments['save_path'] = os.path.join(save_dir, site)
     site_dir = os.path.join(radial_dir, site)
     files = sorted(glob.glob(os.path.join(site_dir, '*.ruv')))
+
     for fname in files:
         qc_arguments['radial_file'] = fname
         st = os.stat(fname)

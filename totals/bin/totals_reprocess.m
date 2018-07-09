@@ -29,12 +29,11 @@ function totals_reprocess(systemType, varargin)
 caller = [mfilename '.m'];
 
 % Default values
-hours   = 12;
+hours = 12;
 start_time = [];
-end_time   = [];
-radial_directory = '/Users/hroarty/data/realtime/';
-pattern_type = 'RDLi';
-save_directory = '/Users/hroarty/data/realtime/';
+end_time = [];
+radial_directory = '/Users/mikesmith/Documents/projects/bpu/radials/';
+save_directory = '/Users/mikesmith/Documents/projects/bpu/total/';
 region = 1; %1 = maracoos, 2 = caricoos, 13 = antarctica
 
 % Process optional name/value input parameters -------------------------------
@@ -133,7 +132,6 @@ region = 1; %1 = maracoos, 2 = caricoos, 13 = antarctica
     end
     
     %Do not use the database.. forcefully reprocess the files...
-        fprintf(1, 'Bypassing database completely. \n');
         if ~isempty(start_time)
             tNow = end_time;
             tThen = start_time;
@@ -142,19 +140,19 @@ region = 1; %1 = maracoos, 2 = caricoos, 13 = antarctica
             tThen = tNow - hours/24;
         end
 
-        tCurrent = [tNow:-1/24:tThen]; % Build hourly timestamps 
+        time_steps = [tNow:-1/24:tThen]; % Build hourly timestamps 
 
-        for x = 1:1:length(tCurrent)
+        for x = 1:1:length(time_steps)
+            
             nTime = {};
             
             % Build configuration file for use in CODAR_driver_totals
             % Leave the second input, Sites, as an empty array with no data
             
-            %conf = CODAR_configuration(systemType, [], [], radial_directory, save_directory, region);
             metaData.region = region;
-            conf = CODAR_configuration_HJR_laptop(systemType, [], [], radial_directory, save_directory, metaData.region);
+            conf = codar_configuration(systemType, radial_directory, save_directory, metaData.region);
             for y = 1:length(conf.Radials.Sites)
-                file_name = [conf.Radials.radial_directory conf.Radials.Sites{y} '/' datestr(tCurrent(x), 'yyyy_mm') '/' conf.Radials.Types{y} '_' conf.Radials.Sites{y} '_' datestr(tCurrent(x), 'yyyy_mm_dd_HH00.ruv')];
+                file_name = [conf.Radials.BaseDir conf.Radials.Sites{y} '/' conf.Radials.Types{y} '_' conf.Radials.Sites{y} '_' datestr(time_steps(x), 'yyyy_mm_dd_HH00.ruv')];
                 if exist(file_name, 'file');
                     nTime = [nTime; file_name]; %Append to matrix the times that do exist
                 end
@@ -163,13 +161,12 @@ region = 1; %1 = maracoos, 2 = caricoos, 13 = antarctica
             % Process current timestamp
             fprintf(1, '****************************************\n');
             fprintf(1, '  Current time: %s\n',datestr(now));
-            fprintf(1, '  Processing data time: %s\n',datestr(tCurrent(x),0));
+            fprintf(1, '  Processing data time: %s\n',datestr(time_steps(x),0));
             
             % Hourly Total Creation
             try
                 fprintf(1, 'Starting Totals_driver\n');
-                [procFname] = CODAR_driver_totals_QC(tCurrent(x),conf, systemType);
-                %ingestCodar(systemType, procFname, region,pattSelect)
+                [procFname] = codar_driver_totals(time_steps(x), conf, systemType);
             catch
                 fprintf(1, 'Driver_totals failed because: \n');
                 res=lasterror;                
@@ -179,4 +176,3 @@ region = 1; %1 = maracoos, 2 = caricoos, 13 = antarctica
             clear nTime
         end
     end
-end

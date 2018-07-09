@@ -1,6 +1,6 @@
+import copy
 import datetime as dt
 import logging
-import numpy as np
 import os
 from codar_processing.common import LLUVParser, create_dir
 
@@ -103,12 +103,12 @@ class Radial(LLUVParser):
             if key not in present_keys:
                 self.header[key] = None
 
-    def create_nc(self, filename):
-        """
-        Create a compressed netCDF4 (.nc) file from the radial instance
-        :param filename: User defined filename of radial file you want to save
-        :return:
-        """
+    # def create_nc(self, filename):
+    #     """
+    #     Create a compressed netCDF4 (.nc) file from the radial instance
+    #     :param filename: User defined filename of radial file you want to save
+    #     :return:
+    #     """
 
     def create_ruv(self, filename):
         """
@@ -133,8 +133,12 @@ class Radial(LLUVParser):
                     self.tables[table]['data'] = self.tables[table]['data'].drop(['datetime'], axis=1)
 
                 # Fill NaN with 999.000 which is the standard fill value for codar lluv files
-                self.tables[table]['data'] = self.tables[table]['data'].fillna(999.000)
-                self.tables[table]['data'].to_string(f, index=False, justify='center')
+                if table == '1':
+                    self.data = self.data.fillna(999.000)
+                    self.data.to_string(f, index=False, justify='center')
+                else:
+                    self.tables[table]['data'] = self.tables[table]['data'].fillna(999.000)
+                    self.tables[table]['data'].to_string(f, index=False, justify='center')
 
                 if int(table) > 1:
                     f.write('\n%TableEnd: {}\n'.format(table))
@@ -243,6 +247,10 @@ class Radial(LLUVParser):
         self.tables['1']['TableColumnTypes'] += ' MVEL'
         self.footer['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_speed"')
 
+    def reset(self):
+        logging.info('Resetting instance data variable to original dataset')
+        self.tables['1']
+        self.data = self._data_backup
     # # Modify any tableheader information that needs to be updated
     # radial_file_data['tables']['1']['TableColumns'] = radial_data.shape[1]
     # header_list = radial_data.columns.tolist()

@@ -8,3 +8,6 @@
 configs/configs.py
 
 *.pyc
+
+*.ruv
+*.swp

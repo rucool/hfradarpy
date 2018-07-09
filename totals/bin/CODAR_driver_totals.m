@@ -1,4 +1,4 @@
-function [fname] = CODAR_driver_totals(dtime,conf, systemType, varargin)
+function [fname] = codar_driver_totals(dtime,conf, systemType, varargin)
 %
 % Rutgers HFRadar Processing Toolbox
 %
@@ -33,7 +33,7 @@ mand_params = { 'Radials.Sites', 'Radials.Types', 'Radials.RangeLims', ...
                 'Radials.BearLims', 'Totals.DomainName', 'Totals.GridFile' };
             
 % Check if mandatory input arguments are satisfied
-conf = checkParamValInputArgs( conf, {}, mand_params, varargin{:} );
+% conf = checkParamValInputArgs( conf, {}, mand_params, varargin{:} );
 
 % Load Radial Data
 fprintf(1, 'Loading Radial Data. \n');
@@ -138,7 +138,7 @@ RTUV = Rmask;
 
 % Call makeTotalsOI to generate the totals.
 fprintf(1, 'Generating OI totals. \n');
-[TUVorig,RTUV]=makeTotalsOI(RTUV,systemType,'Grid',grid,'TimeStamp',dtime, ...
+[TUVorig, RTUV]=makeTotalsOI(RTUV,'Grid',grid,'TimeStamp',dtime, ...
       'mdlvar', conf.OI.mdlvar, 'errvar', conf.OI.errvar, ...
       'sx', conf.OI.sx, 'sy', conf.OI.sy, ...
       'tempthresh',conf.OI.tempthresh, ...
@@ -156,35 +156,35 @@ if systemType == 2
      [TUV,I]=maskTotals(TUV,conf.Totals.MaskFile,false);
      fprintf(1, '%d totals masked out. \n',sum(~I(:)));
 end
-
-%% ------------------------------------------------------------------------
-%% This section of code was a contribution from Erick Fredj to gap fill the data
-% Masking is a destructive process, any totals current inside the mask will be
-% set to zero.
-
-fprintf(1, 'Starting Smooth Total Field. \n');
-fprintf(1, '---------------------------------------------------------------- \n');
-
-mask=load(conf.OSN.BestCoverageFile);
-hfrcvrg = inpolygon(TUV.LonLat(:,1),TUV.LonLat(:,2),mask(:,1),mask(:,2));
-
-% Robust Smooth
-TUVosn = TUV;
-TUVosn.CreationInfo= 'Erick Fredj';
-
-U=TUVosn.U(hfrcvrg);
-V=TUVosn.V(hfrcvrg);
-
-% set to reset TUVs.U to NaN
-TUVosn.U = NaN(size(TUVosn.U));
-% set to reset TUVs.V to NaN
-TUVosn.V = NaN(size(TUVosn.V));
-
-%% this function smoothn is located in toolbox_eric_fredj
-Vs = smoothn({U,V},'robust');
-
-TUVosn.U(hfrcvrg)=Vs{1};
-TUVosn.V(hfrcvrg)=Vs{2};
+% 
+% %% ------------------------------------------------------------------------
+% %% This section of code was a contribution from Erick Fredj to gap fill the data
+% % Masking is a destructive process, any totals current inside the mask will be
+% % set to zero.
+% 
+% fprintf(1, 'Starting Smooth Total Field. \n');
+% fprintf(1, '---------------------------------------------------------------- \n');
+% 
+% mask=load(conf.OSN.BestCoverageFile);
+% hfrcvrg = inpolygon(TUV.LonLat(:,1),TUV.LonLat(:,2),mask(:,1),mask(:,2));
+% 
+% % Robust Smooth
+% TUVosn = TUV;
+% TUVosn.CreationInfo= 'Erick Fredj';
+% 
+% U=TUVosn.U(hfrcvrg);
+% V=TUVosn.V(hfrcvrg);
+% 
+% % set to reset TUVs.U to NaN
+% TUVosn.U = NaN(size(TUVosn.U));
+% % set to reset TUVs.V to NaN
+% TUVosn.V = NaN(size(TUVosn.V));
+% 
+% %% this function smoothn is located in toolbox_eric_fredj
+% Vs = smoothn({U,V},'robust');
+% 
+% TUVosn.U(hfrcvrg)=Vs{1};
+% TUVosn.V(hfrcvrg)=Vs{2};
 
 %%-------------------------------------------------------------------------
 
@@ -197,7 +197,7 @@ tdn = tdn{1};%
 if ~exist( tdn, 'dir' )
   mkdir(tdn);
 end
-save(fullfile(tdn,tfn{1}),'conf','missingRadials','RTUV','TUVorig','TUV','TUVosn')
+save(fullfile(tdn,tfn{1}),'conf','missingRadials','RTUV','TUVorig','TUV')
 
 % Check if Ascii Directory exists. If not, create it.
 if ~exist( conf.OI.AsciiDir, 'dir' )

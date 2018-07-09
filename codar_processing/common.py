@@ -209,24 +209,6 @@ class LLUVParser(object):
                                 self.tables[str(table_count)][key] = value
                     else:  # Uncommented lines are the main data table.
                         table_data += '{}'.format(line)
-        # if self.file_type() == 'wave':
-        #     if self.tables['1']['data']['DIST'].isnull().all():
-        #         # pass
-        #         self.data = self.tables['1']['data']
-        #     else:
-        #         data_tables = []
-        #         for key in self.tables.keys():
-        #             data_tables.append(self.tables[key]['data'])
-        #         self.data = pd.concat(data_tables, axis=0)
-        #         # del self.tables
-        #     self.data['datetime'] = self.data[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
-        # elif self.file_type() == 'radial':
-        #     # self.tables['1']['data'] = self.tables['1']['data']
-        #     self.data = self.tables['1']['data']
-        #     self.diags_radial = self.tables['2']['data']
-        #     self.diags_hardware = self.tables['3']['data']
-        #     self.diags_radial['datetime'] = self.diags_radial[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
-        #     self.diags_hardware['datetime'] = self.diags_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1
 
     def is_valid(self, table='1'):
         """
@@ -238,7 +220,6 @@ class LLUVParser(object):
             return not self.tables[table]['data'].empty
         except:
             return False
-
 
     @staticmethod
     def _parse_header_line(line):

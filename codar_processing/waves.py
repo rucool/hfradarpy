@@ -79,6 +79,12 @@ class Waves(LLUVParser):
         boolean = self.data['MWHT'].between(wave_min, wave_max, inclusive=True)
         self.data['mwht_flag'] = self.data['mwht_flag'].where(boolean, other=4)
 
+    def is_valid(self):
+        if self.data.empty:
+            return False
+        else:
+            return True
+
     def remove_bad_data(self):
         """
         Remove any data that contains NaN. In the original RUV file, these usually refer to data with 999 or 1080 values

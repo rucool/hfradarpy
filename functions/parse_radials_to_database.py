@@ -91,16 +91,110 @@ def parse_radial_file(radial_file):
 
 
 if __name__ == '__main__':
-    # radial_dir = '/Volumes/home/codaradm/data/radials/'
-    radial_dir = '/Users/mikesmith/Documents/git/rucool/codar_processing/data/radials/'
-    initial_loading = True
-    time_delta = 300  # days
-    max_workers = 8
-
-    paths = [os.path.join(radial_dir, o) for o in os.listdir(radial_dir) if os.path.isdir(os.path.join(radial_dir, o))]
+    paths = ['/Volumes/home/codaradm/data/radials/AMAG',
+             '/Volumes/home/codaradm/data/radials/AMHE',
+             '/Volumes/home/codaradm/data/radials/ASSA',
+             '/Volumes/home/codaradm/data/radials/ASVT',
+             '/Volumes/home/codaradm/data/radials/BELM',
+             '/Volumes/home/codaradm/data/radials/BEOP',
+             '/Volumes/home/codaradm/data/radials/BESE',
+             '/Volumes/home/codaradm/data/radials/BESP',
+             '/Volumes/home/codaradm/data/radials/BISL',
+             '/Volumes/home/codaradm/data/radials/BLCK',
+             '/Volumes/home/codaradm/data/radials/BRAD',
+             '/Volumes/home/codaradm/data/radials/BRBR',
+             '/Volumes/home/codaradm/data/radials/BRBY',
+             '/Volumes/home/codaradm/data/radials/BRIG',
+             '/Volumes/home/codaradm/data/radials/BRLO',
+             '/Volumes/home/codaradm/data/radials/BRMR',
+             '/Volumes/home/codaradm/data/radials/BRNT',
+             '/Volumes/home/codaradm/data/radials/BRRA',
+             '/Volumes/home/codaradm/data/radials/BRSE',
+             '/Volumes/home/codaradm/data/radials/BRSP',
+             '/Volumes/home/codaradm/data/radials/BRWI',
+             '/Volumes/home/codaradm/data/radials/BRZY',
+             '/Volumes/home/codaradm/data/radials/BSWP',
+             '/Volumes/home/codaradm/data/radials/CAPE',
+             '/Volumes/home/codaradm/data/radials/CBBT',
+             '/Volumes/home/codaradm/data/radials/CDDO',
+             '/Volumes/home/codaradm/data/radials/CEDR',
+             '/Volumes/home/codaradm/data/radials/CLUB',
+             '/Volumes/home/codaradm/data/radials/CMPT',
+             '/Volumes/home/codaradm/data/radials/CORE',
+             '/Volumes/home/codaradm/data/radials/CPHN',
+             '/Volumes/home/codaradm/data/radials/CStM',
+             '/Volumes/home/codaradm/data/radials/DUCK',
+             '/Volumes/home/codaradm/data/radials/ERRA',
+             '/Volumes/home/codaradm/data/radials/FARO',
+             '/Volumes/home/codaradm/data/radials/GCAP',
+             '/Volumes/home/codaradm/data/radials/GMNB',
+             '/Volumes/home/codaradm/data/radials/GRNI',
+             '/Volumes/home/codaradm/data/radials/HATY',
+             '/Volumes/home/codaradm/data/radials/HEAM',
+             '/Volumes/home/codaradm/data/radials/HEMP',
+             '/Volumes/home/codaradm/data/radials/HLPN',
+             '/Volumes/home/codaradm/data/radials/HOMR',
+             '/Volumes/home/codaradm/data/radials/HOOK',
+             '/Volumes/home/codaradm/data/radials/HOSR',
+             '/Volumes/home/codaradm/data/radials/JOUB',
+             '/Volumes/home/codaradm/data/radials/LISL',
+             '/Volumes/home/codaradm/data/radials/LOBR',
+             '/Volumes/home/codaradm/data/radials/LOHO',
+             '/Volumes/home/codaradm/data/radials/LOOK',
+             '/Volumes/home/codaradm/data/radials/LOVE',
+             '/Volumes/home/codaradm/data/radials/LPWR',
+             '/Volumes/home/codaradm/data/radials/MABO',
+             '/Volumes/home/codaradm/data/radials/METS',
+             '/Volumes/home/codaradm/data/radials/MISQ',
+             '/Volumes/home/codaradm/data/radials/MNTK',
+             '/Volumes/home/codaradm/data/radials/MRAM',
+             '/Volumes/home/codaradm/data/radials/MRCH',
+             '/Volumes/home/codaradm/data/radials/MRHE',
+             '/Volumes/home/codaradm/data/radials/MVBL',
+             '/Volumes/home/codaradm/data/radials/MVCO',
+             '/Volumes/home/codaradm/data/radials/MVNA',
+             '/Volumes/home/codaradm/data/radials/NANT',
+             '/Volumes/home/codaradm/data/radials/NAUS',
+             '/Volumes/home/codaradm/data/radials/OLDB',
+             '/Volumes/home/codaradm/data/radials/P125',
+             '/Volumes/home/codaradm/data/radials/P313',
+             '/Volumes/home/codaradm/data/radials/PALM',
+             '/Volumes/home/codaradm/data/radials/POOL',
+             '/Volumes/home/codaradm/data/radials/PORT',
+             '/Volumes/home/codaradm/data/radials/POSI',
+             '/Volumes/home/codaradm/data/radials/PYFA',
+             '/Volumes/home/codaradm/data/radials/PYFC',
+             '/Volumes/home/codaradm/data/radials/PYMA',
+             '/Volumes/home/codaradm/data/radials/RATH',
+             '/Volumes/home/codaradm/data/radials/RAWO',
+             '/Volumes/home/codaradm/data/radials/SEAB',
+             '/Volumes/home/codaradm/data/radials/SEOP',
+             '/Volumes/home/codaradm/data/radials/SESP',
+             '/Volumes/home/codaradm/data/radials/SET1',
+             '/Volumes/home/codaradm/data/radials/SILD',
+             '/Volumes/home/codaradm/data/radials/SLTR',
+             '/Volumes/home/codaradm/data/radials/SPAD',
+             '/Volumes/home/codaradm/data/radials/SPNT',
+             '/Volumes/home/codaradm/data/radials/SPOP',
+             '/Volumes/home/codaradm/data/radials/SPRK',
+             '/Volumes/home/codaradm/data/radials/SQUB',
+             '/Volumes/home/codaradm/data/radials/STLI',
+             '/Volumes/home/codaradm/data/radials/SUNS',
+             '/Volumes/home/codaradm/data/radials/TEST',
+             '/Volumes/home/codaradm/data/radials/VIEW',
+             '/Volumes/home/codaradm/data/radials/WAUW',
+             '/Volumes/home/codaradm/data/radials/WILD',
+             '/Volumes/home/codaradm/data/radials/WOOD']
+    # # radial_dir = '/Users/mikesmith/Documents/git/rucool/codar_processing/data/radials/'
+    # initial_loading = True
+    time_delta = 10000  # days
+    max_workers = 32
+    #
+    # paths = [os.path.join(radial_dir, o) for o in os.listdir(radial_dir) if os.path.isdir(os.path.join(radial_dir, o))]
     now = dt.datetime.now()
     ago = now - dt.timedelta(days=time_delta)
 
+    paths = ['/Volumes/']
     for site_path in paths:
         file_list = glob(os.path.join(site_path, '**', '*.ruv'), recursive=True)
         # Convert to dataframe for faster index searching

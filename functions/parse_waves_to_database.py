@@ -8,6 +8,8 @@ import os
 import sys
 from configs import database_tables
 from codar_processing.waves import Waves
+import concurrent.futures
+
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)
@@ -15,8 +17,13 @@ log_level = 'INFO'
 log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
-global session
+# Initialize sqlalchemy session with codar MySQL database
 session = db.db_session()
+
+
+# Load some relational ids upon initial execution of script. Saves time because less database calls.
+radar_sites = db.get_sites(session)
+pattern_types = db.get_pattern_types(session)
 
 
 def parse_wave_file(wave_file, upload_file_id=None):
@@ -40,9 +47,17 @@ def parse_wave_file(wave_file, upload_file_id=None):
     w.header['TableWaveMode'] = mode
     w.header['TableRows'] = w.tables['1']['TableRows']
 
-    # Check to see if the site has been uploaded to the HfrSites table of the MySQL database and get site_id info
-    site_info = db.site_check(session, w.header['Site'], w.header['TransmitCenterFreqMHz'], w.header['Origin'])
-    w.header['Site'] = site_info.id
+    # Fill certain table columns with relational ids
+    # Check to see if the site has been uploaded to the HfrSites table of the MySQL database
+    try:
+        site_info = radar_sites[radar_sites.site == w.header['Site']]
+        site_id = int(site_info.id.iloc[0])
+    except IndexError:
+        logging.info('{} not found. Uploading site to hfrSites table'.format(w.header['Site']))
+        site_info = db.update_site_table(session, w.header['Site'], w.header['TransmitCenterFreqMHz'], w.header['Origin'])
+        site_id = int(site_info)
+
+    w.header['Site'] = site_id
 
     # Upload file data to database
     if not upload_file_id:

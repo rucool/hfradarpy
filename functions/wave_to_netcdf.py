@@ -61,6 +61,12 @@ def main(wave_file, save_dir):
     """
     w = Waves(wave_file)
 
+    # if w.is_valid():
+    #     pass
+    # else:
+    #     logging.error('{} - No Data Available. Skipping'.format(wave_file))
+    #     return
+
     # Clean up wave header
     w.clean_wave_header()
 
@@ -97,7 +103,10 @@ def main(wave_file, save_dir):
     ds.rename(rename, inplace=True)
 
     # Grab min and max time in dataset for entry into global attributes for cf compliance
-    time_start = ds['time'].min().data
+    try:
+        time_start = ds['time'].min().data
+    except:
+        return
     time_end = ds['time'].max().data
 
     # Assign global attributes for CF compliant time series files

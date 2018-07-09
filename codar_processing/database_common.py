@@ -1,5 +1,6 @@
 import logging
 import os
+import pandas as pd
 import re
 from configs import database_tables
 from configs.configs import db_configs
@@ -85,7 +86,28 @@ def get_file_type_id(session, file_type):
     return result.id
 
 
-def site_check(session, site, freq=None, origin=None):
+def get_pattern_types(session):
+    """
+    Get a list of all pattern types in hfrPatternTypes table
+    :param session: SQLAlchemy database session instance
+    :return: dataframe of hfrPatternTypes
+    """
+    df = pd.read_sql(session.query(database_tables.PatternTypes).statement, session.bind)
+    return df
+
+
+def get_sites(session):
+    """
+    Get list of all sites in hfrSites table.
+
+    :param session: SQLAlchemy database session instance
+    :return: dataframe of hfrSites
+    """
+    df = pd.read_sql(session.query(database_tables.Sites).statement, session.bind)
+    return df
+
+
+def update_site_table(session, site, freq=None, origin=None):
     """
     Check if site exists in table, hfrSites. If it doesn't, add it to the table.
     :param session: SQLAlchemy database session instance
@@ -94,23 +116,16 @@ def site_check(session, site, freq=None, origin=None):
     :param origin: Origin (lon, lat) of CODAR Receive Antenna
     :return: ID of CODAR site in hfrSites table
     """
+    type_id = check_freq(session, freq)
+    try:
+        lonlat = re.findall(r"[-+]?\d*\.\d+|\d+", origin)
+    except TypeError:
+        lonlat = (0, 0)
 
-    site_dict = dict(site=site)
-    result = session.query(database_tables.Sites).filter_by(**site_dict).first()
-
-    if not result:
-        type_id = check_freq(session, freq)
-        try:
-            lonlat = re.findall(r"[-+]?\d*\.\d+|\d+", origin)
-        except TypeError:
-            lonlat = (0, 0)
-
-        logger.info('{} - New HFR site detected. Adding to table `hfrSites`'.format(site))
-        new_site = dict(site=site, transmitCenterFrequency=freq, lat=lonlat[0], lon=lonlat[1], type=type_id)
-        ref = database_tables.Sites(**new_site)
-        session.add(ref)
-        session.commit()
-        session.flush()
-        return ref
-    else:
-        return result
+    logger.info('{} - New HFR site detected. Adding to table `hfrSites`'.format(site))
+    new_site = dict(site=site, transmitCenterFrequency=freq, lat=lonlat[0], lon=lonlat[1], type=type_id)
+    ref = database_tables.Sites(**new_site)
+    session.add(ref)
+    session.commit()
+    session.flush()
+    return ref

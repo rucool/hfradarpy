@@ -43,8 +43,7 @@ def upload_diagnostics(session, table_object, data, id):
     data = data.where(data.notnull(), None)
     bulk_list = []
     for row in data.itertuples():
-        (ret,), = session.query(exists().where(table_object.datetime == row.datetime).
-            where(table_object.id_site == id))
+        (ret,), = session.query(exists().where(table_object.datetime == row.datetime).where(table_object.id_site == id))
         if ret:
             continue
         line_dict = row._asdict()

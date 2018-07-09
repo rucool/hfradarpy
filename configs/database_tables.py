@@ -177,11 +177,10 @@ class Sites(Base):
     description = Column(VARCHAR)
     lat = Column(DOUBLE)
     lon = Column(DOUBLE)
-    active = Column(TINYINT)
+    # active = Column(TINYINT)
     # numSites = Column(TINYINT)
-    radialProcessingType = Column(INTEGER)
-    useRadials = Column(TINYINT)
-    low_count = Column(SMALLINT)
+    # radialProcessingType = Column(INTEGER)
+    # useRadials = Column(TINYINT)
 
 
 class SystemTypes(Base):
