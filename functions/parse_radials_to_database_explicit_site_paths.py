@@ -6,7 +6,6 @@
 """
 import codar_processing.database_common as db
 import codar_processing.database_radials as dbr
-import concurrent.futures
 import datetime as dt
 import logging
 import os
@@ -24,7 +23,6 @@ log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
 # Initialize sqlalchemy session with codar MySQL database
-global session
 session = db.db_session()
 
 # Load some relational ids upon initial execution of script. Saves time because less database calls.
@@ -107,8 +105,101 @@ def parse_radial_file(radial_file):
 
 
 if __name__ == '__main__':
-    paths = ['/home/codaradm/data/radials/SEAB/']
     time_delta = 30  # days
+    paths = ['/home/codaradm/data/radials/AMAG',
+             '/home/codaradm/data/radials/AMHE',
+             '/home/codaradm/data/radials/ASSA',
+             '/home/codaradm/data/radials/ASVT',
+             '/home/codaradm/data/radials/BELM',
+             '/home/codaradm/data/radials/BEOP',
+             '/home/codaradm/data/radials/BESE',
+             '/home/codaradm/data/radials/BESP',
+             '/home/codaradm/data/radials/BISL',
+             '/home/codaradm/data/radials/BLCK',
+             '/home/codaradm/data/radials/BRAD',
+             '/home/codaradm/data/radials/BRBR',
+             '/home/codaradm/data/radials/BRBY',
+             '/home/codaradm/data/radials/BRIG',
+             '/home/codaradm/data/radials/BRLO',
+             '/home/codaradm/data/radials/BRMR',
+             '/home/codaradm/data/radials/BRNT',
+             '/home/codaradm/data/radials/BRRA',
+             '/home/codaradm/data/radials/BRSE',
+             '/home/codaradm/data/radials/BRSP',
+             '/home/codaradm/data/radials/BRWI',
+             '/home/codaradm/data/radials/BRZY',
+             '/home/codaradm/data/radials/BSWP',
+             '/home/codaradm/data/radials/CAPE',
+             '/home/codaradm/data/radials/CBBT',
+             '/home/codaradm/data/radials/CDDO',
+             '/home/codaradm/data/radials/CEDR',
+             '/home/codaradm/data/radials/CLUB',
+             '/home/codaradm/data/radials/CMPT',
+             '/home/codaradm/data/radials/CORE',
+             '/home/codaradm/data/radials/CPHN',
+             '/home/codaradm/data/radials/CStM',
+             '/home/codaradm/data/radials/DUCK',
+             '/home/codaradm/data/radials/ERRA',
+             '/home/codaradm/data/radials/FARO',
+             '/home/codaradm/data/radials/GCAP',
+             '/home/codaradm/data/radials/GMNB',
+             '/home/codaradm/data/radials/GRNI',
+             '/home/codaradm/data/radials/HATY',
+             '/home/codaradm/data/radials/HEAM',
+             '/home/codaradm/data/radials/HEMP',
+             '/home/codaradm/data/radials/HLPN',
+             '/home/codaradm/data/radials/HOMR',
+             '/home/codaradm/data/radials/HOOK',
+             '/home/codaradm/data/radials/HOSR',
+             '/home/codaradm/data/radials/JOUB',
+             '/home/codaradm/data/radials/LISL',
+             '/home/codaradm/data/radials/LOBR',
+             '/home/codaradm/data/radials/LOHO',
+             '/home/codaradm/data/radials/LOOK',
+             '/home/codaradm/data/radials/LOVE',
+             '/home/codaradm/data/radials/LPWR',
+             '/home/codaradm/data/radials/MABO',
+             '/home/codaradm/data/radials/METS',
+             '/home/codaradm/data/radials/MISQ',
+             '/home/codaradm/data/radials/MNTK',
+             '/home/codaradm/data/radials/MRAM',
+             '/home/codaradm/data/radials/MRCH',
+             '/home/codaradm/data/radials/MRHE',
+             '/home/codaradm/data/radials/MVBL',
+             '/home/codaradm/data/radials/MVCO',
+             '/home/codaradm/data/radials/MVNA',
+             '/home/codaradm/data/radials/NANT',
+             '/home/codaradm/data/radials/NAUS',
+             '/home/codaradm/data/radials/OLDB',
+             '/home/codaradm/data/radials/P125',
+             '/home/codaradm/data/radials/P313',
+             '/home/codaradm/data/radials/PALM',
+             '/home/codaradm/data/radials/POOL',
+             '/home/codaradm/data/radials/PORT',
+             '/home/codaradm/data/radials/POSI',
+             '/home/codaradm/data/radials/PYFA',
+             '/home/codaradm/data/radials/PYFC',
+             '/home/codaradm/data/radials/PYMA',
+             '/home/codaradm/data/radials/RATH',
+             '/home/codaradm/data/radials/RAWO',
+             '/home/codaradm/data/radials/SEAB',
+             '/home/codaradm/data/radials/SEOP',
+             '/home/codaradm/data/radials/SESP',
+             '/home/codaradm/data/radials/SET1',
+             '/home/codaradm/data/radials/SILD',
+             '/home/codaradm/data/radials/SLTR',
+             '/home/codaradm/data/radials/SPAD',
+             '/home/codaradm/data/radials/SPNT',
+             '/home/codaradm/data/radials/SPOP',
+             '/home/codaradm/data/radials/SPRK',
+             '/home/codaradm/data/radials/SQUB',
+             '/home/codaradm/data/radials/STLI',
+             '/home/codaradm/data/radials/SUNS',
+             '/home/codaradm/data/radials/TEST',
+             '/home/codaradm/data/radials/VIEW',
+             '/home/codaradm/data/radials/WAUW',
+             '/home/codaradm/data/radials/WILD',
+             '/home/codaradm/data/radials/WOOD']
 
     now = dt.datetime.now()
     ago = now - dt.timedelta(days=time_delta)

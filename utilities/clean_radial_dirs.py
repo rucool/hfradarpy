@@ -61,7 +61,7 @@ for site in site_dirs:
             else:  # file is newer than 30 days old.
                 if os.path.isfile(os.path.join(new_dir, basename)): # is the file archived already?
                     # if it is, leave it in the main folder of the site directory
-                    logging.info('{} already archived.'.format(filename))
+                    logging.debug('{} already archived.'.format(filename))
                     continue
                 else:  # file is not archived already
                     # copy the file to the yyyy_mm directory, but leave a copy in the main site directory
