@@ -66,7 +66,7 @@ def parse_radial_file(radial_file):
                 patt_type = pattern_types[pattern_types.type == r.header['PatternType']]
                 pattern_id = int(patt_type.id.iloc[0])
             except IndexError:
-                logging.info('{} not found. Pattern type invalid'.format(r.header['PatternType']))
+                logging.error('{} not found. Pattern type invalid'.format(r.header['PatternType']))
                 return
 
             r.header['PatternType'] = pattern_id
@@ -85,9 +85,8 @@ def parse_radial_file(radial_file):
                 r.diags_radial = r.diags_radial.drop(['%%', 'TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC'], axis=1)
                 r.diags_radial['id_site'] = r.header['Site']
                 r.diags_radial['id_radial'] = radial_id
-
                 dbr.upload_diagnostics(session, RadialDiagnostics, r.diags_radial, r.header['Site'])
-                logging.info('{} - Table `{}` - Diagnostic data uploaded '.format(r.header['filename'], 'hfrRadialDiagnostics'))
+                logging.debug('{} - Table `{}` - Diagnostic data uploaded '.format(r.header['filename'], 'hfrRadialDiagnostics'))
             except:
                 pass
 
@@ -97,11 +96,12 @@ def parse_radial_file(radial_file):
                 r.diags_hardware['id_site'] = r.header['Site']
                 r.diags_hardware['id_radial'] = radial_id
                 dbr.upload_diagnostics(session, HardwareDiagnostics, r.diags_hardware, r.header['Site'])
+                logging.debug('{} - Table `{}` - Diagnostic data uploaded '.format(r.header['filename'], 'hfrHardwareDiagnostics'))
             except:
                 pass
-            return 'File uploaded successfully'
+            logging.info('{} - File uploaded successfully'.format(radial_file))
         except:
-            return 'File failed to upload'
+            logging.error('{} - File failed to upload'.format(radial_file))
 
 
 if __name__ == '__main__':
@@ -123,5 +123,4 @@ if __name__ == '__main__':
         recents = sorted(tdf['path'].tolist())
 
         for recent in recents:
-            result = parse_radial_file(recent)
-            logging.info('{} - {}'.format(recent, result))
+            parse_radial_file(recent)

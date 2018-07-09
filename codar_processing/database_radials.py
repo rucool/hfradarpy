@@ -70,5 +70,5 @@ def upload_radial_header(session, header):
     session.add(result)
     session.commit()
     session.flush()
-    logging.info('{} - Table `hfrRadialFilesMetadata` - Radial header upload complete.'.format(header['filename']))
+    logging.debug('{} - Table `hfrRadialFilesMetadata` - Radial header upload complete.'.format(header['filename']))
     return result.id
