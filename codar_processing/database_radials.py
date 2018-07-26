@@ -1,6 +1,6 @@
 import logging
 from configs.database_tables import *
-from sqlalchemy import exists
+# from sqlalchemy import exists
 
 logger = logging.getLogger(__name__)
 
@@ -28,34 +28,34 @@ def update_latest_radials(session, filename, timestamp, site_id, radial_id):
         session.add(result)
         session.commit()
         session.flush()
-        logging.info('{} - Table `hfrLatestRadials` - Added siteId: {} and latest timestamp: {}'.format(filename, site_id, timestamp))
+        logging.debug('{} - Table `hfrLatestRadials` - Added siteId: {} and latest timestamp: {}'.format(filename, site_id, timestamp))
     elif result:
         if result.TimeStamp < timestamp:
             result.TimeStamp = timestamp
             result.radialId = radial_id
             result.filename = filename
             session.commit()
-            logging.info('{} - Table `hfrLatestRadials` - Updated siteId: {} to latest timestamp: {}'.format(filename, site_id, timestamp))
+            logging.debug('{} - Table `hfrLatestRadials` - Updated siteId: {} to latest timestamp: {}'.format(filename, site_id, timestamp))
 
 
 def upload_diagnostics(session, table_object, data, id):
     data['datetime'] = data['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
     data = data.where(data.notnull(), None)
-    bulk_list = []
-    for row in data.itertuples():
-        (ret,), = session.query(exists().where(table_object.datetime == row.datetime).where(table_object.id_site == id))
-        if ret:
-            continue
-        line_dict = row._asdict()
-        line_dict.pop('Index', None)
-        line_ref = table_object(**line_dict)
-        bulk_list.append(line_ref)
+    # bulk_list = []
+    # for row in data.itertuples():
+    #     (ret,), = session.query(exists().where(table_object.datetime == row.datetime).where(table_object.id_site == id))
+    #     if ret:
+    #         continue
+    #     line_dict = row._asdict()
+    #     line_dict.pop('Index', None)
+    #     line_ref = table_object(**line_dict)
+    #     bulk_list.append(line_ref)
+    #
+    # session.bulk_save_objects(bulk_list)
+    # session.commit()
+    # session.flush()
 
-    session.bulk_save_objects(bulk_list)
-    session.commit()
-    session.flush()
-
-    # data.to_sql(table_name, con=engine, if_exists='append', index=False)
+    data.to_sql(table_object.__tablename__, con=session.bind, if_exists='append', index=False)
     return
 
 

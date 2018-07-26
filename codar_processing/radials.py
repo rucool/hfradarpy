@@ -1,4 +1,3 @@
-import copy
 import datetime as dt
 import logging
 import os
@@ -17,7 +16,6 @@ class Radial(LLUVParser):
 
     def __init__(self, fname):
         LLUVParser.__init__(self, fname)
-        # tdf = tdf.replace(999, np.nan)
 
         for key in self.tables.keys():
             if self.is_valid(key):
@@ -33,15 +31,13 @@ class Radial(LLUVParser):
                     table['data'].insert(0, '%%', '%')
                     self.diags_hardware = table['data']
                     self.diags_hardware['datetime'] = self.diags_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+        # print('test')
 
     def file_type(self):
         """Return a string representing the type of file this is."""
         return 'radial'
 
-    def validate_key(self, key):
-        return
-
-    def validate_header(self):
+    def clean_header(self):
         """
         Clean up the radial header dictionary so that you can upload it to the HFR MySQL Database.
         :return:
@@ -163,7 +159,6 @@ class Radial(LLUVParser):
         """
 
         if not self.is_valid():
-            # logging.error("Could not export ASCII data, the input file was invalid.)
             raise ValueError("Could not export ASCII data, the input file was invalid.")
 
         if os.path.isfile(filename):

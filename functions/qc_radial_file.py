@@ -30,17 +30,18 @@ def main(radial_file, save_path, qc_values):
         logging.error('{} - {}'.format(radial_file, err))
         return
 
-    # run high frequencvy radar qartod tests on open radial file
-    r.qc_qartod_location()
-    r.qc_qartod_speed(qc_values['radial_max_speed'])
-    r.qc_qartod_radial_count(qc_values['radial_min_count'], qc_values['radial_low_count'])
+    if r.is_valid():
+        # run high frequencvy radar qartod tests on open radial file
+        r.qc_qartod_location()
+        r.qc_qartod_speed(qc_values['radial_max_speed'])
+        r.qc_qartod_radial_count(qc_values['radial_min_count'], qc_values['radial_low_count'])
 
-    # Export radial file to either a radial or netcdf
-    try:
-        r.export(os.path.join(save_path, r.file_name), 'radial')
-    except ValueError as err:
-        logging.error('{} - {}'.format(radial_file, err))
-        pass
+        # Export radial file to either a radial or netcdf
+        try:
+            r.export(os.path.join(save_path, r.file_name), 'radial')
+        except ValueError as err:
+            logging.error('{} - {}'.format(radial_file, err))
+            pass
 
 
 if __name__ == '__main__':
