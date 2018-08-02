@@ -17,7 +17,7 @@
 % availabe options type "help radials2totals.m" If the argument inputs for 
 % radials2totals.m are not entered by the user, the script will use the 
 % default settings which are preset in order to generate totals for the 
-% past twelce hours on arctic.
+% past twelve hours on arctic.
 % 
 %
 % Created by Mike Smith (michaesm@marine.rutgers.edu) on 3/23/2012.
@@ -26,24 +26,40 @@
 % See also radials2totals, CODAR_configuration, CODAR_driver_totals
 addpath(genpath('.'))
 
-% Proceed to total generation by calling generate_totals. This also updates
-% the codar database
-totals_reprocess(2,...
-    'start_time', datenum(2016,1,23,16,0,0),...
-    'end_time', datenum(2016,1,23,16,0,0),...
-    'region', 7,...
-    'radial_directory', '/Users/mikesmith/Documents/projects/bpu/radials/fairways_south/',...
-    'save_directory', '/Users/mikesmith/Documents/projects/bpu/totals/fairways_south/');
+start_time = datenum(2016,1,1,0,0,0);
+end_time = datenum(2016,2,1,0,0,0);
+system_type = 2;
+radial_directory = '/Users/mikesmith/Documents/projects/bpu/radials/hudson_south/';
+save_directory = '/Users/mikesmith/Documents/projects/bpu/totals/domain/';
 
-% Close MySQL Connection
-% close(database_session);
+% Build hourly timestamps
+time_steps = end_time:-1/24:start_time;  
+conf = codar_configuration(system_type, radial_directory, save_directory);
+
+for x = 1:1:length(time_steps)
+    % Process current timestamp
+    fprintf(1, '****************************************\n');
+    fprintf(1, '  Current time: %s\n',datestr(now));
+    fprintf(1, '  Processing data time: %s\n',datestr(time_steps(x),0));
+
+    % Hourly Total Creation
+    try
+        fprintf(1, 'Starting Totals_driver\n');
+        [procFname] = codar_driver_totals(time_steps(x), conf, system_type);
+    catch
+        fprintf(1, 'Driver_totals failed because: \n');
+        res = lasterror;                
+        fprintf(1, '%s\n',res.message);
+    end
+end
+
 fprintf(1, 'Total Creation Finished.\n');
 fprintf(1, '---------------------------------------------------------------------------\n');
 
-% Display script ending time and elapsed time to file.
-% end_time = now;
-% fprintf(1, 'reprocess.m End Time: %s \n', datestr(end_time));
-% end_time = abs(end_time(floor(datevec(start_time)), floor(datevec(end_time))));
-% elapsed_minutes = floor(end_time/60);
-% elapsed_seconds = mod(end_time, 60);
-% fprintf(1, 'Elapsed time is %s minutes and %s seconds.\n', num2str(elapsed_minutes), num2str(elapsed_seconds));
+Display script ending time and elapsed time to file.
+end_time = now;
+fprintf(1, 'reprocess.m End Time: %s \n', datestr(end_time));
+end_time = abs(end_time(floor(datevec(start_time)), floor(datevec(end_time))));
+elapsed_minutes = floor(end_time/60);
+elapsed_seconds = mod(end_time, 60);
+fprintf(1, 'Elapsed time is %s minutes and %s seconds.\n', num2str(elapsed_minutes), num2str(elapsed_seconds));

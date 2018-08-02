@@ -33,7 +33,7 @@ mand_params = { 'Radials.Sites', 'Radials.Types', 'Radials.RangeLims', ...
                 'Radials.BearLims', 'Totals.DomainName', 'Totals.GridFile' };
             
 % Check if mandatory input arguments are satisfied
-% conf = checkParamValInputArgs( conf, {}, mand_params, varargin{:} );
+conf = checkParamValInputArgs( conf, {}, mand_params, varargin{:} );
 
 % Load Radial Data
 fprintf(1, 'Loading Radial Data. \n');
@@ -198,11 +198,3 @@ if ~exist( tdn, 'dir' )
   mkdir(tdn);
 end
 save(fullfile(tdn,tfn{1}),'conf','missingRadials','RTUV','TUVorig','TUV')
-
-% Check if Ascii Directory exists. If not, create it.
-if ~exist( conf.OI.AsciiDir, 'dir' )
-  mkdir(conf.OI.AsciiDir);
-end
-
-% Save the totals to ASCII files
-fname = TUVstruct2ascii_OI(TUV,conf.OI.AsciiDir);

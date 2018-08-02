@@ -1,19 +1,5 @@
-function [TOI,R] = makeTotalsOI(R,systemType,varargin)
-%
-% Rutgers HFRadar Processing Toolbox
-%
-% Usage: makeTotalsOI(R, varargin)
-%
-% Generates OI total vectors from radials
-%
-% First, we fill the TUV data structure with basic data and metadata. 
-% Then we find other radial grid points that are within the spatial 
-% threshold of each grid point. Finally, we loop over each timestep and
-% grid point and create the OI total vector with tuvOI_Ellipse. The total
-% vector components u,v, and their error components are placed into a
-% structured array which is output from this function as TOI, and R.
-%
-% See also tuvOI_Ellipse, CODAR_driver_totals
+function [TOI,R] = makeTotalsOI(R,varargin)
+% MAKETOTALSOI  Generates total vectors from OI of radials 
 
 
 tic % Calculate total time.
@@ -26,10 +12,15 @@ disp( [ 'Starting ' mfilename ' @ ' datestr(now) ] );
 % Default parameters
 p.MinNumSites = 2;
 p.MinNumRads = 3;
+%p.WhichErrors = {'GDOPMaxOrthog','GDOP','FitDif'};
 p.DomainName = '';
 p.CreationInfo = '';
 p.verbosity = 24;
-p.normr = 2; % normalized radius 
+
+p.normr = 2; % normalized radius  %new for OI
+%The search radius is a function of the decorrelation scale.  You could theoretically %throw every possible radial data point into the calculation of each grid point, but %this would be incredibly inefficient, as most points greater than a few decorrelation %lengths away have Infinitesimally small weights.  We currently use a factor of 2, %such that a radial measurement must be within
+%     sqrt( (x/sx)^2 + (y/sy)^2 ) < 2
+%where sx an sy are the X and Y decorrelation scales and x and y are the distances %from the model grid point.  If you do the math backwards and assume sx=sy, you get my %estimate of 37km above.
 
 % Mandatory parameters
 mand_params = { 'Grid', 'TimeStamp', 'mdlvar', 'errvar', 'sx', 'sy', 'tempthresh' };
@@ -103,6 +94,9 @@ TOI.ProcessingSteps{end+1} = mfilename;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 err = TUVerrorstruct( [ DIM ] );
 err.Type = 'OIuncert';
+% Remove unused arrays
+%err.TotalErrors = deal([]);
+%err.TotalErrorsUnits = deal('NA');
 
 TOI.ErrorEstimates = err;
 clear err
@@ -129,7 +123,7 @@ disp( [ 'Starting radial points to grid points distance calculations @ ' ...
 sds = {};
 for j = goodRADs
   for k = 1:size(TOI.LonLat,1)
-    [dx,dy] = lonlat2km( TOI.LonLat(k,1),TOI.LonLat(k,2), R(j).LonLat(:,1),R(j).LonLat(:,2));
+    [dx,dy] = lonlat2km( TOI.LonLat(k,1),TOI.LonLat(k,2), R(j).LonLat(:,1),R(j).LonLat(:,2));  %finds distance in x and y with lonlat2km instead of using lonlatdist
     sds{ j, k } = find( sqrt((dx/p.sx).^2 + (dy/p.sy).^2) < p.normr );
   end    
 end
@@ -158,7 +152,7 @@ for i = 1:length(p.TimeStamp)
   
   % Now loop over grid points and pull out pieces of interest
   for k = 1:size(TOI.LonLat,1)
-    rad_speed = []; rad_angle = []; rad_lonlat=[];
+    rad_speed = []; rad_angle = []; rad_lonlat=[];  %new in OI code
     sc = 0; ns = 0;
     
     for j = goodRADs
@@ -191,7 +185,7 @@ for i = 1:length(p.TimeStamp)
         end
       end
 
-    end %j = goodRADs 
+    end %j = goodRADs
     
     TOI.OtherMatrixVars.([mfilename '_TotalsSiteCode'])(k,i) = sc;
     TOI.OtherMatrixVars.([mfilename '_TotalsNumRads'])(k,i) = size(rad_speed,1);
@@ -200,19 +194,9 @@ for i = 1:length(p.TimeStamp)
     if ns < p.MinNumSites, continue, end
     if size(rad_speed,1) < p.MinNumRads, continue, end
     
-    if systemType == 2;
-        % Pick out grid points and rotational angles that lie in four 
-        % pre-determined regions
-        [~, rotAng] = MABregions(TOI.LonLat(k,1),  TOI.LonLat(k,2));
-
-        % Generate total vector
-        [u,v,xi] = tuvOI_Ellipse(rad_speed,rad_angle, rad_lonlat, TOI.LonLat(k,:), ...
-                  p.mdlvar, p.errvar, p.sx, p.sy, rotAng, 1); 
-    else
-        [u,v,xi] = tuvOI(rad_speed, rad_angle, rad_lonlat, TOI.LonLat(k,:), ...
-            p.mdlvar, p.errvar, p.sx, p.sy, 1); 
-    end
-          
+    % All looks good - generate total
+    [u,v,xi] = tuvOI(rad_speed,rad_angle, rad_lonlat, TOI.LonLat(k,:), ...
+              p.mdlvar, p.errvar, p.sx, p.sy, 1); 
     TOI.U(k,i) = u;
     TOI.V(k,i) = v;    
     TOI.ErrorEstimates.Uerr(k,i) = xi(1,1);
@@ -220,9 +204,9 @@ for i = 1:length(p.TimeStamp)
     TOI.ErrorEstimates.UVCovariance(k,i) = xi(1,2);
     TOI.ErrorEstimates.TotalErrors(k,i) = sqrt(xi(1,1).^2 + xi(2,2).^2);
         
-  end 
+  end %k = 1:size(TOI.LonLat,1)
   
-end 
+end %i = 1:length(p.TimeStamp)
 
 % Finished
 disp( [ 'Finishing ' mfilename ' @ ' datestr(now) ] );

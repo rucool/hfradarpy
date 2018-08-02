@@ -6,6 +6,7 @@
 """
 import codar_processing.database_common as db
 import codar_processing.database_radials as dbr
+# import concurrent.futures
 import datetime as dt
 import logging
 import os
@@ -82,124 +83,128 @@ def parse_radial_file(radial_file):
 
             try:
                 # Upload radial diagnostic data
-                r.diags_radial = r.diags_radial.drop(['%%', 'TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC'], axis=1)
+                r.diags_radial = r.diags_radial.drop(['%%', 'TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC'],
+                                                     axis=1)
                 r.diags_radial['id_site'] = r.header['Site']
                 r.diags_radial['id_radial'] = radial_id
-
                 dbr.upload_diagnostics(session, RadialDiagnostics, r.diags_radial, r.header['Site'])
-                logging.info('{} - Table `{}` - Diagnostic data uploaded '.format(r.header['filename'], 'hfrRadialDiagnostics'))
+                logging.debug(
+                    '{} - Table `{}` - Diagnostic data uploaded '.format(r.header['filename'], 'hfrRadialDiagnostics'))
             except:
                 pass
 
             try:
                 # Upload hardware diagnostic data
-                r.diags_hardware = r.diags_hardware.drop(['%%', 'TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC'], axis=1)
+                r.diags_hardware = r.diags_hardware.drop(['%%', 'TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC'],
+                                                         axis=1)
                 r.diags_hardware['id_site'] = r.header['Site']
                 r.diags_hardware['id_radial'] = radial_id
                 dbr.upload_diagnostics(session, HardwareDiagnostics, r.diags_hardware, r.header['Site'])
+                logging.debug('{} - Table `{}` - Diagnostic data uploaded '.format(r.header['filename'],
+                                                                                   'hfrHardwareDiagnostics'))
             except:
                 pass
-            return 'File uploaded successfully'
+            logging.info('{} - File uploaded successfully'.format(radial_file))
         except:
-            return 'File failed to upload'
+            logging.error('{} - File failed to upload'.format(radial_file))
 
 
 if __name__ == '__main__':
-    time_delta = 30  # days
-    paths = ['/home/codaradm/data/radials/AMAG',
-             '/home/codaradm/data/radials/AMHE',
-             '/home/codaradm/data/radials/ASSA',
-             '/home/codaradm/data/radials/ASVT',
-             '/home/codaradm/data/radials/BELM',
-             '/home/codaradm/data/radials/BEOP',
-             '/home/codaradm/data/radials/BESE',
-             '/home/codaradm/data/radials/BESP',
-             '/home/codaradm/data/radials/BISL',
-             '/home/codaradm/data/radials/BLCK',
-             '/home/codaradm/data/radials/BRAD',
-             '/home/codaradm/data/radials/BRBR',
-             '/home/codaradm/data/radials/BRBY',
-             '/home/codaradm/data/radials/BRIG',
-             '/home/codaradm/data/radials/BRLO',
-             '/home/codaradm/data/radials/BRMR',
-             '/home/codaradm/data/radials/BRNT',
-             '/home/codaradm/data/radials/BRRA',
-             '/home/codaradm/data/radials/BRSE',
-             '/home/codaradm/data/radials/BRSP',
-             '/home/codaradm/data/radials/BRWI',
-             '/home/codaradm/data/radials/BRZY',
-             '/home/codaradm/data/radials/BSWP',
-             '/home/codaradm/data/radials/CAPE',
-             '/home/codaradm/data/radials/CBBT',
-             '/home/codaradm/data/radials/CDDO',
-             '/home/codaradm/data/radials/CEDR',
-             '/home/codaradm/data/radials/CLUB',
-             '/home/codaradm/data/radials/CMPT',
-             '/home/codaradm/data/radials/CORE',
-             '/home/codaradm/data/radials/CPHN',
-             '/home/codaradm/data/radials/CStM',
-             '/home/codaradm/data/radials/DUCK',
-             '/home/codaradm/data/radials/ERRA',
-             '/home/codaradm/data/radials/FARO',
-             '/home/codaradm/data/radials/GCAP',
-             '/home/codaradm/data/radials/GMNB',
-             '/home/codaradm/data/radials/GRNI',
-             '/home/codaradm/data/radials/HATY',
-             '/home/codaradm/data/radials/HEAM',
-             '/home/codaradm/data/radials/HEMP',
-             '/home/codaradm/data/radials/HLPN',
-             '/home/codaradm/data/radials/HOMR',
-             '/home/codaradm/data/radials/HOOK',
-             '/home/codaradm/data/radials/HOSR',
-             '/home/codaradm/data/radials/JOUB',
-             '/home/codaradm/data/radials/LISL',
-             '/home/codaradm/data/radials/LOBR',
-             '/home/codaradm/data/radials/LOHO',
-             '/home/codaradm/data/radials/LOOK',
-             '/home/codaradm/data/radials/LOVE',
-             '/home/codaradm/data/radials/LPWR',
-             '/home/codaradm/data/radials/MABO',
-             '/home/codaradm/data/radials/METS',
-             '/home/codaradm/data/radials/MISQ',
-             '/home/codaradm/data/radials/MNTK',
-             '/home/codaradm/data/radials/MRAM',
-             '/home/codaradm/data/radials/MRCH',
-             '/home/codaradm/data/radials/MRHE',
-             '/home/codaradm/data/radials/MVBL',
-             '/home/codaradm/data/radials/MVCO',
-             '/home/codaradm/data/radials/MVNA',
-             '/home/codaradm/data/radials/NANT',
-             '/home/codaradm/data/radials/NAUS',
-             '/home/codaradm/data/radials/OLDB',
-             '/home/codaradm/data/radials/P125',
-             '/home/codaradm/data/radials/P313',
-             '/home/codaradm/data/radials/PALM',
-             '/home/codaradm/data/radials/POOL',
-             '/home/codaradm/data/radials/PORT',
-             '/home/codaradm/data/radials/POSI',
-             '/home/codaradm/data/radials/PYFA',
-             '/home/codaradm/data/radials/PYFC',
-             '/home/codaradm/data/radials/PYMA',
-             '/home/codaradm/data/radials/RATH',
-             '/home/codaradm/data/radials/RAWO',
-             '/home/codaradm/data/radials/SEAB',
-             '/home/codaradm/data/radials/SEOP',
-             '/home/codaradm/data/radials/SESP',
-             '/home/codaradm/data/radials/SET1',
-             '/home/codaradm/data/radials/SILD',
-             '/home/codaradm/data/radials/SLTR',
-             '/home/codaradm/data/radials/SPAD',
-             '/home/codaradm/data/radials/SPNT',
-             '/home/codaradm/data/radials/SPOP',
-             '/home/codaradm/data/radials/SPRK',
-             '/home/codaradm/data/radials/SQUB',
-             '/home/codaradm/data/radials/STLI',
-             '/home/codaradm/data/radials/SUNS',
-             '/home/codaradm/data/radials/TEST',
-             '/home/codaradm/data/radials/VIEW',
-             '/home/codaradm/data/radials/WAUW',
-             '/home/codaradm/data/radials/WILD',
-             '/home/codaradm/data/radials/WOOD']
+    time_delta = 190  # days
+    paths = ['/Volumes/home/codaradm/data/radials/AMAG',
+             '/Volumes/home/codaradm/data/radials/AMHE',
+             '/Volumes/home/codaradm/data/radials/ASSA',
+             '/Volumes/home/codaradm/data/radials/ASVT',
+             '/Volumes/home/codaradm/data/radials/BELM',
+             '/Volumes/home/codaradm/data/radials/BEOP',
+             '/Volumes/home/codaradm/data/radials/BESE',
+             '/Volumes/home/codaradm/data/radials/BESP',
+             '/Volumes/home/codaradm/data/radials/BISL',
+             '/Volumes/home/codaradm/data/radials/BLCK',
+             '/Volumes/home/codaradm/data/radials/BRAD',
+             '/Volumes/home/codaradm/data/radials/BRBR',
+             '/Volumes/home/codaradm/data/radials/BRBY',
+             '/Volumes/home/codaradm/data/radials/BRIG',
+             '/Volumes/home/codaradm/data/radials/BRLO',
+             '/Volumes/home/codaradm/data/radials/BRMR',
+             '/Volumes/home/codaradm/data/radials/BRNT',
+             '/Volumes/home/codaradm/data/radials/BRRA',
+             '/Volumes/home/codaradm/data/radials/BRSE',
+             '/Volumes/home/codaradm/data/radials/BRSP',
+             '/Volumes/home/codaradm/data/radials/BRWI',
+             '/Volumes/home/codaradm/data/radials/BRZY',
+             '/Volumes/home/codaradm/data/radials/BSWP',
+             '/Volumes/home/codaradm/data/radials/CAPE',
+             '/Volumes/home/codaradm/data/radials/CBBT',
+             '/Volumes/home/codaradm/data/radials/CDDO',
+             '/Volumes/home/codaradm/data/radials/CEDR',
+             '/Volumes/home/codaradm/data/radials/CLUB',
+             '/Volumes/home/codaradm/data/radials/CMPT',
+             '/Volumes/home/codaradm/data/radials/CORE',
+             '/Volumes/home/codaradm/data/radials/CPHN',
+             '/Volumes/home/codaradm/data/radials/CStM',
+             '/Volumes/home/codaradm/data/radials/DUCK',
+             '/Volumes/home/codaradm/data/radials/ERRA',
+             '/Volumes/home/codaradm/data/radials/FARO',
+             '/Volumes/home/codaradm/data/radials/GCAP',
+             '/Volumes/home/codaradm/data/radials/GMNB',
+             '/Volumes/home/codaradm/data/radials/GRNI',
+             '/Volumes/home/codaradm/data/radials/HATY',
+             '/Volumes/home/codaradm/data/radials/HEAM',
+             '/Volumes/home/codaradm/data/radials/HEMP',
+             '/Volumes/home/codaradm/data/radials/HLPN',
+             '/Volumes/home/codaradm/data/radials/HOMR',
+             '/Volumes/home/codaradm/data/radials/HOOK',
+             '/Volumes/home/codaradm/data/radials/HOSR',
+             '/Volumes/home/codaradm/data/radials/JOUB',
+             '/Volumes/home/codaradm/data/radials/LISL',
+             '/Volumes/home/codaradm/data/radials/LOBR',
+             '/Volumes/home/codaradm/data/radials/LOHO',
+             '/Volumes/home/codaradm/data/radials/LOOK',
+             '/Volumes/home/codaradm/data/radials/LOVE',
+             '/Volumes/home/codaradm/data/radials/LPWR',
+             '/Volumes/home/codaradm/data/radials/MABO',
+             '/Volumes/home/codaradm/data/radials/METS',
+             '/Volumes/home/codaradm/data/radials/MISQ',
+             '/Volumes/home/codaradm/data/radials/MNTK',
+             '/Volumes/home/codaradm/data/radials/MRAM',
+             '/Volumes/home/codaradm/data/radials/MRCH',
+             '/Volumes/home/codaradm/data/radials/MRHE',
+             '/Volumes/home/codaradm/data/radials/MVBL',
+             '/Volumes/home/codaradm/data/radials/MVCO',
+             '/Volumes/home/codaradm/data/radials/MVNA',
+             '/Volumes/home/codaradm/data/radials/NANT',
+             '/Volumes/home/codaradm/data/radials/NAUS',
+             '/Volumes/home/codaradm/data/radials/OLDB',
+             '/Volumes/home/codaradm/data/radials/P125',
+             '/Volumes/home/codaradm/data/radials/P313',
+             '/Volumes/home/codaradm/data/radials/PALM',
+             '/Volumes/home/codaradm/data/radials/POOL',
+             '/Volumes/home/codaradm/data/radials/PORT',
+             '/Volumes/home/codaradm/data/radials/POSI',
+             '/Volumes/home/codaradm/data/radials/PYFA',
+             '/Volumes/home/codaradm/data/radials/PYFC',
+             '/Volumes/home/codaradm/data/radials/PYMA',
+             '/Volumes/home/codaradm/data/radials/RATH',
+             '/Volumes/home/codaradm/data/radials/RAWO',
+             '/Volumes/home/codaradm/data/radials/SEAB',
+             '/Volumes/home/codaradm/data/radials/SEOP',
+             '/Volumes/home/codaradm/data/radials/SESP',
+             '/Volumes/home/codaradm/data/radials/SET1',
+             '/Volumes/home/codaradm/data/radials/SILD',
+             '/Volumes/home/codaradm/data/radials/SLTR',
+             '/Volumes/home/codaradm/data/radials/SPAD',
+             '/Volumes/home/codaradm/data/radials/SPNT',
+             '/Volumes/home/codaradm/data/radials/SPOP',
+             '/Volumes/home/codaradm/data/radials/SPRK',
+             '/Volumes/home/codaradm/data/radials/SQUB',
+             '/Volumes/home/codaradm/data/radials/STLI',
+             '/Volumes/home/codaradm/data/radials/SUNS',
+             '/Volumes/home/codaradm/data/radials/TEST',
+             '/Volumes/home/codaradm/data/radials/VIEW',
+             '/Volumes/home/codaradm/data/radials/WAUW',
+             '/Volumes/home/codaradm/data/radials/WILD',
+             '/Volumes/home/codaradm/data/radials/WOOD']
 
     now = dt.datetime.now()
     ago = now - dt.timedelta(days=time_delta)
@@ -219,7 +224,7 @@ if __name__ == '__main__':
 
         # TODO
         # Add multiprocessing functionality that actually works.....
-        # max_workers = 16
+        # max_workers = 8
         # with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         #     for recent, result in zip(recents, executor.map(parse_radial_file, recents)):
-        #         logging.info('{} - {}'.format(recent, result))
+        #         logging.info('success')

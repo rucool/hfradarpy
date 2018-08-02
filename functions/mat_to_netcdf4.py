@@ -367,7 +367,7 @@ if __name__ == '__main__':
 
     # Define test inputs
     files = sorted(glob.glob('../data/totals/mat/*.mat'))
-    grid_file = '../totals/grid_files/OI_6km_Grid_Extend.txt'
+    grid_file = '../totals/grid_files/maracoos_grid_6km_extended.txt'
     save_dir = '../data/totals/nc'
     threshold = dict(u_err=0.6, v_err=0.6, uv_covariance=0.6)
 
