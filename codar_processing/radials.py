@@ -1,7 +1,13 @@
 import datetime as dt
 import logging
+import numpy as np
+import re
 import os
+import pandas as pd
+import xarray as xr
 from codar_processing.common import LLUVParser, create_dir
+from codar_processing.calc import reckon, gridded_index
+
 
 logger = logging.getLogger(__name__)
 
@@ -13,25 +19,70 @@ class Radial(LLUVParser):
     This class should be used when loading a CODAR radial (.ruv) file. This class utilizes the generic LLUV class from
     ~/codar_processing/common.py in order to load CODAR Radial files
     """
-
-    def __init__(self, fname):
+    def __init__(self, fname, replace_invalid=True, n_dimensional=True):
+        coords = ('time', 'range', 'bearing')
         LLUVParser.__init__(self, fname)
+        self.ds = xr.Dataset()
 
-        for key in self.tables.keys():
-            if self.is_valid(key):
-                table = self.tables[key]
-                if 'LLUV' in table['TableType']:
-                    table['data'].insert(0, '%%', '')
-                    self.data = table['data']
-                elif 'rads' in table['TableType']:
-                    table['data'].insert(0, '%%', '%')
-                    self.diags_radial = table['data']
-                    self.diags_radial['datetime'] = self.diags_radial[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
-                elif 'rcvr' in table['TableType']:
-                    table['data'].insert(0, '%%', '%')
-                    self.diags_hardware = table['data']
-                    self.diags_hardware['datetime'] = self.diags_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
-        # print('test')
+        for key in self._tables.keys():
+            table = self._tables[key]
+            if 'LLUV' in table['TableType']:
+                # table['data'].insert(0, '%%', '')
+                self.data = table['data']
+            elif 'rads' in table['TableType']:
+                # table['data'].insert(0, '%%', '%')
+                self.diags_radial = table['data']
+                self.diags_radial['datetime'] = self.diags_radial[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+            elif 'rcvr' in table['TableType']:
+                # table['data'].insert(0, '%%', '%')
+                self.diags_hardware = table['data']
+                self.diags_hardware['datetime'] = self.diags_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+
+        if replace_invalid:
+            self.replace_invalid_values()
+
+        if n_dimensional:
+            # range cells in this radial
+            range_dim = np.arange(self.data['RNGE'].min(),
+                                  self.data['RNGE'].max() + float(self._metadata['RangeResolutionKMeters']),
+                                  float(self._metadata['RangeResolutionKMeters']))
+
+            # Clean radial header
+            self.clean_header()
+
+            # bearing_dim
+            bearing_dim = np.arange(0, 360 + float(self._metadata['AngularResolution']), self._metadata['AngularResolution'])
+
+            # create radial grid
+            [bearing, ranges] = np.meshgrid(bearing_dim, range_dim)
+
+            # calculate lat/lons from origin, bearing, and ranges
+            lonlat = [float(x) for x in re.findall(r"[-+]?\d*\.\d+|\d+", self._metadata['Origin'])]
+
+            new_lon, new_lat = reckon(lonlat[0], lonlat[1], bearing, ranges)
+
+            # create dictionary containing variables from dataframe in the shape of radial grid
+            d = {key: np.tile(np.nan, bearing.shape) for key in self.data.keys()}
+
+            # find grid indices from radial grid (bearing, ranges)
+            x_ind, y_ind = gridded_index(bearing, ranges, self.data['BEAR'], self.data['RNGE'])
+
+            for k, v in d.items():
+                v[(y_ind, x_ind)] = self.data[k]
+                d[k] = v
+            # self.data = self.data.to_xarray()
+
+            self.ds['lon'] = (('range', 'bearing'), new_lon)
+            self.ds['lat'] = (('range', 'bearing'), new_lat)
+
+            # expand variables for time and add to dataset
+            self.ds['u'] = (coords, np.expand_dims(np.float32(d['VELU']), axis=0))
+            self.ds['v'] = (coords, np.expand_dims(np.float32(d['VELV']), axis=0))
+
+            # Add coordinate variables to dataset
+            self.ds.coords['time'] = pd.date_range(self._metadata['TimeStamp'], periods=1)
+            self.ds.coords['bearing'] = bearing_dim
+            self.ds.coords['range'] = range_dim
 
     def file_type(self):
         """Return a string representing the type of file this is."""
@@ -54,50 +105,50 @@ class Radial(LLUVParser):
                 'TableRows', 'TableStart', 'CurrentVelocityLimit']
 
         # TableColumnTypes
-        key_list = list(self.header.keys())
+        key_list = list(self._metadata.keys())
         for key in key_list:
             if not key in keep:
-                del self.header[key]
+                del self._metadata[key]
 
-        for k, v in self.header.items():
+        for k, v in self._metadata.items():
             if 'Site' in k:
-                self.header[k] = ''.join(e for e in v if e.isalnum())
+                self._metadata[k] = ''.join(e for e in v if e.isalnum())
             elif k in ('TimeStamp', 'PatternDate'):
                 t_list = [int(s) for s in v.split()]
-                self.header[k] = dt.datetime(*t_list)
+                self._metadata[k] = dt.datetime(*t_list)
             elif 'TimeZone' in k:
-                self.header[k] = v.split('"')[1]
+                self._metadata[k] = v.split('"')[1]
             elif 'TableColumnTypes' in k:
-                self.header[k] = ' '.join([x.strip() for x in v.strip().split(' ')])
+                self._metadata[k] = ' '.join([x.strip() for x in v.strip().split(' ')])
             elif 'Origin' in k:
-                self.header[k] = v.lstrip()
+                self._metadata[k] = v.lstrip()
             elif k in ('RangeStart', 'RangeEnd', 'AntennaBearing', 'ReferenceBearing', 'AngularResolution', 'SpatialResolution',
                        'FirstOrderMethod', 'BraggSmoothingPoints', 'BraggHasSecondOrder', 'MergedCount',
                        'RadialMinimumMergePoints', 'FirstOrderCalc', 'SpectraRangeCells', 'SpectraDopplerCells',
                        'TableColumns', 'TableRows',  'PatternResolution', 'CurrentVelocityLimit', 'TimeCoverage'):
                 try:
-                    self.header[k] = int(v)
+                    self._metadata[k] = int(v)
                 except ValueError:
                     temp = v.split(' ')[0]
                     try:
-                        self.header[k] = int(temp)
+                        self._metadata[k] = int(temp)
                     except ValueError:
-                        self.header[k] = int(temp.split('.')[0])
+                        self._metadata[k] = int(temp.split('.')[0])
             elif k in ('RangeResolutionKMeters', 'CTF', 'TransmitCenterFreqMHz', 'DopplerResolutionHzPerBin',
                        'RadialBraggPeakDropOff', 'RadialBraggPeakNull', 'RadialBraggNoiseThreshold', 'TransmitSweepRateHz',
                        'TransmitBandwidthKHz'):
                 try:
-                    self.header[k] = float(v)
+                    self._metadata[k] = float(v)
                 except ValueError:
-                    self.header[k] = float(v.split(' ')[0])
+                    self._metadata[k] = float(v.split(' ')[0])
             else:
                 continue
 
         required = ['Origin', 'TransmitCenterFreqMHz']
-        present_keys = self.header.keys()
+        present_keys = self._metadata.keys()
         for key in required:
             if key not in present_keys:
-                self.header[key] = None
+                self._metadata[key] = None
 
     # def create_nc(self, filename):
     #     """
@@ -106,49 +157,49 @@ class Radial(LLUVParser):
     #     :return:
     #     """
 
-    def create_ruv(self, filename):
-        """
-        Create a CODAR Radial (.ruv) file from radial instance
-        :param filename: User defined filename of radial file you want to save
-        :return:
-        """
-        create_dir(os.path.dirname(filename))
-
-        with open(filename, 'w') as f:
-            # Write header
-            for header_key, header_value in self.header.items():
-                f.write('%{}: {}\n'.format(header_key, header_value))
-
-            # Write data tables. Anything beyond the first table is commented out.
-            for table in self.tables.keys():
-                for table_key, table_value in self.tables[table].items():
-                    if table_key is not 'data':
-                        f.write('%{}: {}\n'.format(table_key, table_value))
-
-                if 'datetime' in self.tables[table]['data'].keys():
-                    self.tables[table]['data'] = self.tables[table]['data'].drop(['datetime'], axis=1)
-
-                # Fill NaN with 999.000 which is the standard fill value for codar lluv files
-                if table == '1':
-                    self.data = self.data.fillna(999.000)
-                    self.data.to_string(f, index=False, justify='center')
-                else:
-                    self.tables[table]['data'] = self.tables[table]['data'].fillna(999.000)
-                    self.tables[table]['data'].to_string(f, index=False, justify='center')
-
-                if int(table) > 1:
-                    f.write('\n%TableEnd: {}\n'.format(table))
-                else:
-                    f.write('\n%TableEnd: \n')
-                f.write('%%\n')
-
-            # Write footer containing processing information
-            for footer_key, footer_value in self.footer.items():
-                if footer_key == 'ProcessingTool':
-                    for tool in self.footer['ProcessingTool']:
-                        f.write('%ProcessingTool: {}\n'.format(tool))
-                else:
-                    f.write('%{}: {}\n'.format(footer_key, footer_value))
+    # def create_ruv(self, filename):
+    #     """
+    #     Create a CODAR Radial (.ruv) file from radial instance
+    #     :param filename: User defined filename of radial file you want to save
+    #     :return:
+    #     """
+    #     create_dir(os.path.dirname(filename))
+    #
+    #     with open(filename, 'w') as f:
+    #         # Write header
+    #         for header_key, header_value in self.header.items():
+    #             f.write('%{}: {}\n'.format(header_key, header_value))
+    #
+    #         # Write data tables. Anything beyond the first table is commented out.
+    #         for table in self.tables.keys():
+    #             for table_key, table_value in self.tables[table].items():
+    #                 if table_key is not 'data':
+    #                     f.write('%{}: {}\n'.format(table_key, table_value))
+    #
+    #             if 'datetime' in self.tables[table]['data'].keys():
+    #                 self.tables[table]['data'] = self.tables[table]['data'].drop(['datetime'], axis=1)
+    #
+    #             # Fill NaN with 999.000 which is the standard fill value for codar lluv files
+    #             if table == '1':
+    #                 self.data = self.data.fillna(999.000)
+    #                 self.data.to_string(f, index=False, justify='center')
+    #             else:
+    #                 self.tables[table]['data'] = self.tables[table]['data'].fillna(999.000)
+    #                 self.tables[table]['data'].to_string(f, index=False, justify='center')
+    #
+    #             if int(table) > 1:
+    #                 f.write('\n%TableEnd: {}\n'.format(table))
+    #             else:
+    #                 f.write('\n%TableEnd: \n')
+    #             f.write('%%\n')
+    #
+    #         # Write footer containing processing information
+    #         for footer_key, footer_value in self.footer.items():
+    #             if footer_key == 'ProcessingTool':
+    #                 for tool in self.footer['ProcessingTool']:
+    #                     f.write('%ProcessingTool: {}\n'.format(tool))
+    #             else:
+    #                 f.write('%{}: {}\n'.format(footer_key, footer_value))
 
     def export(self, filename, file_type='radial'):
         """
@@ -188,8 +239,8 @@ class Radial(LLUVParser):
         boolean = self.data['VFLG'] == 128
 
         self.data['VLOC'] = self.data['VLOC'].where(~boolean, other=4)
-        self.tables['1']['TableColumnTypes'] += ' VLOC'
-        self.footer['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_location"')
+        self._tables['1']['TableColumnTypes'] += ' VLOC'
+        self._metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_location"')
 
     def qc_qartod_radial_count(self, min_radials=150, low_radials=300):
         """
@@ -215,8 +266,8 @@ class Radial(LLUVParser):
         elif num_radials > low_radials:
             radial_count_flag = 1
 
-        self.header['qc_qartod_radial_count'] = str(radial_count_flag)
-        self.footer['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_radial_count"')
+        self._metadata['qc_qartod_radial_count'] = str(radial_count_flag)
+        self._metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_radial_count"')
 
     def qc_qartod_speed(self, threshold=250):
         """
@@ -239,12 +290,16 @@ class Radial(LLUVParser):
             boolean = self.data['VELO'].abs() > threshold
 
         self.data['MVEL'] = self.data['MVEL'].where(~boolean, other=4)
-        self.tables['1']['TableColumnTypes'] += ' MVEL'
-        self.footer['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_speed"')
+        self._tables['1']['TableColumnTypes'] += ' MVEL'
+        self._metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_speed"')
+
+    def replace_invalid_values(self, values=[999.00, 1080.0]):
+        # Convert 999.00 and 1080.0 CODAR 'uncalculable values' to NaN
+        self.data.replace(values, np.nan, inplace=True)
 
     def reset(self):
         logging.info('Resetting instance data variable to original dataset')
-        self.tables['1']
+        self._tables['1']
         self.data = self._data_backup
     # # Modify any tableheader information that needs to be updated
     # radial_file_data['tables']['1']['TableColumns'] = radial_data.shape[1]

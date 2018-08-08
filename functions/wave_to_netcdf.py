@@ -9,7 +9,8 @@ import logging
 import numpy as np
 import os
 import sys
-from codar_processing.calc import reckon
+import xarray as xr
+# from codar_processing.calc import reckon
 from configs.configs import netcdf_global_attributes
 from codar_processing.common import make_encoding, create_dir
 from codar_processing.waves import Waves
@@ -59,60 +60,26 @@ def main(wave_file, save_dir):
     :param wave_file: Path to wave file
     :param save_dir: Path to save directory for generated NetCDF4 files
     """
-    w = Waves(wave_file)
+    w = Waves(wave_file, n_dimensional=True)
 
-    # if w.is_valid():
-    #     pass
-    # else:
-    #     logging.error('{} - No Data Available. Skipping'.format(wave_file))
-    #     return
-
-    # Clean up wave header
-    w.clean_wave_header()
-
-    # Remove wave heights less than 0.2 and greater than 5 m
-    w.remove_bad_wave_heights(0.2, 5)
-
-    # Calculate point location
-    radar_median = np.median([float(x) for x in w.header['CoastlineSector'].split(', ')])
-    origin = [float(x) for x in w.header['Origin'].split('  ')]
-    point = reckon(origin[0], origin[1], radar_median, 2)
-
-    # create lat and lon columns
-    w.data['lon'] = point[1]
-    w.data['lat'] = point[0]
-
-    if w.data['DIST'].isnull().all():
-        w.data = w.data.drop(['TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC', 'ACNT', 'RCLL', 'WDPT', 'MTHD', 'FLAG', 'WHNM', 'WHSD', 'PMWH', 'DIST'], axis=1)
-    else:
-        # w.data = w.data.drop(['TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC', 'ACNT', 'RCLL', 'WDPT', 'MTHD', 'FLAG', 'WHNM', 'WHSD', 'PMWH'], axis=1)
-        return
-
-    w.data = w.data.set_index('datetime')
-
-    # Convert pandas dataframe to xarray dataset
-    ds = w.data.to_xarray()
-
-    # rename variables to something meaningful
-    rename = dict(datetime='time',
-                  MWHT='wave_height',
-                  MWPD='wave_period',
-                  WAVB='wave_bearing',
-                  WNDB='wind_bearing')
-
-    ds.rename(rename, inplace=True)
+    # # Remove wave heights less than 0.2 and greater than 5 m
+    # w.remove_bad_wave_heights(wave_min=0.2, wave_max=5)
 
     # Grab min and max time in dataset for entry into global attributes for cf compliance
     try:
-        time_start = ds['time'].min().data
+        time_start = w.data['time'].min().data
     except:
         return
-    time_end = ds['time'].max().data
+    time_end = w.data['time'].max().data
 
+    lonlat = [float(x) for x in w.data.Origin.split()]
+
+    length = len(w.data['time'])
+    w.data['lon'] = xr.DataArray(np.full(length, lonlat[0]), dims=('time'))
+    w.data['lat'] = xr.DataArray(np.full(length, lonlat[1]), dims=('time'))
     # Assign global attributes for CF compliant time series files
     global_attr = netcdf_global_attributes(required_attributes, time_start, time_end)
-    global_attr['Site'] = w.header['Site']
-    ds = ds.assign_attrs(global_attr)
+    ds = w.data.assign_attrs(global_attr)
 
     # set time attribute
     ds['time'].attrs['standard_name'] = 'time'

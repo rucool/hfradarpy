@@ -36,11 +36,11 @@ def gridded_index(X, Y, x, y, flag=np.nan):
     return x_ind, y_ind
 
 
-def reckon(lat, lon, bearing, distance):
+def reckon(lon, lat, bearing, distance):
     """
     Point at specified azimuth, range on sphere or ellipsoid
-    :param lat: origin latitude (decimal degrees)
     :param lon: origin longitude (decimal degrees)
+    :param lat: origin latitude (decimal degrees)
     :param bearing: np.array of bearings
     :param distance: np.array of ranges
     :return: latitude, longitude of calculated coordinates from o
@@ -65,7 +65,7 @@ def reckon(lat, lon, bearing, distance):
                                              np.cos(distance/EARTH_RADIUS) - np.sin(latitude) * np.sin(next_latitude)))
 
     # convert points into decimal degrees
-    new_lat = round(np.degrees(next_latitude), 4)
-    new_lon = round(np.degrees(next_longitude), 4)
+    new_lat = np.degrees(next_latitude).round(4)
+    new_lon = np.degrees(next_longitude).round(4)
 
-    return new_lat, new_lon
+    return new_lon, new_lat

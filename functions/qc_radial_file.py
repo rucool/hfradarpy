@@ -25,13 +25,13 @@ def main(radial_file, save_path, qc_values):
     :param qc_values: Dictionary containing thresholds for each QC test
     """
     try:
-        r = Radial(radial_file)
+        r = Radial(radial_file, n_dimensional=True)
     except Exception as err:
         logging.error('{} - {}'.format(radial_file, err))
         return
 
     if r.is_valid():
-        # run high frequencvy radar qartod tests on open radial file
+        # run high frequency radar qartod tests on open radial file
         r.qc_qartod_location()
         r.qc_qartod_speed(qc_values['radial_max_speed'])
         r.qc_qartod_radial_count(qc_values['radial_min_count'], qc_values['radial_low_count'])
