@@ -10,7 +10,6 @@ import numpy as np
 import os
 import sys
 import xarray as xr
-# from codar_processing.calc import reckon
 from configs.configs import netcdf_global_attributes
 from codar_processing.common import make_encoding, create_dir
 from codar_processing.waves import Waves
@@ -51,19 +50,19 @@ required_attributes = dict(ncei_template_version='NCEI_NetCDF_Point_Template_v2.
                            publisher_url='rucool.marine.rutgers.edu')
 
 
-# @click.command()
-# @click.option('--wave_file', default='../data/waves/wls/SEAB/WVLM_SEAB_2018_01_01_0000.wls', help='Path to Wave file')
-# @click.option('--save_dir', default='../data/waves/nc/SEAB', help='Path to save files')
-def main(wave_file, save_dir):
+def main(wave_file, save_dir, wave_min=0.2, wave_max=5):
     """
-    Function to parse the wave file and output as NetCDF4 file
+
     :param wave_file: Path to wave file
     :param save_dir: Path to save directory for generated NetCDF4 files
+    :param wave_min: Minimum wave height to include in netCDF file
+    :param wave_max: Maximum wave height to include in netCDF file
+    :return:
     """
     w = Waves(wave_file, n_dimensional=True)
 
-    # # Remove wave heights less than 0.2 and greater than 5 m
-    # w.remove_bad_wave_heights(wave_min=0.2, wave_max=5)
+    # Remove wave heights less than 0.2 and greater than 5 m
+    w.data = w.data.where((wave_min < w.data['wave_height']) & (w.data['wave_height'] < wave_max))
 
     # Grab min and max time in dataset for entry into global attributes for cf compliance
     try:
@@ -77,6 +76,7 @@ def main(wave_file, save_dir):
     length = len(w.data['time'])
     w.data['lon'] = xr.DataArray(np.full(length, lonlat[0]), dims=('time'))
     w.data['lat'] = xr.DataArray(np.full(length, lonlat[1]), dims=('time'))
+
     # Assign global attributes for CF compliant time series files
     global_attr = netcdf_global_attributes(required_attributes, time_start, time_end)
     ds = w.data.assign_attrs(global_attr)
@@ -176,10 +176,12 @@ def main(wave_file, save_dir):
 
 
 if __name__ == '__main__':
-    wave_file = '../data/waves/wls/SEAB/WVLM_SEAB_2018_01_01_0000.wls'
-    save_dir = '../data/waves/nc/SEAB'
-    try:
-        main(wave_file, save_dir)
-    except Exception:
-        logger.exception('Exception in main(): ')
-        exit(1)
+    wave_files = ['../../data/waves/wls/SEAB/WVLM_SEAB_2018_01_01_0000.wls', '../../data/waves/wls/SEAB/WVLR_SEAB_2018_01_01_0000.wls']
+    save_dir = '../../data/waves/nc/SEAB'
+
+    for f in wave_files:
+        try:
+            main(f, save_dir)
+        except Exception:
+            logger.exception('Exception in main(): ')
+            exit(1)

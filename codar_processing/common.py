@@ -46,7 +46,7 @@ def aggregate_netcdfs(files, save_dir, save_filename=None):
     ds.load()  # Load lazy arrays of open files into memory. Performance is better once loaded
 
     if save_filename:
-        save_file = '{}/{}'.format(save_dir, save_filename)
+        save_file = '{}/{}-{}_{}'.format(save_dir, ds.time_coverage_start, ds.time_coverage_end, save_filename)
         ds.to_netcdf(save_file, encoding=encoding, format='netCDF4', engine='netcdf4', unlimited_dims=['time'])
     else:
         save_file = '{}/{}-{}_totals_aggregated.nc'.format(save_dir, ds.time_coverage_start, ds.time_coverage_end)
@@ -143,13 +143,13 @@ class LLUVParser(object):
         """
         self.file_path = fname
         self.file_name = os.path.basename(fname)
-        self._metadata = OrderedDict()
+        self.metadata = OrderedDict()
         self._tables = OrderedDict()
 
         # Load the LLUV Data with this generic LLUV parsing routine below
         table_count = 0
         table = False  # Set table to False. Once a table is found, switch to True.
-        is_wera = False  #  Default false. If 'WERA' is detected in the Manufacturer flag. It is set to True
+        is_wera = False  # Default false. If 'WERA' is detected in the Manufacturer flag. It is set to True
         processing_info = []
 
         with open(self.file_path, 'r', encoding='ISO-8859-1') as open_file:
@@ -176,9 +176,9 @@ class LLUVParser(object):
                             if key == 'ProcessingTool':
                                 processing_info.append(value)
                             else:
-                                self._metadata[key] = value
+                                self.metadata[key] = value
                         else:
-                            self._metadata[key] = value
+                            self.metadata[key] = value
                 elif table:
                     if line.startswith('%'):
                         if line.startswith('%%'):  # table header information
@@ -206,7 +206,7 @@ class LLUVParser(object):
                                     self._tables[str(table_count)][key] = value
                     else:  # Uncommented lines are the main data table.
                         table_data += '{}'.format(line)
-            self._metadata['ProcessingTool'] = processing_info
+            self.metadata['ProcessingTool'] = processing_info
             if is_wera:
                 self._tables['1']['data'] = pd.read_csv(io.StringIO(table_data),
                                                         sep=' ',
@@ -246,3 +246,12 @@ class LLUVParser(object):
     def file_type(self):
         """Return a string representing the type of file this is."""
         pass
+
+    def replace_invalid_values(self, values=[999.00, 1080.0]):
+        """
+        Convert invalid CODAR values to NaN
+        :param df: dataframe
+        :param values: list of CODAR fill values that reflect non calculable values
+        :return: dataframe with invalid values set to NaN
+        """
+        self.data.replace(values, np.nan, inplace=True)

@@ -1,15 +1,34 @@
 import datetime as dt
+import geopandas as gpd
 import logging
 import numpy as np
-import re
 import os
 import pandas as pd
+import re
+from shapely.geometry import Point
 import xarray as xr
 from codar_processing.common import LLUVParser, create_dir
 from codar_processing.calc import reckon, gridded_index
 
 
 logger = logging.getLogger(__name__)
+
+
+def concatenate_radials(radial_list):
+    """
+    This function takes a list of radial files. Loads them all separately using the Radial object and then combines
+    them along the time dimension using xarrays built-in concatenation routines.
+    :param radial_list: list of radial files that you want to concatenate
+    :return: radial files concatenated into an xarray dataset by range, bearing, and time
+    """
+
+    radial_dict = {}
+    for each in sorted(radial_list):
+        radial = Radial(each, multi_dimensional=True)
+        radial_dict[radial.file_name] = radial.ds
+
+    ds = xr.concat(radial_dict.values(), 'time')
+    return ds
 
 
 class Radial(LLUVParser):
@@ -19,70 +38,106 @@ class Radial(LLUVParser):
     This class should be used when loading a CODAR radial (.ruv) file. This class utilizes the generic LLUV class from
     ~/codar_processing/common.py in order to load CODAR Radial files
     """
-    def __init__(self, fname, replace_invalid=True, n_dimensional=True):
-        coords = ('time', 'range', 'bearing')
-        LLUVParser.__init__(self, fname)
-        self.ds = xr.Dataset()
+    def __init__(self, fname, replace_invalid=True, multi_dimensional=False, mask_over_land=False):
+        keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
 
+        LLUVParser.__init__(self, fname)
         for key in self._tables.keys():
             table = self._tables[key]
             if 'LLUV' in table['TableType']:
-                # table['data'].insert(0, '%%', '')
                 self.data = table['data']
             elif 'rads' in table['TableType']:
-                # table['data'].insert(0, '%%', '%')
-                self.diags_radial = table['data']
-                self.diags_radial['datetime'] = self.diags_radial[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+                self.diagnostics_radial = table['data']
+                self.diagnostics_radial['datetime'] = self.diagnostics_radial[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
             elif 'rcvr' in table['TableType']:
-                # table['data'].insert(0, '%%', '%')
-                self.diags_hardware = table['data']
-                self.diags_hardware['datetime'] = self.diags_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+                self.diagnostics_hardware = table['data']
+                self.diagnostics_hardware['datetime'] = self.diagnostics_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
 
         if replace_invalid:
             self.replace_invalid_values()
 
-        if n_dimensional:
-            # range cells in this radial
-            range_dim = np.arange(self.data['RNGE'].min(),
-                                  self.data['RNGE'].max() + float(self._metadata['RangeResolutionKMeters']),
-                                  float(self._metadata['RangeResolutionKMeters']))
+        if mask_over_land:
+            land = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+            land = land[land['continent'] == 'North America']
+            # ocean = gpd.read_file('/Users/mikesmith/Downloads/ne_10m_ocean')
+            self.data = gpd.GeoDataFrame(self.data, crs={'init': 'epsg:4326'}, geometry=[Point(xy) for xy in zip(self.data.LOND.values, self.data.LATD.values)])
 
-            # Clean radial header
-            self.clean_header()
+            # Join the geodataframe containing radial points with geodataframe containing leasing areas
+            self.data = gpd.tools.sjoin(self.data, land, how='left')
 
-            # bearing_dim
-            bearing_dim = np.arange(0, 360 + float(self._metadata['AngularResolution']), self._metadata['AngularResolution'])
+            # All data in the continent column that lies over water should be nan.
+            self.data = self.data[keep][self.data['continent'].isna()]
+            self.data = self.data.reset_index()
 
-            # create radial grid
-            [bearing, ranges] = np.meshgrid(bearing_dim, range_dim)
+        if multi_dimensional:
+            self.to_multi_dimensional()
 
-            # calculate lat/lons from origin, bearing, and ranges
-            lonlat = [float(x) for x in re.findall(r"[-+]?\d*\.\d+|\d+", self._metadata['Origin'])]
+    def to_multi_dimensional(self, range_min=0, range_max=150):
+        rename = dict(VELU='u',
+                      VELV='v',
+                      VFLG='vector_indicator_flag',
+                      ESPC='spatial_standard_deviation',
+                      ETMP='temporal_standard_deviation',
+                      MAXV='maximum_current_velocity',
+                      MINV='minimum_current_velocity',
+                      ERSC='spatial_num_velocities',
+                      ERTC='temporal_num_velocities',
+                      XDST='east_dist_from_origin',
+                      YDST='north_dist_from_origin',
+                      RNGE='range_old',
+                      BEAR='bearing_old',
+                      VELO='velocity',
+                      HEAD='heading',
+                      SPRC='range_cell')
+        coords = ('time', 'range', 'bearing')
 
-            new_lon, new_lat = reckon(lonlat[0], lonlat[1], bearing, ranges)
+        # Intitialize empty xarray dataset
+        ds = xr.Dataset()
+        range_dim = np.arange(range_min, range_max + float(self.metadata['RangeResolutionKMeters']), float(self.metadata['RangeResolutionKMeters']))
 
-            # create dictionary containing variables from dataframe in the shape of radial grid
-            d = {key: np.tile(np.nan, bearing.shape) for key in self.data.keys()}
+        # Clean radial header
+        self.clean_header()
 
-            # find grid indices from radial grid (bearing, ranges)
-            x_ind, y_ind = gridded_index(bearing, ranges, self.data['BEAR'], self.data['RNGE'])
+        # bearing_dim - 360 degrees
+        bearing_dim = np.arange(0, 360 + float(self.metadata['AngularResolution']), self.metadata['AngularResolution'])
 
-            for k, v in d.items():
-                v[(y_ind, x_ind)] = self.data[k]
-                d[k] = v
-            # self.data = self.data.to_xarray()
+        # create radial grid from bearing and range
+        [bearing, ranges] = np.meshgrid(bearing_dim, range_dim)
 
-            self.ds['lon'] = (('range', 'bearing'), new_lon)
-            self.ds['lat'] = (('range', 'bearing'), new_lat)
+        # calculate lat/lons from origin, bearing, and ranges
+        latlon = [float(x) for x in re.findall(r"[-+]?\d*\.\d+|\d+", self.metadata['Origin'])]
+        new_lat, new_lon = reckon(latlon[0], latlon[1], bearing, ranges)
 
-            # expand variables for time and add to dataset
-            self.ds['u'] = (coords, np.expand_dims(np.float32(d['VELU']), axis=0))
-            self.ds['v'] = (coords, np.expand_dims(np.float32(d['VELV']), axis=0))
+        # create dictionary containing variables from dataframe in the shape of radial grid
+        d = {key: np.tile(np.nan, bearing.shape) for key in self.data.keys()}
 
-            # Add coordinate variables to dataset
-            self.ds.coords['time'] = pd.date_range(self._metadata['TimeStamp'], periods=1)
-            self.ds.coords['bearing'] = bearing_dim
-            self.ds.coords['range'] = range_dim
+        # find grid indices from radial grid (bearing, ranges)
+        x_ind, y_ind = gridded_index(bearing, ranges, self.data['BEAR'].values, self.data['RNGE'].values)
+
+        for k, v in d.items():
+            v[(y_ind, x_ind)] = self.data[k]
+            d[k] = v
+
+        # Add extra dimension for time
+        d = {k: np.expand_dims(np.float32(v), axis=0) for (k, v) in d.items()}
+
+        ds['lon'] = (('range', 'bearing'), new_lon.round(4))
+        ds['lat'] = (('range', 'bearing'), new_lat.round(4))
+
+        # Add all variables to dataset
+        for k, v in d.items():
+            ds[k] = (coords, v)
+
+        # Add coordinate variables to dataset
+        ds.coords['time'] = pd.date_range(self.metadata['TimeStamp'], periods=1)
+        ds.coords['bearing'] = bearing_dim
+        ds.coords['range'] = range_dim
+
+        # rename variables to something meaningful
+        ds.rename(rename, inplace=True)
+
+        # Assign header data to global attributes
+        self.data = ds.assign_attrs(self.metadata)
 
     def file_type(self):
         """Return a string representing the type of file this is."""
@@ -105,50 +160,50 @@ class Radial(LLUVParser):
                 'TableRows', 'TableStart', 'CurrentVelocityLimit']
 
         # TableColumnTypes
-        key_list = list(self._metadata.keys())
+        key_list = list(self.metadata.keys())
         for key in key_list:
             if not key in keep:
-                del self._metadata[key]
+                del self.metadata[key]
 
-        for k, v in self._metadata.items():
+        for k, v in self.metadata.items():
             if 'Site' in k:
-                self._metadata[k] = ''.join(e for e in v if e.isalnum())
+                self.metadata[k] = ''.join(e for e in v if e.isalnum())
             elif k in ('TimeStamp', 'PatternDate'):
                 t_list = [int(s) for s in v.split()]
-                self._metadata[k] = dt.datetime(*t_list)
+                self.metadata[k] = dt.datetime(*t_list)
             elif 'TimeZone' in k:
-                self._metadata[k] = v.split('"')[1]
+                self.metadata[k] = v.split('"')[1]
             elif 'TableColumnTypes' in k:
-                self._metadata[k] = ' '.join([x.strip() for x in v.strip().split(' ')])
+                self.metadata[k] = ' '.join([x.strip() for x in v.strip().split(' ')])
             elif 'Origin' in k:
-                self._metadata[k] = v.lstrip()
+                self.metadata[k] = v.lstrip()
             elif k in ('RangeStart', 'RangeEnd', 'AntennaBearing', 'ReferenceBearing', 'AngularResolution', 'SpatialResolution',
                        'FirstOrderMethod', 'BraggSmoothingPoints', 'BraggHasSecondOrder', 'MergedCount',
                        'RadialMinimumMergePoints', 'FirstOrderCalc', 'SpectraRangeCells', 'SpectraDopplerCells',
                        'TableColumns', 'TableRows',  'PatternResolution', 'CurrentVelocityLimit', 'TimeCoverage'):
                 try:
-                    self._metadata[k] = int(v)
+                    self.metadata[k] = int(v)
                 except ValueError:
                     temp = v.split(' ')[0]
                     try:
-                        self._metadata[k] = int(temp)
+                        self.metadata[k] = int(temp)
                     except ValueError:
-                        self._metadata[k] = int(temp.split('.')[0])
+                        self.metadata[k] = int(temp.split('.')[0])
             elif k in ('RangeResolutionKMeters', 'CTF', 'TransmitCenterFreqMHz', 'DopplerResolutionHzPerBin',
                        'RadialBraggPeakDropOff', 'RadialBraggPeakNull', 'RadialBraggNoiseThreshold', 'TransmitSweepRateHz',
                        'TransmitBandwidthKHz'):
                 try:
-                    self._metadata[k] = float(v)
+                    self.metadata[k] = float(v)
                 except ValueError:
-                    self._metadata[k] = float(v.split(' ')[0])
+                    self.metadata[k] = float(v.split(' ')[0])
             else:
                 continue
 
         required = ['Origin', 'TransmitCenterFreqMHz']
-        present_keys = self._metadata.keys()
+        present_keys = self.metadata.keys()
         for key in required:
             if key not in present_keys:
-                self._metadata[key] = None
+                self.metadata[key] = None
 
     # def create_nc(self, filename):
     #     """
@@ -157,49 +212,53 @@ class Radial(LLUVParser):
     #     :return:
     #     """
 
-    # def create_ruv(self, filename):
-    #     """
-    #     Create a CODAR Radial (.ruv) file from radial instance
-    #     :param filename: User defined filename of radial file you want to save
-    #     :return:
-    #     """
-    #     create_dir(os.path.dirname(filename))
-    #
-    #     with open(filename, 'w') as f:
-    #         # Write header
-    #         for header_key, header_value in self.header.items():
-    #             f.write('%{}: {}\n'.format(header_key, header_value))
-    #
-    #         # Write data tables. Anything beyond the first table is commented out.
-    #         for table in self.tables.keys():
-    #             for table_key, table_value in self.tables[table].items():
-    #                 if table_key is not 'data':
-    #                     f.write('%{}: {}\n'.format(table_key, table_value))
-    #
-    #             if 'datetime' in self.tables[table]['data'].keys():
-    #                 self.tables[table]['data'] = self.tables[table]['data'].drop(['datetime'], axis=1)
-    #
-    #             # Fill NaN with 999.000 which is the standard fill value for codar lluv files
-    #             if table == '1':
-    #                 self.data = self.data.fillna(999.000)
-    #                 self.data.to_string(f, index=False, justify='center')
-    #             else:
-    #                 self.tables[table]['data'] = self.tables[table]['data'].fillna(999.000)
-    #                 self.tables[table]['data'].to_string(f, index=False, justify='center')
-    #
-    #             if int(table) > 1:
-    #                 f.write('\n%TableEnd: {}\n'.format(table))
-    #             else:
-    #                 f.write('\n%TableEnd: \n')
-    #             f.write('%%\n')
-    #
-    #         # Write footer containing processing information
-    #         for footer_key, footer_value in self.footer.items():
-    #             if footer_key == 'ProcessingTool':
-    #                 for tool in self.footer['ProcessingTool']:
-    #                     f.write('%ProcessingTool: {}\n'.format(tool))
-    #             else:
-    #                 f.write('%{}: {}\n'.format(footer_key, footer_value))
+    def create_ruv(self, filename):
+        """
+        Create a CODAR Radial (.ruv) file from radial instance
+        :param filename: User defined filename of radial file you want to save
+        :return:
+        """
+        create_dir(os.path.dirname(filename))
+
+        with open(filename, 'w') as f:
+            # Write header
+            for metadata_key, metadata_value in self.metadata.items():
+                if 'ProcessedTimeStamp' in metadata_key:
+                    break
+                else:
+                    f.write('%{}: {}\n'.format(metadata_key, metadata_value))
+
+            # Write data tables. Anything beyond the first table is commented out.
+            for table in self._tables.keys():
+                for table_key, table_value in self._tables[table].items():
+                    if table_key is not 'data':
+                        f.write('%{}: {}\n'.format(table_key, table_value))
+
+                if 'datetime' in self._tables[table]['data'].keys():
+                    self._tables[table]['data'] = self._tables[table]['data'].drop(['datetime'], axis=1)
+
+                if table == '1':
+                    f.write('%{}\n'.format(self._tables[table]['TableColumnTypes']))
+                    # Fill NaN with 999.000 which is the standard fill value for codar lluv filesself._tables[table]['TableColumnTypes']
+                    self.data = self.data.fillna(999.000)
+                    self.data.to_string(f, index=False, justify='center', header=False)
+                else:
+                    f.write('%%{}\n'.format(self._tables[table]['TableColumnTypes']))
+                    self._tables[table]['data'].insert(0, '%%', '%')
+                    self._tables[table]['data'] = self._tables[table]['data'].fillna(999.000)
+                    self._tables[table]['data'].to_string(f, index=False, justify='center', header=False)
+
+                if int(table) > 1:
+                    f.write('\n%TableEnd: {}\n'.format(table))
+                else:
+                    f.write('\n%TableEnd: \n')
+                f.write('%%\n')
+
+            # Write footer containing processing information
+            f.write('%ProcessedTimeStamp: {}\n'.format(self.metadata['ProcessedTimeStamp']))
+            for tool in self.metadata['ProcessingTool']:
+                f.write('%ProcessingTool: {}\n'.format(tool))
+                # f.write('%{}: {}\n'.format(footer_key, footer_value))
 
     def export(self, filename, file_type='radial'):
         """
@@ -240,7 +299,7 @@ class Radial(LLUVParser):
 
         self.data['VLOC'] = self.data['VLOC'].where(~boolean, other=4)
         self._tables['1']['TableColumnTypes'] += ' VLOC'
-        self._metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_location"')
+        self.metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_location"')
 
     def qc_qartod_radial_count(self, min_radials=150, low_radials=300):
         """
@@ -266,8 +325,8 @@ class Radial(LLUVParser):
         elif num_radials > low_radials:
             radial_count_flag = 1
 
-        self._metadata['qc_qartod_radial_count'] = str(radial_count_flag)
-        self._metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_radial_count"')
+        self.metadata['qc_qartod_radial_count'] = str(radial_count_flag)
+        self.metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_radial_count"')
 
     def qc_qartod_speed(self, threshold=250):
         """
@@ -291,62 +350,9 @@ class Radial(LLUVParser):
 
         self.data['MVEL'] = self.data['MVEL'].where(~boolean, other=4)
         self._tables['1']['TableColumnTypes'] += ' MVEL'
-        self._metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_speed"')
-
-    def replace_invalid_values(self, values=[999.00, 1080.0]):
-        # Convert 999.00 and 1080.0 CODAR 'uncalculable values' to NaN
-        self.data.replace(values, np.nan, inplace=True)
+        self.metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_speed"')
 
     def reset(self):
         logging.info('Resetting instance data variable to original dataset')
         self._tables['1']
         self.data = self._data_backup
-    # # Modify any tableheader information that needs to be updated
-    # radial_file_data['tables']['1']['TableColumns'] = radial_data.shape[1]
-    # header_list = radial_data.columns.tolist()
-    # header_list.remove('%%')
-    # radial_file_data['tables']['1']['TableColumnTypes'] = ' '.join(header_list)
-
-    # def qc_average_radial_bearing(df):
-    #     return df
-
-    # def qc_spatial_median_filter():
-    # """
-    # """
-    # return def
-
-    # def qc_temporal_gradient(df, deriv_limit):
-    #     """
-    #     Remove data points that have a backward derivative greater than the deriv_limit that is passed to the function
-    #     :param df:
-    #     :param deriv_limit:
-    #     :return:
-    #     """
-    #     # function[DATA, nout, ind] = backwardsTemporalDerivative(rad_vel, deriv_limit)
-    #     # deriv_limit is expressed in velocity change(cm / s) over the course of an hour
-    #
-    #     # Convert the derivative limit from cm / s * hour to cm / s * s
-    #     deriv_limit = deriv_limit / 3600  # units cm / s ^ 2
-    #
-    #     # use the diff function to calculate the derivative
-    #     deriv = diff(rad_vel(:, 2))./ (24 * 60 * 60 * diff(rad_vel(:, 1)))
-    #
-    #     # the backward derivative is the output of the diff calculation with the last value removed
-    #     bckwd_deriv = abs(deriv);
-    #     bckwd_deriv(length(bckwd_deriv)) = []
-    #
-    #     # Find the indices of the backward derivatives that are greater than the derivative limit
-    #     ind = find(bckwd_deriv > deriv_limit)
-    #
-    #     # find the number of outliers
-    #     nout = length(ind);
-    #
-    #     # add 1 to the indices so that they match the indices of the vectors that you are screening
-    #     ind = ind + 1;
-    #
-    #     # remove the outliers
-    #     rad_vel(ind,:)=[];
-    #
-    #     # assign the new matrix to the variable DATA
-    #     DATA = rad_vel;
-    #     return df

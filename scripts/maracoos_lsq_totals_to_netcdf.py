@@ -9,7 +9,7 @@ import os
 import pandas as pd
 import sys
 from codar_processing.common import list_files, list_to_dataframe
-from functions import mat_to_netcdf4
+from functions.totals import hfrprogs_mat_to_netcdf4
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)
@@ -17,11 +17,11 @@ log_level = 'INFO'
 log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
-data_dir = '/home/codaradm/data_reprocessed/totals/maracoos/lsq/5MHz/'
-save_dir = '/home/codaradm/data_reprocessed/totals/maracoos/nc_lsq/5MHz/'
-hfr_grid = '../totals/grid_files/OI_6km_Grid_Extend.txt'
-start_time = pd.Timestamp(2017, 1, 1, 0, 0, 0)
-end_time = pd.Timestamp(2017, 1, 1, 1, 0, 0)
+data_dir = '//home/codaradm/data/totals/maracoos/lsq/5MHz/'
+save_dir = '/home/codaradm/data/totals/maracoos/nc_lsq/5MHz/'
+hfr_grid = '../data/grid_files/maracoos_grid_6km_extended.txt'
+start_time = pd.Timestamp(2018, 1, 1, 0, 0, 0)
+end_time = pd.Timestamp(2018, 1, 2, 0, 0, 0)
 
 avoid = ('ideal', 'measured')  # avoid these subfolders
 types = ['*.mat']  # find only files with these types
@@ -68,4 +68,4 @@ df = df[start_time: end_time]
 
 for row in df.itertuples():
     logging.info('{} - Converting MAT file to netCDF4 format'.format(os.path.basename(row.file)))
-    mat_to_netcdf4.main(grid, row.file, save_dir, user_attributes, method='lsq')
+    hfrprogs_mat_to_netcdf4.main(grid, row.file, save_dir, user_attributes, method='lsq')

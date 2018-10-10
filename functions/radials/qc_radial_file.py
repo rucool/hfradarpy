@@ -25,7 +25,7 @@ def main(radial_file, save_path, qc_values):
     :param qc_values: Dictionary containing thresholds for each QC test
     """
     try:
-        r = Radial(radial_file, n_dimensional=True)
+        r = Radial(radial_file, multi_dimensional=False)
     except Exception as err:
         logging.error('{} - {}'.format(radial_file, err))
         return
@@ -35,6 +35,7 @@ def main(radial_file, save_path, qc_values):
         r.qc_qartod_location()
         r.qc_qartod_speed(qc_values['radial_max_speed'])
         r.qc_qartod_radial_count(qc_values['radial_min_count'], qc_values['radial_low_count'])
+        # r.qc_qartod_spatialmedian()
 
         # Export radial file to either a radial or netcdf
         try:
@@ -45,7 +46,7 @@ def main(radial_file, save_path, qc_values):
 
 
 if __name__ == '__main__':
-    radial = '../data/radials/SEAB/2018_03/RDLi_SEAB_2018_03_01_0200.ruv'
-    save_path = '../data/radials_qc/SEAB/2018_03/'
+    radial = '../../data/radials/SEAB/2018_03/RDLi_SEAB_2018_03_01_0200.ruv'
+    save_path = '../../data/radials_qc/SEAB/2018_03/'
     qc_values = dict(radial_max_speed=30, radial_min_count=50, radial_low_count=140)
     main(radial, save_path, qc_values)

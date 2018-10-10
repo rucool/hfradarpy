@@ -133,8 +133,8 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         return
 
     # Create a grid to shape 1d data
-    lon = np.unique(grid['lon'].as_matrix().astype(np.float32))
-    lat = np.unique(grid['lat'].as_matrix().astype(np.float32))
+    lon = np.unique(grid['lon'].values.astype(np.float32))
+    lat = np.unique(grid['lat'].values.astype(np.float32))
     [x, y] = np.meshgrid(lon, lat)
 
     # Create a dictionary of variables that we want to grid
@@ -366,9 +366,9 @@ if __name__ == '__main__':
     import glob
 
     # Define test inputs
-    files = sorted(glob.glob('../data/totals/mat/*.mat'))
-    grid_file = '../totals/grid_files/maracoos_grid_6km_extended.txt'
-    save_dir = '../data/totals/nc'
+    files = sorted(glob.glob('../../data/totals/mat/*.mat'))
+    grid_file = '../../data/grid_files/maracoos_grid_6km_extended.txt'
+    save_dir = '../../data/totals/nc/hourly'
     threshold = dict(u_err=0.6, v_err=0.6, uv_covariance=0.6)
 
     # load csv file containing the grid

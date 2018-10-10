@@ -6,7 +6,6 @@
 @brief This utility aggregates netCDF files in a given folder.
 @purpose To convert many netCDF files into a single netCDF file that is aggregated on the same dimension
 """
-import click
 import logging
 import sys
 from codar_processing.common import aggregate_netcdfs
@@ -18,11 +17,14 @@ log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
 
-@click.command()
-@click.option('--data_dir', default='../data/totals/nc/*.nc', help='Path to netCDF files')
-@click.option('--save_dir', default='../data/totals/nc/monthly/', help='Path to save files')
-@click.option('--save_name', default='aggregated.nc', help='Save filename')
 def main(data_dir, save_dir, save_name):
+    """
+
+    :param data_dir: Directory that contains netCDF files.
+    :param save_dir: Directory that you want to save aggregated netCDF file.
+    :param save_name: Filename you want to name aggregated netCDF file. This will be prepended by start and end time of data. Leave blank for default filename.
+    :return:
+    """
     data = sorted(glob(data_dir))
     save_file = aggregate_netcdfs(data, save_dir, save_name)
 
@@ -31,4 +33,7 @@ def main(data_dir, save_dir, save_name):
 
 
 if __name__ == '__main__':
-    main()
+    data_dir = '../data/totals/nc/hourly/*.nc'
+    save_dir = '../data/totals/nc/aggregated/'
+    save_name = 'aggregated.nc'
+    main(data_dir, save_dir, save_name)
