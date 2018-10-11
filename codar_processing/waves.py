@@ -12,27 +12,58 @@ class Waves(LLUVParser):
     ~/codar_processing/common.py in order to load CODAR wave files
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, replace_invalid=True, n_dimensional=True):
+        rename = dict(datetime='time',
+                      MWHT='wave_height',
+                      MWPD='wave_period',
+                      WAVB='wave_bearing',
+                      WNDB='wind_bearing',
+                      PMWH='maximum_observable_wave_height',
+                      ACNT='cross_spectra_averaged_count',
+                      DIST='distance_from_origin',
+                      RCLL='range_cell_result',
+                      WDPT='doppler_points_used',
+                      MTHD='wave_method',
+                      FLAG='vector_flag',
+                      WHNM='num_valid_source_wave_vectors',
+                      WHSD='standard_deviation_of_wave_heights')
+
         LLUVParser.__init__(self, fname)
-        if self.tables['1']['data']['DIST'].isnull().all():
-            self.data = self.tables['1']['data']
+        if self._tables['1']['data']['DIST'].isnull().all():
+            df = self._tables['1']['data']
+            self.data = df
+            index = 'datetime'  # define index so pd.to_xarray function will automatically assign dimension and coordinates
         else:
             data_tables = []
-            for key in self.tables.keys():
-                data_tables.append(self.tables[key]['data'])
+            for key in self._tables.keys():
+                df = self._tables[key]['data']
+                data_tables.append(df)
             self.data = pd.concat(data_tables, axis=0)
+            index = ['datetime', 'DIST']  # define two indices for multidimensional indexing.
+
+        # Use separate date and time columns to create datetime column and drop those columns.
         self.data['datetime'] = self.data[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
 
-    def file_type(self):
-        """Return a string representing the type of file this is."""
-        return 'wave'
+        if replace_invalid:
+            self.replace_invalid_values()
+
+        if n_dimensional:
+            # Set index of dataframe and also drop columns that we don't need to see anymore
+            self.data = self.data.set_index(index).drop(['TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC'], axis=1)
+
+            # Convert from pandas dataframe into an xarray dataset
+            self.ds = self.data.to_xarray()
+
+            # rename variables to something meaningful
+            self.ds.rename(rename, inplace=True)
+
+            # Clean up wave header and assign header data to global attributes
+            self.clean_wave_header()
+            self.data = self.ds.assign_attrs(self.metadata)
 
     def clean_wave_header(self):
         """
         Cleans the header data from the wave data for proper input into MySQL database
-        :param head_dict: dictionary containing the header data
-        :return: dictionary containing the cleaned header data
-        :rtype:
         """
 
         keep = ['TimeCoverage', 'WaveMinDopplerPoints', 'AntennaBearing', 'DopplerCells', 'TransmitCenterFreqMHz',
@@ -42,30 +73,34 @@ class Waves(LLUVParser):
                 'Origin', 'MaximumWavePeriod', 'UUID', 'WaveBraggNoiseThreshold', 'TransmitBandwidthKHz', 'Site',
                 'TransmitSweepRateHz', 'WaveBearingLimits', 'WavesFollowTheWind', 'CurrentVelocityLimit']
 
-        key_list = list(self.header.keys())
+        key_list = list(self.metadata.keys())
         for key in key_list:
             if not key in keep:
-                del self.header[key]
+                del self.metadata[key]
 
-        for k, v in self.header.items():
+        for k, v in self.metadata.items():
             if 'Site' in k:
-                self.header[k] = ''.join(e for e in v if e.isalnum())
+                self.metadata[k] = ''.join(e for e in v if e.isalnum())
             elif 'TimeStamp' in k:
                 t_list = v.split()
                 t_list = [int(s) for s in t_list]
-                self.header[k] = dt.datetime(t_list[0], t_list[1], t_list[2], t_list[3], t_list[4], t_list[5]).strftime(
+                self.metadata[k] = dt.datetime(t_list[0], t_list[1], t_list[2], t_list[3], t_list[4], t_list[5]).strftime(
                     '%Y-%m-%d %H:%M:%S')
             elif k in ('TimeCoverage', 'RangeResolutionKMeters'):
-                self.header[k] = re.findall("\d+\.\d+", v)[0]
+                self.metadata[k] = re.findall("\d+\.\d+", v)[0]
             elif k in ('WaveMergeMethod', 'WaveUseInnerBragg', 'WavesFollowTheWind'):
-                self.header[k] = re.search(r'\d+', v).group()
+                self.metadata[k] = re.search(r'\d+', v).group()
             elif 'TimeZone' in k:
-                self.header[k] = re.search('"(.*)"', v).group(1)
+                self.metadata[k] = re.search('"(.*)"', v).group(1)
             elif k in ('WaveBearingLimits', 'CoastlineSector'):
                 bearings = re.findall(r"[-+]?\d*\.\d+|\d+", v)
-                self.header[k] = ', '.join(e for e in bearings)
+                self.metadata[k] = ', '.join(e for e in bearings)
             else:
-                self.header
+                continue
+
+    def file_type(self):
+        """Return a string representing the type of file this is."""
+        return 'wave'
 
     def flag_wave_heights(self, wave_min=0.2, wave_max=5):
         """
@@ -84,21 +119,3 @@ class Waves(LLUVParser):
             return False
         else:
             return True
-
-    def remove_bad_data(self):
-        """
-        Remove any data that contains NaN. In the original RUV file, these usually refer to data with 999 or 1080 values
-        :return:
-        """
-        self.data = self.data.dropna()
-
-    def remove_bad_wave_heights(self, wave_min=0.2, wave_max=5):
-        """
-        Remove any data that lies outside of wave heights at wave_min and wave_max
-        :param wave_min: Minimum Wave Height - Waves above this will be considered good
-        :param wave_max: Maximum Wave Height - Waves less than this will be considered good
-        :return:
-        """
-        self.flag_wave_heights(wave_min, wave_max)
-        self.data = self.data[self.data['mwht_flag'] == 1]
-        self.data = self.data.drop(['mwht_flag'], axis=1)

@@ -9,7 +9,7 @@ import os
 import pandas as pd
 import sys
 from codar_processing.common import list_files, list_to_dataframe
-from functions import mat_to_netcdf4
+from functions.totals import hfrprogs_mat_to_netcdf4
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)
@@ -68,4 +68,4 @@ df = df[start_time: end_time]
 
 for row in df.itertuples():
     logging.info('{} - Converting MAT file to netCDF4 format'.format(os.path.basename(row.file)))
-    mat_to_netcdf4.main(grid, row.file, save_dir, user_attributes)
+    hfrprogs_mat_to_netcdf4.main(grid, row.file, save_dir, user_attributes)
