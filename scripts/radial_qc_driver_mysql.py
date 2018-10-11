@@ -2,7 +2,7 @@
 """
 @author Mike Smith
 @email michaesm@marine.rutgers.edu
-@purpose Parse CODAR radial files utilizing the Radial subclass and upload to MySQL database
+@purpose Parse CODAR radial files utilizing the Radial subclass and download qc values from MySQL database
 """
 import codar_processing.database_common as db
 import concurrent.futures
@@ -13,7 +13,7 @@ import os
 import sys
 import time
 from configs.database_tables import Sites, QCValues
-from functions.qc_radial_file import main as qc_radial
+from functions.radials.qc_radial_file import main as qc_radial
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)

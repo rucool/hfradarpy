@@ -1,7 +1,7 @@
 import glob
 import os
 import pandas as pd
-from functions import mat_to_netcdf4
+from functions.totals import hfrprogs_mat_to_netcdf4
 
 main_dir = '/Volumes/home/codaradm/data/totals/pldp/25MHz/0.5km/oi/mat/'
 save_dir = '/Users/mikesmith/Documents/data/codar/totals/nc'
@@ -42,4 +42,4 @@ user_attributes = dict(title='Palmer Deep Antarctica 0.5 km Sea Surface Currents
 
 files = sorted(files_grabbed)
 for fname in files:
-    mat_to_netcdf4.main(grid, fname, save_dir, user_attributes)
+    hfrprogs_mat_to_netcdf4.main(grid, fname, save_dir, user_attributes)

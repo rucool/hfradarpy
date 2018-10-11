@@ -46,7 +46,7 @@ def aggregate_netcdfs(files, save_dir, save_filename=None):
     ds.load()  # Load lazy arrays of open files into memory. Performance is better once loaded
 
     if save_filename:
-        save_file = '{}/{}'.format(save_dir, save_filename)
+        save_file = '{}/{}-{}_{}'.format(save_dir, ds.time_coverage_start, ds.time_coverage_end, save_filename)
         ds.to_netcdf(save_file, encoding=encoding, format='netCDF4', engine='netcdf4', unlimited_dims=['time'])
     else:
         save_file = '{}/{}-{}_totals_aggregated.nc'.format(save_dir, ds.time_coverage_start, ds.time_coverage_end)
@@ -101,7 +101,7 @@ def timestamp_from_lluv_filename(filename):
     return timestamp
 
 
-def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=1, chunksize=10000, fillvalue=-999.00):
+def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=4, chunksize=10000, fillvalue=-999.00):
     encoding = {}
 
     for k in ds.data_vars:
@@ -143,21 +143,21 @@ class LLUVParser(object):
         """
         self.file_path = fname
         self.file_name = os.path.basename(fname)
-        self.header = OrderedDict()
-        self.tables = OrderedDict()
-        self.footer = OrderedDict()
+        self.metadata = OrderedDict()
+        self._tables = OrderedDict()
 
         # Load the LLUV Data with this generic LLUV parsing routine below
         table_count = 0
         table = False  # Set table to False. Once a table is found, switch to True.
+        is_wera = False  # Default false. If 'WERA' is detected in the Manufacturer flag. It is set to True
         processing_info = []
 
         with open(self.file_path, 'r', encoding='ISO-8859-1') as open_file:
             open_lluv = open_file.readlines()
 
             # Parse header and footer metadata
-            for i, line in enumerate(open_lluv):
-                if not table:  # If we are not looking at a table
+            for line in open_lluv:
+                if not table:  # If we are not looking at a table or a tables header information
                     if line.startswith('%%'):
                         continue
                     elif line.startswith('%'):  # Parse the single commented header lines
@@ -167,48 +167,52 @@ class LLUVParser(object):
                             table_count = table_count + 1  # this is the nth table
                             data_header = []  # initialize an empty list for the data header information
                             table_data = u''
-                            self.tables[str(table_count)] = OrderedDict()
-                            self.tables[str(table_count)][key] = value
+                            self._tables[str(table_count)] = OrderedDict()
+                            self._tables[str(table_count)][key] = value
+                        elif 'Manufacturer' in line:
+                            if 'WERA' in value:
+                                is_wera = True
                         elif table_count > 0:
                             if key == 'ProcessingTool':
                                 processing_info.append(value)
-                            elif key == 'End':
-                                self.footer['ProcessingTool'] = processing_info
-                                self.footer[key] = value
                             else:
-                                self.footer[key] = value
+                                self.metadata[key] = value
                         else:
-                            self.header[key] = value
+                            self.metadata[key] = value
                 elif table:
-                    if line.startswith('%%'):  # table header information
-                        line = line.replace('%%', '')
-                        temp = line.split()
-                        if 'comp' in temp:
-                            temp = [x for x in temp if x not in ('comp', 'Distance')]
-                        data_header.append(tuple(temp))
-                    elif line.startswith('%'):
-                        if len(line.split(':')) == 1:
-                            line = line.replace('%', '')
-                            line = line.strip()
-                            table_data += '{}\n'.format(line)
-                        else:
-                            key, value = self._parse_header_line(line)
-                            if 'TableEnd' in line:
-                                # use pandas read_csv rather because it automatically
-                                # interprets the datatype for each column of the csv
-                                tdf = pd.read_csv(io.StringIO(table_data),
-                                                  sep=' ',
-                                                  header=None,
-                                                  names=self.tables[str(table_count)]['TableColumnTypes'].split(),
-                                                  skipinitialspace=True,)
-                                                  # na_values=['999.000'])
+                    if line.startswith('%'):
+                        if line.startswith('%%'):  # table header information
+                            temp = line.replace('%%', '').split()
+                            if 'comp' in temp:
+                                temp = [x for x in temp if x not in ('comp', 'Distance')]
+                            data_header.append(tuple(temp))
+                        else:  # Table metadata and diagnostic data are prepended by at least 1 % sign
+                            if len(line.split(':')) == 1:  # Diagnostic Data
+                                line = line.replace('%', '').strip()
+                                table_data += '{}\n'.format(line)
+                            else:  # Table data
+                                key, value = self._parse_header_line(line)
+                                if 'TableEnd' in line:
+                                    # use pandas read_csv because it interprets the datatype for each column of the csv
+                                    tdf = pd.read_csv(io.StringIO(table_data),
+                                                      sep=' ',
+                                                      header=None,
+                                                      names=self._tables[str(table_count)]['TableColumnTypes'].split(),
+                                                      skipinitialspace=True,)
 
-                                self.tables[str(table_count)]['data'] = tdf
-                                table = False
-                            else:
-                                self.tables[str(table_count)][key] = value
+                                    self._tables[str(table_count)]['data'] = tdf
+                                    table = False
+                                else:
+                                    self._tables[str(table_count)][key] = value
                     else:  # Uncommented lines are the main data table.
                         table_data += '{}'.format(line)
+            self.metadata['ProcessingTool'] = processing_info
+            if is_wera:
+                self._tables['1']['data'] = pd.read_csv(io.StringIO(table_data),
+                                                        sep=' ',
+                                                        header=None,
+                                                        names=['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'EACC', 'RNGE', 'BEAR', 'VELO', 'HEAD'],  # WERA has incorrect TableColumnTypes in their files.....
+                                                        skipinitialspace=True,)
 
     def is_valid(self, table='1'):
         """
@@ -217,7 +221,7 @@ class LLUVParser(object):
         :return: True or False
         """
         try:
-            return not self.tables[table]['data'].empty
+            return not self._tables[table]['data'].empty
         except:
             return False
 
@@ -242,3 +246,12 @@ class LLUVParser(object):
     def file_type(self):
         """Return a string representing the type of file this is."""
         pass
+
+    def replace_invalid_values(self, values=[999.00, 1080.0]):
+        """
+        Convert invalid CODAR values to NaN
+        :param df: dataframe
+        :param values: list of CODAR fill values that reflect non calculable values
+        :return: dataframe with invalid values set to NaN
+        """
+        self.data.replace(values, np.nan, inplace=True)

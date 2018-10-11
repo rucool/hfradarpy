@@ -243,8 +243,6 @@ class WaveFileHeader(Base):
     CurrentVelocityLimit = Column(SMALLINT)
     TransmitSweepRateHz = Column(FLOAT)
     TransmitBandwidthKHz = Column(FLOAT)
-    TableColumnTypes = Column(VARCHAR)
-    TableRows = Column(SMALLINT)
     CoastlineSector = Column(VARCHAR)
     DopplerCells = Column(FLOAT)
     MaximumWavePeriod = Column(FLOAT)

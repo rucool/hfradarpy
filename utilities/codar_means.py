@@ -63,28 +63,20 @@ def filter_by_error(ds, g_u=1, g_v=1):
     return ds
 
 
-@click.command()
-@click.option('--files', default='../data/totals/nc/*.nc', help='Path to or list of netCDF files')
-@click.option('--save_dir', default='../data/totals/nc_averaged', help='Path to save files')
-@click.option('--average', default='time.month', help='Average by time. Default: time.month')
-@click.option('--filter_error', nargs=2, type=float, default=[.6, .6], help='U and V error values to filter above. Default: .6 .6')
-def main(files, save_dir, average, filter_error):
+def main(files, save_dir, average, error):
     """
     This function averages CODAR surface current data over a given time period.
     :param fname: Path to netCDF file or directory containing netCDF files. If directory, must use wildcard (/path/*.nc)
     :param save_dir: Directory to save averaged surface current netCDF file
-    :param average: String containing how to average (in time) the data. http://xarray.pydata.org/en/latest/time-series.html#datetime-components
-    :param g_u: Error in Eastward seawater velocity (u)
-    :param g_v: Error in Northward seawater velocity (v)
+    :param average: Average by time. Default: time.month; See: http://xarray.pydata.org/en/latest/time-series.html#datetime-components
+    :param g_u: Error in Eastward seawater velocity (u). Default: .6
+    :param g_v: Error in Northward seawater velocity (v). Default: .6
     """
-    g_u = filter_error[0]
-    g_v = filter_error[1]
-
     # open netcdf file or files
     ds = xr.open_mfdataset(files)
 
     # filter both u and v by .6. anything over will be removed
-    ds = filter_by_error(ds, g_u, g_v)
+    ds = filter_by_error(ds, error[0], error[1])
 
     # group dataset by
     new_ds = ds.groupby(average).apply(custom_mean)
@@ -97,4 +89,8 @@ def main(files, save_dir, average, filter_error):
 
 
 if __name__ == '__main__':
-    main()
+    files = '../data/totals/nc/hourly/*.nc'
+    save_dir = '../data/totals/nc/averaged'
+    average = 'time.month'
+    filter_error_u_v = [.6, .6]
+    main(files, save_dir, average, filter_error_u_v)

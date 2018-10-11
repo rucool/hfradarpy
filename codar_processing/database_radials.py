@@ -18,7 +18,12 @@ def get_pattern_type_id(session, pattern_type):
     return int(result.id)
 
 
-def update_latest_radials(session, filename, timestamp, site_id, radial_id):
+def update_latest_radials(session, _metadata):
+    site_id = _metadata['Site']
+    radial_id = _metadata['radial_id']
+    timestamp = _metadata['TimeStamp']
+    filename = _metadata['filename']
+
     radial_info = dict(siteId=site_id, radialId=radial_id, TimeStamp=timestamp, filename=filename)
 
     result = session.query(RadialsLatest).filter_by(siteId=radial_info['siteId']).first()
@@ -59,16 +64,17 @@ def upload_diagnostics(session, table_object, data, id):
     return
 
 
-def upload_radial_header(session, header):
+def upload_radial_header(session, _metadata):
     """
 
     :param session:
-    :param header:
+    :param _metadata:
     :return:
     """
-    result = RadialMetadata(**header)
+    result = RadialMetadata(**_metadata)
     session.add(result)
     session.commit()
     session.flush()
-    logging.debug('{} - Table `hfrRadialFilesMetadata` - Radial header upload complete.'.format(header['filename']))
-    return result.id
+    logging.debug('{} - Table `hfrRadialFilesMetadata` - Radial header upload complete.'.format(_metadata['filename']))
+    _metadata['radial_id'] = result.id
+    return _metadata

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='codar_processing',
-    version='0.1',
+    version='0.2',
     packages=['configs', 'sandbox', 'scripts', 'functions', 'utilities', 'codar_processing'],
     url='https://github.com/rucool/codar_processing',
     license='MIT',
