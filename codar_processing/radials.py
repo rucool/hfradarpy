@@ -352,6 +352,111 @@ class Radial(LLUVParser):
         self._tables['1']['TableColumnTypes'] += ' MVEL'
         self.metadata['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_speed"')
 
+    def qc_qartod_spatialmedian(self, rclim=2.1, anglim=10, threshold = 30):
+            """
+            Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+            Spatial Median (Test 10)
+            Ensures that the radial velocity is not too different from nearby radial velocities.
+
+            RV is the radial velocity
+            NV is a set of radial velocities for neighboring radial cells (cells within radius of 'rclim' * Range Step (km)
+            and whose vector bearing (angle of arrival at site) is also within 'anglim' degrees of the source vector's bearing)
+
+            Required to pass the test: |RV - median(NV)| <= threshold
+
+            Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
+            :param RCLim: multiple of range step which depends on the radar type
+            :param AngLim: limit for number of degrees from source radial's bearing (degrees)
+            :param CurLim: Current difference threshold (cm/s)
+            :return:
+            """
+            self.data['SMED'] = 1
+            try:
+                Rstep = float(self.header['RangeResolutionKMeters'])
+                #Rstep = np.floor(min(np.diff(np.unique(self.data['RNGE'])))) #use as backup method if other fails?
+
+                Bstep = [float(s) for s in re.findall(r'-?\d+\.?\d*', self.header['AngularResolution'])]
+                Bstep = Bstep[0]
+                #Bstep = int(min(np.diff(np.unique(self.data['BEAR']))))  #use as backup method if other fails?
+
+                RLim = int(round(rclim)) #if not an integer will cause an error later on
+                BLim = int(anglim/Bstep) #if not an integer will cause an error later on
+
+                #convert bearing into bearing cell numbers
+                adj = int(5 - min(self.data['BEAR']))
+                Bcell = ((self.data['BEAR'] + adj) / Bstep) - 1
+                Bcell = Bcell.astype(int)
+                #Btable = np.column_stack((self.data['BEAR'], Bcell))  #only for debugging
+
+                #convert range into range cell numbers
+                Rcell = (np.floor((self.data['RNGE'] / Rstep) + 0.1))
+                Rcell = Rcell - min(Rcell)
+                Rcell = Rcell.astype(int)
+                #Rtable = np.column_stack((self.data['RNGE'], Rcell))   #only for debugging
+                Rcell = self.data['SPRC']
+
+                # place velocities into a matrix with rows defined as bearing cell# and columns as range cell#
+                BRvel = np.zeros((int(360 / Bstep), max(Rcell)+1), dtype=int) + np.nan
+                BRind = np.zeros((int(360 / Bstep), max(Rcell)+1), dtype=int) + np.nan
+
+                for xx in range(len(self.data['VELO'])):
+                   BRvel[Bcell[xx]][Rcell[xx]] = self.data['VELO'][xx]
+                   BRind[Bcell[xx]][Rcell[xx]] = xx   #keep track of indices so easier to return to original format
+
+                # deal with 359 to 0 transition in bearing by
+                # repeating first BLim rows at the bottom and last BLim rows at the top
+                # also pad ranges with NaNs by adding extra columns on the left and right of the array
+                # this keeps the indexing for selecting the neighbors from breaking
+
+                BRtemp = np.append(np.append(BRvel[-BLim:], BRvel, axis=0), BRvel[:BLim],axis=0)
+                rangepad = np.zeros((BRtemp.shape[0], RLim), dtype=int) + np.nan
+                BRpad = np.append(np.append(rangepad, BRtemp,axis=1), rangepad,axis=1)
+
+                #calculate median of neighbors (neighbors include the point itself)
+                BRmed = BRpad + np.nan  # initialize with an array of NaN
+                for rr in range(RLim,BRvel.shape[1]+RLim):
+                    for bb in range(BLim,BRvel.shape[0]+BLim):
+                        temp = BRpad[bb-BLim:bb+BLim+1,rr-RLim:rr+RLim+1]  #temp is the matrix of neighbors
+                        BRmed[bb][rr] = np.nanmedian(temp)
+
+                # now remove the padding from the array containing the median values
+                # I should be able to index the cells I want, but I could not
+                # figure out how to do this so I did a two step deletion process instead!
+                BRmedtrim = np.delete(BRmed, [[0, BLim - 1, 1], [BRmed.shape[0] - BLim, BRmed.shape[0] - 1, 1]], axis=0)
+                BRmedtrim = np.delete(BRmedtrim, [[0, RLim - 1, 1], [BRmed.shape[1] - RLim, BRmed.shape[1] - 1, 1]], axis=1)
+
+                # calculate velocity minus median of neighbors
+                # and put back into single column using the indices saved in BRind
+                BRdiff = BRvel - BRmedtrim # velocity minus median of neighbors, test these values against current threshold
+                diffcol = self.data['RNGE'] + np.nan  #initialize a single column for the difference results
+                for rr in range(BRdiff.shape[1]):
+                    for bb in range(BRdiff.shape[0]):
+                        if not(np.isnan(BRind[bb][rr])):
+                           diffcol[BRind[bb][rr]] = BRdiff[bb][rr]
+                boolean = diffcol.abs() > threshold
+
+
+                # Another method would take the median of data from any radial cells within a certain
+                # distance (radius) of the radial being tested.  This method, as coded below, was very slow!
+                # Perhaps there is a better way to write the code.
+                # dist contains distance between each location and the other locations
+                # for rvi in range(len(self.data['VELO'])):
+                #     dist = np.zeros((len(self.data['LATD']), 1))
+                #     for i in range(len(self.data['LATD'])):
+                #         rvloc = self.data['LATD'][i],self.data['LOND'][i]
+                #         dist[i][0] = distance.distance((self.data['LATD'][rvi],self.data['LOND'][rvi]),(self.data['LATD'][i],self.data['LOND'][i])).kilometers
+
+            except TypeError:
+                diffcol = diffcol.astype(float)
+                boolean = diffcol.abs() > threshold
+
+
+            self.data['SMED'] = self.data['SMED'].where(~boolean, other=4)
+            #self.data['VFLG'] = self.data['VFLG'].where(~boolean, other=4) # for testing only, shows up as "marker" flag in SeaDisplay
+            self.tables['1']['TableColumnTypes'] += ' SMED'
+            self.footer['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_spatialmedian"')
+
+
     def reset(self):
         logging.info('Resetting instance data variable to original dataset')
         self._tables['1']
