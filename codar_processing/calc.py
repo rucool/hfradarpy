@@ -45,7 +45,7 @@ def gridded_index(X, Y, x, y, flag=np.nan):
 
 @numba.jit
 def lond_jit(lon, lat, dist, bearing, EARTH_RADIUS):
-    next_longitude = lon + (np.arctan2(np.sin(np.radians(bearing)) * np.sin(dist/EARTH_RADIUS) * np.cos(lat),
+    next_longitude = lon + (np.arctan2(np.sin(bearing) * np.sin(dist/EARTH_RADIUS) * np.cos(lat),
                                              np.cos(dist/EARTH_RADIUS) - np.sin(lat) * np.sin(lat)))
     return next_longitude
 
@@ -71,7 +71,7 @@ def reckon(lat, lon, bearing, distance):
                     np.cos(distance/EARTH_RADIUS) +
                     np.cos(latitude) *
                     np.sin(distance/EARTH_RADIUS) *
-                    np.cos(np.radians(bearing)))
+                    np.cos(bearing))
 
     # calculate distance longitude. For some reason, lon is faster when calculated with numba function compared to lat. So we split it out into a new function.....
     next_longitude = lond_jit(longitute, latitude, distance, bearing, EARTH_RADIUS)

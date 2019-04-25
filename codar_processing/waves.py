@@ -1,10 +1,28 @@
 import datetime as dt
 import pandas as pd
 import re
-from codar_processing.common import LLUVParser
+import xarray as xr
+from codar_processing.common import CTFParser
 
 
-class Waves(LLUVParser):
+def concatenate_waves(wave_list):
+    """
+    This function takes a list of radial files. Loads them all separately using the Wave object and then combines
+    them along the time dimension using xarrays built-in concatenation routines.
+    :param wave_list: list of radial files that you want to concatenate
+    :return: wave files concatenated into an xarray dataset by range, bearing, and time
+    """
+
+    wave_dict = {}
+    for each in sorted(wave_list):
+        wave = Waves(each, multi_dimensional=True)
+        wave_dict[wave.file_name] = wave.ds
+
+    ds = xr.concat(wave_dict.values(), 'time')
+    return ds
+
+
+class Waves(CTFParser):
     """
     Waves Subclass.
 
@@ -12,7 +30,7 @@ class Waves(LLUVParser):
     ~/codar_processing/common.py in order to load CODAR wave files
     """
 
-    def __init__(self, fname, replace_invalid=True, n_dimensional=True):
+    def __init__(self, fname, replace_invalid=True, multi_dimensional=True):
         rename = dict(datetime='time',
                       MWHT='wave_height',
                       MWPD='wave_period',
@@ -28,7 +46,7 @@ class Waves(LLUVParser):
                       WHNM='num_valid_source_wave_vectors',
                       WHSD='standard_deviation_of_wave_heights')
 
-        LLUVParser.__init__(self, fname)
+        CTFParser.__init__(self, fname)
         if self._tables['1']['data']['DIST'].isnull().all():
             df = self._tables['1']['data']
             self.data = df
@@ -47,7 +65,7 @@ class Waves(LLUVParser):
         if replace_invalid:
             self.replace_invalid_values()
 
-        if n_dimensional:
+        if multi_dimensional:
             # Set index of dataframe and also drop columns that we don't need to see anymore
             self.data = self.data.set_index(index).drop(['TIME', 'TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC'], axis=1)
 

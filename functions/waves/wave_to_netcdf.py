@@ -59,7 +59,7 @@ def main(wave_file, save_dir, wave_min=0.2, wave_max=5):
     :param wave_max: Maximum wave height to include in netCDF file
     :return:
     """
-    w = Waves(wave_file, n_dimensional=True)
+    w = Waves(wave_file, multi_dimensional=True)
 
     # Remove wave heights less than 0.2 and greater than 5 m
     w.data = w.data.where((wave_min < w.data['wave_height']) & (w.data['wave_height'] < wave_max))

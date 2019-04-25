@@ -33,7 +33,7 @@ def aggregate_netcdfs(files, save_dir, save_filename=None):
     pprint.pprint(files)
 
     # Opening files lazily (not into memory) using xarray
-    ds = xr.open_mfdataset(files, autoclose=True)
+    ds = xr.open_mfdataset(files)
     ds.attrs['time_coverage_start'] = pd.Timestamp(ds['time'].min().data).strftime(datetime_format)
     ds.attrs['time_coverage_end'] = pd.Timestamp(ds['time'].max().data).strftime(datetime_format)
 
@@ -53,6 +53,14 @@ def aggregate_netcdfs(files, save_dir, save_filename=None):
         ds.to_netcdf(save_file, encoding=encoding, format='netCDF4', engine='netcdf4', unlimited_dims=['time'])
     ds.close()
     return save_file
+
+
+# Yield successive n-sized chunks from l.
+# Taken from https://www.geeksforgeeks.org/break-list-chunks-size-n-python/
+def divide_chunks(l, n):
+    # looping till length l
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
 
 
 def create_dir(new_dir):
@@ -130,9 +138,9 @@ def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=4,
     return encoding
 
 
-class LLUVParser(object):
+class CTFParser(object):
     """
-    A generic parser for the CODAR LLUV file format.
+    A generic parser for the CODAR CTF file format.
     """
 
     __metaclass__ = ABCMeta
@@ -141,10 +149,13 @@ class LLUVParser(object):
         """
         Return an LLUVParser object whose
         """
-        self.file_path = fname
-        self.file_name = os.path.basename(fname)
+        split_path = os.path.split(fname)
+        self.file_path = split_path[0]
+        self.file_name = split_path[1]
+        self.full_file = os.path.realpath(fname)
         self.metadata = OrderedDict()
         self._tables = OrderedDict()
+        # self._data_header = {}  # initialize an empty list for the data header information
 
         # Load the LLUV Data with this generic LLUV parsing routine below
         table_count = 0
@@ -152,7 +163,7 @@ class LLUVParser(object):
         is_wera = False  # Default false. If 'WERA' is detected in the Manufacturer flag. It is set to True
         processing_info = []
 
-        with open(self.file_path, 'r', encoding='ISO-8859-1') as open_file:
+        with open(self.full_file, 'r', encoding='ISO-8859-1') as open_file:
             open_lluv = open_file.readlines()
 
             # Parse header and footer metadata
@@ -165,10 +176,11 @@ class LLUVParser(object):
                         if 'TableType' in line:  # Save this data as global header information
                             table = True  # we found a table
                             table_count = table_count + 1  # this is the nth table
-                            data_header = []  # initialize an empty list for the data header information
                             table_data = u''
+                            # self._data_header[table_count] = []
                             self._tables[str(table_count)] = OrderedDict()
                             self._tables[str(table_count)][key] = value
+                            self._tables[str(table_count)]['_TableHeader'] = []
                         elif 'Manufacturer' in line:
                             if 'WERA' in value:
                                 is_wera = True
@@ -182,10 +194,11 @@ class LLUVParser(object):
                 elif table:
                     if line.startswith('%'):
                         if line.startswith('%%'):  # table header information
-                            temp = line.replace('%%', '').split()
-                            if 'comp' in temp:
-                                temp = [x for x in temp if x not in ('comp', 'Distance')]
-                            data_header.append(tuple(temp))
+                            # temp = line.replace('%%', '').split()
+                            # if 'comp' in temp:
+                            #     temp = [x for x in temp if x not in ('comp', 'Distance')]
+                            # self._data_header[table_count].append(line)
+                            self._tables[str(table_count)]['_TableHeader'].append(line)
                         else:  # Table metadata and diagnostic data are prepended by at least 1 % sign
                             if len(line.split(':')) == 1:  # Diagnostic Data
                                 line = line.replace('%', '').strip()

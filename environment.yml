@@ -10,9 +10,10 @@ dependencies:
   - mysql-connector-python   
   - scipy
   - geopandas
-  - cyordereddict
+  - cyordereddic
   - cartopy
   - oceans
   - gsw
   - seawater
   - jupyter
+  - numba

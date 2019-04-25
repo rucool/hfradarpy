@@ -8,6 +8,7 @@ Convert CODAR Totals MATLAB .mat files generated using the HFRProgs toolbox into
 import datetime as dt
 import logging
 import numpy as np
+from numpy import matlib as mb
 import os
 import pandas as pd
 import sys
@@ -146,11 +147,12 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
                      num_radials=num_rads,)
 
     logging.debug('{} - Gridding data to 2d grid'.format(fname))
+
     # convert 1d data into 2d gridded form. data_dict must be a dictionary.
     x_ind, y_ind = gridded_index(x, y, lonlat[:, 0], lonlat[:, 1])
 
     for key in data_dict.keys():
-        temp_data = np.matlib.tile(np.nan, x.shape)
+        temp_data = mb.tile(np.nan, x.shape)
         temp_data[(y_ind, x_ind)] = data_dict[key]
 
         # expand dimensions for time and depth

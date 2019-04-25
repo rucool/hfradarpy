@@ -8,7 +8,6 @@
 calculated for a grid point if that grid point has data present more than 50% of the time. U and V errors (GDOP or GDOSA)
 can also be used to filter the dataset.
 """
-import click
 import os
 import xarray as xr
 import xarray.ufuncs as xu

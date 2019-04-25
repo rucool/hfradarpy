@@ -17,7 +17,7 @@ log_level = 'INFO'
 log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
-data_dir = '//home/codaradm/data/totals/maracoos/lsq/5MHz/'
+data_dir = '/home/codaradm/data/totals/maracoos/lsq/5MHz/'
 save_dir = '/home/codaradm/data/totals/maracoos/nc_lsq/5MHz/'
 hfr_grid = '../data/grid_files/maracoos_grid_6km_extended.txt'
 start_time = pd.Timestamp(2018, 1, 1, 0, 0, 0)

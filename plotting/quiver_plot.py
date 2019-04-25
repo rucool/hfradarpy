@@ -6,21 +6,19 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import os
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
-from oceans import
+from oceans.ocfis import uv2spdir, spdir2uv
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from codar_processing.common import create_dir
 
-# f = '/Volumes/home/nazzaro/codar_10yr/error0.60/december/decadal_means.nc'
-save_dir = '/Users/mikesmith/Documents/'
-
-title_str = 'MARACOOS - Decadal Mean'
-sname = 'RU_MARA_decadal-mean.png'
-
-save_name = os.path.join(save_dir, sname)
-
+f = '../data/totals/nc/hourly/RU_MARA_20180301T000000Z.nc'
+save_dir = '../data/plots/totals/'
+title_str = 'MARACOOS'
 velocity_min = 0
 velocity_max = 15
+resoluton = 150  # plot resolution in DPI
+sub = 2  # subset data by every n sub
 
-ds = xr.open_dataset('/Volumes/home/nazzaro/codar_10yr/error0.60/december/decadal_means.nc')
+ds = xr.open_dataset(f)
 
 LAND = cfeature.NaturalEarthFeature(
     'physical', 'land', '10m',
@@ -35,12 +33,10 @@ state_lines = cfeature.NaturalEarthFeature(
     facecolor='none')
 
 fig = plt.figure()
-sub = 2
-
 tds = ds.squeeze()
 
-u = tds['u_mean_annual'].data
-v = tds['v_mean_annual'].data
+u = tds['u'].data
+v = tds['v'].data
 
 lon = tds.coords['lon'].data
 lat = tds.coords['lat'].data
@@ -60,7 +56,7 @@ fig, ax = plt.subplots(figsize=(11, 8),
                          subplot_kw=dict(projection=ccrs.PlateCarree()))
 
 # Plot title
-plt.title('{}\n{}'.format(title_str, 'Time Period: 2007 - 2016'))
+plt.title('{}\n{}'.format(title_str, str(ds.time.values[0])))
 
 # plot arrows over pcolor
 h = ax.quiver(lons[::sub, ::sub], lats[::sub, ::sub],
@@ -72,7 +68,7 @@ h = ax.quiver(lons[::sub, ::sub], lats[::sub, ::sub],
 divider = make_axes_locatable(ax)
 cax = divider.new_horizontal(size='5%', pad=0.05, axes_class=plt.Axes)
 fig.add_axes(cax)
-#
+
 # generate colorbar
 cb = plt.colorbar(h, cax=cax, ticks=[0,5,10,15])
 cb.set_label('cm/s')
@@ -104,5 +100,9 @@ fig_size[0] = 12
 fig_size[1] = 8.5
 plt.rcParams["figure.figsize"] = fig_size
 
-plt.savefig(save_name, dpi=150)
+sname = '{}.png'.format(os.path.basename(f))
+save_name = os.path.join(save_dir, sname)
+create_dir(save_dir)
+
+plt.savefig(save_name, dpi=resoluton)
 plt.close('all')

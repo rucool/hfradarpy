@@ -32,10 +32,13 @@ def main(radial_file, save_path, qc_values):
 
     if r.is_valid():
         # run high frequency radar qartod tests on open radial file
-        r.qc_qartod_location()
-        r.qc_qartod_speed(qc_values['radial_max_speed'])
+        r.initialize_qc()
+        r.qc_qartod_syntax()
+        r.qc_qartod_maximum_velocity(qc_values['radial_max_speed'])
+        r.qc_qartod_valid_location()
         r.qc_qartod_radial_count(qc_values['radial_min_count'], qc_values['radial_low_count'])
-        # r.qc_qartod_spatialmedian()
+        r.qc_qartod_spatial_median()
+        r.qc_qartod_avg_radial_bearing(qc_values['average_bearing_threshold'])
 
         # Export radial file to either a radial or netcdf
         try:
@@ -47,6 +50,9 @@ def main(radial_file, save_path, qc_values):
 
 if __name__ == '__main__':
     radial = '../../data/radials/SEAB/2018_03/RDLi_SEAB_2018_03_01_0200.ruv'
-    save_path = '../../data/radials_qc/SEAB/2018_03/'
-    qc_values = dict(radial_max_speed=30, radial_min_count=50, radial_low_count=140)
+    save_path = '../../data/radials_nc/SEAB/2018_03/'
+    qc_values = dict(radial_max_speed=30,
+                     radial_min_count=50,
+                     radial_low_count=140,
+                     average_bearing_threshold=30)
     main(radial, save_path, qc_values)
