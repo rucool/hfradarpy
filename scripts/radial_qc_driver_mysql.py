@@ -33,10 +33,10 @@ def qc_data(radial):
 # List of sites to check. If left empty, we will find all available sites on the fileserver and run on everything
 sites = []
 
-radial_dir = '/home/codaradm/data/radials/'
-save_dir = '/home/codaradm/data/radials_qc/'
+radial_dir = '/home/codaradm/data_reprocessed/radials/'
+save_dir = '/home/codaradm/data_reprocessed/radials_qc/'
 workers = 16
-days_to_check = 30
+days_to_check = 1000
 
 # Open up database connection. Database configuration is in ~/configs/configs.py
 global session
@@ -56,16 +56,20 @@ results = session.query(QCValues, Sites).join(Sites).filter(Sites.site.in_(sites
 # Create dictionary of qc values for easy
 qc_values = {}
 for _q,_s in results:
-    qc_values[_s.site] = dict(qc_values=dict(radial_min_count=_q.radial_min_count,
-                                             radial_low_count=_q.radial_low_count,
-                                             radial_max_speed=_q.radial_max_speed))
+    qc_values[_s.site] = dict(
+        qc_values=dict(
+            qc_qartod_radial_count=dict(radial_min_count=_q.radial_min_count, radial_low_count=_q.radial_low_count),
+            qc_qartod_maximum_velocity=dict(radial_max_speed=_q.radial_max_speed),
+            qc_qartod_spatial_median=dict(radial_smed_range_cell_limit=_q.radial_smed_range_cell_limit,
+                                          radial_smed_angular_limit=_q.radial_smed_angular_limit,
+                                          radial_smed_current_difference=_q.radial_smed_current_difference)))
 
 start_time = time.time()
 for site in qc_values.keys():
     qc_arguments = qc_values[site]
     qc_arguments['save_path'] = os.path.join(save_dir, site)
     site_dir = os.path.join(radial_dir, site)
-    files = sorted(glob.glob(os.path.join(site_dir, '*.ruv')))
+    files = sorted(glob.glob(os.path.join(site_dir, '*/*.ruv'), recursive=True))
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
         zip(files, executor.map(qc_data, files))

@@ -62,6 +62,9 @@ class QCValues(Base):
     radial_min_count = Column(SMALLINT)
     radial_low_count = Column(SMALLINT)
     radial_max_speed = Column(SMALLINT)
+    radial_smed_range_cell_limit = Column(FLOAT)
+    radial_smed_angular_limit = Column(SMALLINT)
+    radial_smed_current_difference = Column(SMALLINT)
 
 
 class RadialDiagnostics(Base):

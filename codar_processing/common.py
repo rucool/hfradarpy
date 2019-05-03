@@ -267,4 +267,5 @@ class CTFParser(object):
         :param values: list of CODAR fill values that reflect non calculable values
         :return: dataframe with invalid values set to NaN
         """
+        logging.info('Replacing invalid values {} with NaN'.format(values))
         self.data.replace(values, np.nan, inplace=True)

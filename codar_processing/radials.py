@@ -41,6 +41,7 @@ class Radial(CTFParser):
     def __init__(self, fname, replace_invalid=True, multi_dimensional=False, mask_over_land=False):
         keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
 
+        logging.info('Loading radial file: {}'.format(fname))
         CTFParser.__init__(self, fname)
         for key in self._tables.keys():
             table = self._tables[key]
@@ -57,6 +58,7 @@ class Radial(CTFParser):
             self.replace_invalid_values()
 
         if mask_over_land:
+            logging.info('Masking radials over land')
             land = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
             land = land[land['continent'] == 'North America']
             # ocean = gpd.read_file('/Users/mikesmith/Downloads/ne_10m_ocean')
@@ -83,6 +85,7 @@ class Radial(CTFParser):
         :param range_max:
         :return:
         """
+        logging.info('Converting radial matrix to multidimensional dataset')
         # Clean radial header
         # self.clean_header()
 
@@ -516,7 +519,7 @@ class Radial(CTFParser):
         self._tables['1']['TableColumnTypes'] += ' QC08'
         self.metadata['QCTest'].append('"qc_qartod_valid_location (QC08)[VFLG==128]: See results in column QC08 below"')
 
-    def qc_qartod_radial_count(self, min_radials=150, low_radials=300):
+    def qc_qartod_radial_count(self, radial_min_count=150, radial_low_count=300):
         """
         Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Radial Count (Test 9)
@@ -533,17 +536,17 @@ class Radial(CTFParser):
         :return:
         """
         num_radials = self.data.shape[0]
-        if num_radials < min_radials:
+        if num_radials < radial_min_count:
             radial_count_flag = 4
-        elif (num_radials >= min_radials) and (num_radials <= low_radials):
+        elif (num_radials >= radial_min_count) and (num_radials <= radial_low_count):
             radial_count_flag = 3
-        elif num_radials > low_radials:
+        elif num_radials > radial_low_count:
             radial_count_flag = 1
 
         # self.metadata['qc_qartod_radial_count'] = str(radial_count_flag)
-        self.metadata['QCTest'].append(f'"qc_qartod_radial_count (QC09) [failure={str(min_radials)} (number of radials) warning_num={str(low_radials)}]: {str(radial_count_flag)} (number of radials)]"')
+        self.metadata['QCTest'].append(f'"qc_qartod_radial_count (QC09) [failure={str(radial_min_count)} (number of radials) warning_num={str(radial_low_count)}]: {str(radial_count_flag)} (number of radials)]"')
 
-    def qc_qartod_maximum_velocity(self, threshold=250):
+    def qc_qartod_maximum_velocity(self, radial_max_speed=250):
         """
         Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Max Threshold (Test 7)
@@ -558,28 +561,28 @@ class Radial(CTFParser):
         """
         self.data['QC07'] = 1
         try:
-            boolean = self.data['VELO'].abs() > threshold
+            boolean = self.data['VELO'].abs() > radial_max_speed
         except TypeError:
             self.data['VELO'] = self.data['VELO'].astype(float)
-            boolean = self.data['VELO'].abs() > threshold
+            boolean = self.data['VELO'].abs() > radial_max_speed
 
         self.data['QC07'] = self.data['QC07'].where(~boolean, other=4)
         self._tables['1']['TableColumnTypes'] += ' QC07'
-        self.metadata['QCTest'].append(f'"qc_qartod_maximum_velocity (QC07) [max_vel={str(threshold)} (cm/s)]: See results in column QC07 below"')
+        self.metadata['QCTest'].append(f'"qc_qartod_maximum_velocity (QC07) [max_vel={str(radial_max_speed)} (cm/s)]: See results in column QC07 below"')
 
-    def qc_qartod_spatial_median(self, rclim=2.1, anglim=10, threshold=30):
+    def qc_qartod_spatial_median(self, radial_smed_range_cell_limit=2.1, radial_smed_angular_limit=10, radial_smed_current_difference=30):
         """
         Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Spatial Median (Test 10)
         Ensures that the radial velocity is not too different from nearby radial velocities.
         RV is the radial velocity
-        NV is a set of radial velocities for neighboring radial cells (cells within radius of 'rclim' * Range Step (km)
-        and whose vector bearing (angle of arrival at site) is also within 'anglim' degrees of the source vector's bearing)
-        Required to pass the test: |RV - median(NV)| <= threshold
+        NV is a set of radial velocities for neighboring radial cells (cells within radius of 'radial_smed_range_cell_limit' * Range Step (km)
+        and whose vector bearing (angle of arrival at site) is also within 'radial_smed_angular_limit' degrees of the source vector's bearing)
+        Required to pass the test: |RV - median(NV)| <= radial_smed_current_difference
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
         :param RCLim: multiple of range step which depends on the radar type
         :param AngLim: limit for number of degrees from source radial's bearing (degrees)
-        :param CurLim: Current difference threshold (cm/s)
+        :param CurLim: Current difference radial_smed_current_difference (cm/s)
         :return:
         """
         self.data['QC10'] = 1
@@ -591,8 +594,8 @@ class Radial(CTFParser):
             Bstep = Bstep[0]
             # Bstep = int(min(np.diff(np.unique(self.data['BEAR']))))  #use as backup method if other fails?
 
-            RLim = int(round(rclim))  # if not an integer will cause an error later on
-            BLim = int(anglim / Bstep)  # if not an integer will cause an error later on
+            RLim = int(round(radial_smed_range_cell_limit))  # if not an integer will cause an error later on
+            BLim = int(radial_smed_angular_limit / Bstep)  # if not an integer will cause an error later on
 
             # convert bearing into bearing cell numbers
             adj = int(5 - min(self.data['BEAR']))
@@ -639,13 +642,13 @@ class Radial(CTFParser):
 
             # calculate velocity minus median of neighbors
             # and put back into single column using the indices saved in BRind
-            BRdiff = BRvel - BRmedtrim  # velocity minus median of neighbors, test these values against current threshold
+            BRdiff = BRvel - BRmedtrim  # velocity minus median of neighbors, test these values against current radial_smed_current_difference
             diffcol = self.data['RNGE'] + np.nan  # initialize a single column for the difference results
             for rr in range(BRdiff.shape[1]):
                 for bb in range(BRdiff.shape[0]):
                     if not (np.isnan(BRind[bb][rr])):
                         diffcol[BRind[bb][rr]] = BRdiff[bb][rr]
-            boolean = diffcol.abs() > threshold
+            boolean = diffcol.abs() > radial_smed_current_difference
 
             # Another method would take the median of data from any radial cells within a certain
             # distance (radius) of the radial being tested.  This method, as coded below, was very slow!
@@ -659,12 +662,12 @@ class Radial(CTFParser):
 
         except TypeError:
             diffcol = diffcol.astype(float)
-            boolean = diffcol.abs() > threshold
+            boolean = diffcol.abs() > radial_smed_current_difference
 
         self.data['QC10'] = self.data['QC10'].where(~boolean, other=4)
         # self.data['VFLG'] = self.data['VFLG'].where(~boolean, other=4) # for testing only, shows up as "marker" flag in SeaDisplay
         self._tables['1']['TableColumnTypes'] += ' QC10'
-        self.metadata['QCTest'].append(f'"qc_qartod_spatial_median (QC10) [range_cell_limit={str(rclim)} (range cells) angular_limit={str(anglim)} (degrees) current_difference={str(threshold)} (cm/s)]: See results in column QC10 below"')
+        self.metadata['QCTest'].append(f'"qc_qartod_spatial_median (QC10) [range_cell_limit={str(radial_smed_range_cell_limit)} (range cells) angular_limit={str(radial_smed_angular_limit)} (degrees) current_difference={str(radial_smed_current_difference)} (cm/s)]: See results in column QC10 below"')
 
     def qc_qartod_syntax(self):
         """
@@ -723,111 +726,6 @@ class Radial(CTFParser):
         else:
             syntax = 4
         self.metadata['QCTest'].append(f'"qc_qartod_syntax (QC06) [N/A]: {syntax}"')
-
-    def qc_qartod_spatialmedian(self, rclim=2.1, anglim=10, threshold = 30):
-            """
-            Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
-            Spatial Median (Test 10)
-            Ensures that the radial velocity is not too different from nearby radial velocities.
-
-            RV is the radial velocity
-            NV is a set of radial velocities for neighboring radial cells (cells within radius of 'rclim' * Range Step (km)
-            and whose vector bearing (angle of arrival at site) is also within 'anglim' degrees of the source vector's bearing)
-
-            Required to pass the test: |RV - median(NV)| <= threshold
-
-            Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-            :param RCLim: multiple of range step which depends on the radar type
-            :param AngLim: limit for number of degrees from source radial's bearing (degrees)
-            :param CurLim: Current difference threshold (cm/s)
-            :return:
-            """
-            self.data['SMED'] = 1
-            try:
-                Rstep = float(self.header['RangeResolutionKMeters'])
-                #Rstep = np.floor(min(np.diff(np.unique(self.data['RNGE'])))) #use as backup method if other fails?
-
-                Bstep = [float(s) for s in re.findall(r'-?\d+\.?\d*', self.header['AngularResolution'])]
-                Bstep = Bstep[0]
-                #Bstep = int(min(np.diff(np.unique(self.data['BEAR']))))  #use as backup method if other fails?
-
-                RLim = int(round(rclim)) #if not an integer will cause an error later on
-                BLim = int(anglim/Bstep) #if not an integer will cause an error later on
-
-                #convert bearing into bearing cell numbers
-                adj = int(5 - min(self.data['BEAR']))
-                Bcell = ((self.data['BEAR'] + adj) / Bstep) - 1
-                Bcell = Bcell.astype(int)
-                #Btable = np.column_stack((self.data['BEAR'], Bcell))  #only for debugging
-
-                #convert range into range cell numbers
-                Rcell = (np.floor((self.data['RNGE'] / Rstep) + 0.1))
-                Rcell = Rcell - min(Rcell)
-                Rcell = Rcell.astype(int)
-                #Rtable = np.column_stack((self.data['RNGE'], Rcell))   #only for debugging
-                Rcell = self.data['SPRC']
-
-                # place velocities into a matrix with rows defined as bearing cell# and columns as range cell#
-                BRvel = np.zeros((int(360 / Bstep), max(Rcell)+1), dtype=int) + np.nan
-                BRind = np.zeros((int(360 / Bstep), max(Rcell)+1), dtype=int) + np.nan
-
-                for xx in range(len(self.data['VELO'])):
-                   BRvel[Bcell[xx]][Rcell[xx]] = self.data['VELO'][xx]
-                   BRind[Bcell[xx]][Rcell[xx]] = xx   #keep track of indices so easier to return to original format
-
-                # deal with 359 to 0 transition in bearing by
-                # repeating first BLim rows at the bottom and last BLim rows at the top
-                # also pad ranges with NaNs by adding extra columns on the left and right of the array
-                # this keeps the indexing for selecting the neighbors from breaking
-
-                BRtemp = np.append(np.append(BRvel[-BLim:], BRvel, axis=0), BRvel[:BLim],axis=0)
-                rangepad = np.zeros((BRtemp.shape[0], RLim), dtype=int) + np.nan
-                BRpad = np.append(np.append(rangepad, BRtemp,axis=1), rangepad,axis=1)
-
-                #calculate median of neighbors (neighbors include the point itself)
-                BRmed = BRpad + np.nan  # initialize with an array of NaN
-                for rr in range(RLim,BRvel.shape[1]+RLim):
-                    for bb in range(BLim,BRvel.shape[0]+BLim):
-                        temp = BRpad[bb-BLim:bb+BLim+1,rr-RLim:rr+RLim+1]  #temp is the matrix of neighbors
-                        BRmed[bb][rr] = np.nanmedian(temp)
-
-                # now remove the padding from the array containing the median values
-                # I should be able to index the cells I want, but I could not
-                # figure out how to do this so I did a two step deletion process instead!
-                BRmedtrim = np.delete(BRmed, [[0, BLim - 1, 1], [BRmed.shape[0] - BLim, BRmed.shape[0] - 1, 1]], axis=0)
-                BRmedtrim = np.delete(BRmedtrim, [[0, RLim - 1, 1], [BRmed.shape[1] - RLim, BRmed.shape[1] - 1, 1]], axis=1)
-
-                # calculate velocity minus median of neighbors
-                # and put back into single column using the indices saved in BRind
-                BRdiff = BRvel - BRmedtrim # velocity minus median of neighbors, test these values against current threshold
-                diffcol = self.data['RNGE'] + np.nan  #initialize a single column for the difference results
-                for rr in range(BRdiff.shape[1]):
-                    for bb in range(BRdiff.shape[0]):
-                        if not(np.isnan(BRind[bb][rr])):
-                           diffcol[BRind[bb][rr]] = BRdiff[bb][rr]
-                boolean = diffcol.abs() > threshold
-
-
-                # Another method would take the median of data from any radial cells within a certain
-                # distance (radius) of the radial being tested.  This method, as coded below, was very slow!
-                # Perhaps there is a better way to write the code.
-                # dist contains distance between each location and the other locations
-                # for rvi in range(len(self.data['VELO'])):
-                #     dist = np.zeros((len(self.data['LATD']), 1))
-                #     for i in range(len(self.data['LATD'])):
-                #         rvloc = self.data['LATD'][i],self.data['LOND'][i]
-                #         dist[i][0] = distance.distance((self.data['LATD'][rvi],self.data['LOND'][rvi]),(self.data['LATD'][i],self.data['LOND'][i])).kilometers
-
-            except TypeError:
-                diffcol = diffcol.astype(float)
-                boolean = diffcol.abs() > threshold
-
-
-            self.data['SMED'] = self.data['SMED'].where(~boolean, other=4)
-            #self.data['VFLG'] = self.data['VFLG'].where(~boolean, other=4) # for testing only, shows up as "marker" flag in SeaDisplay
-            self.tables['1']['TableColumnTypes'] += ' SMED'
-            self.footer['ProcessingTool'].append('"hfr_processing/Radial.qc_qartod_spatialmedian"')
-
 
     def reset(self):
         logging.info('Resetting instance data variable to original dataset')
