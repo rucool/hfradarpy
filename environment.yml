@@ -7,10 +7,9 @@ dependencies:
   - netcdf4
   - dask
   - sqlalchemy
-  - mysql-connector-python   
+  - mysql-connector-python=2.2.3=py36_0
   - scipy
   - geopandas
-  - cyordereddic
   - cartopy
   - oceans
   - gsw

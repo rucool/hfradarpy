@@ -13,3 +13,4 @@ configs/configs.py
 *.swp
 notebooks/.ipynb_checkpoints/wave_class_exploration-checkpoint.ipynb
 notebooks/.ipynb_checkpoints/radial_class_exploration-checkpoint.ipynb
+codar_processing/configs/configs.py

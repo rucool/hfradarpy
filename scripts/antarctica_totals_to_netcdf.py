@@ -1,7 +1,7 @@
 import glob
 import os
 import pandas as pd
-from functions.totals import hfrprogs_mat_to_netcdf4
+from codar_processing.methods.totals import hfrprogs_mat_to_netcdf4
 
 main_dir = '/Volumes/home/codaradm/data/totals/pldp/25MHz/0.5km/oi/mat/'
 save_dir = '/Users/mikesmith/Documents/data/codar/totals/nc'

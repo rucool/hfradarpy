@@ -4,7 +4,7 @@
 @email michaesm@marine.rutgers.edu
 @purpose Parse CODAR radial files utilizing the Radial subclass and download qc values from MySQL database
 """
-import codar_processing.database_common as db
+import codar_processing.src.database_common as db
 import concurrent.futures
 import datetime as dt
 import glob
@@ -12,12 +12,12 @@ import logging
 import os
 import sys
 import time
-from configs.database_tables import Sites, QCValues
-from functions.radials.qc_radial_file import main as qc_radial
+from codar_processing.configs.database_tables import Sites, QCValues
+from codar_processing.methods.radials.qc_radial_file import main as qc_radial
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)
-log_level = 'INFO'
+log_level = 'ERROR'
 log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
@@ -30,11 +30,12 @@ def qc_data(radial):
         logging.info('{} modified during the past {} days: {}'.format(radial, days_to_check, mtime))
         qc_radial(**qc_arguments)
 
-# List of sites to check. If left empty, we will find all available sites on the fileserver and run on everything
-sites = []
 
-radial_dir = '/home/codaradm/data_reprocessed/radials/'
-save_dir = '/home/codaradm/data_reprocessed/radials_qc/'
+# List of sites to check. If left empty, we will find all available sites on the fileserver and run on everything
+# sites = ['AMAG', 'BLCK', 'BRIG','HEMP', 'HOOK', 'LISL', 'LOVE', 'MRCH', 'MVCO', 'NANT', 'NAUS',' WILD', 'CEDR', 'CORE', 'DUCK', 'HATY', ]
+sites=['BLCK']
+radial_dir = '/Volumes/home/codaradm/data_reprocessed/radials/'
+save_dir = '/Users/mikesmith/Documents/radials_qc/'
 workers = 16
 days_to_check = 1000
 
