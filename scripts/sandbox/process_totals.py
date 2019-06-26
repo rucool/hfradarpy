@@ -1,7 +1,6 @@
-from codar_processing.radials import Radial
+from codar_processing.src.radials import Radial
 import numpy as np
 import pandas as pd
-from scipy.spatial import cKDTree
 
 sites = ['SEAB', 'BRAD', 'SPRK', 'BRNT', 'BRMR', 'RATH']
 time = '2018_01_01_0000'

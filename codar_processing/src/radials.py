@@ -43,6 +43,9 @@ class Radial(CTFParser):
 
         logging.info('Loading radial file: {}'.format(fname))
         CTFParser.__init__(self, fname)
+        if self._iscorrupt:
+            return
+
         for key in self._tables.keys():
             table = self._tables[key]
             if 'LLUV' in table['TableType']:
@@ -535,7 +538,7 @@ class Radial(CTFParser):
         :param low_radials: Low radial count threshold below which the file should be considered suspect. low_radials > min_radials
         :return:
         """
-        num_radials = self.data.shape[0]
+        num_radials = self.data[self.data['VFLG'] != 128].shape[0]
         if num_radials < radial_min_count:
             radial_count_flag = 4
         elif (num_radials >= radial_min_count) and (num_radials <= radial_low_count):
@@ -544,7 +547,7 @@ class Radial(CTFParser):
             radial_count_flag = 1
 
         # self.metadata['qc_qartod_radial_count'] = str(radial_count_flag)
-        self.metadata['QCTest'].append(f'"qc_qartod_radial_count (QC09) [failure={str(radial_min_count)} (number of radials) warning_num={str(radial_low_count)}]: {str(radial_count_flag)} (number of radials)]"')
+        self.metadata['QCTest'].append(f'"qc_qartod_radial_count (QC09) [failure={str(radial_min_count)} (number of valid radials) warning_num={str(radial_low_count)} (number of valid radials) <valid_radials={str(num_radials)}>]: {str(radial_count_flag)} ]"')
 
     def qc_qartod_maximum_velocity(self, radial_max_speed=250):
         """

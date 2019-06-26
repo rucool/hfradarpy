@@ -1,10 +1,10 @@
 import logging
 import os
 import sys
-from codar_processing.radials import Radial
+from codar_processing.src.radials import Radial
 from pymongo import MongoClient, InsertOne, IndexModel, ASCENDING, DESCENDING
 from pymongo.errors import BulkWriteError
-from codar_processing.common import divide_chunks
+from codar_processing.src.common import divide_chunks
 
 
 def frequency_check(freq):
