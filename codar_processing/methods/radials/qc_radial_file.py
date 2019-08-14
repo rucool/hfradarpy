@@ -54,7 +54,7 @@ if __name__ == '__main__':
     save_path = '../../data/radials_nc/SEAB/2018_03/'
     qc_values = dict(
         qc_qartod_radial_count=dict(radial_min_count=50, radial_low_count=140),
-        qc_qartod_maximum_velocity=dict(radial_max_speed=30),
+        qc_qartod_maximum_velocity=dict(radial_max_speed=300),
         qc_qartod_spatial_median=dict(radial_smed_range_cell_limit=2.1,
                                       radial_smed_angular_limit=10,
                                       radial_smed_current_difference=30))

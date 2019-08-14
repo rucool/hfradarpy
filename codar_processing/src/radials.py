@@ -601,8 +601,8 @@ class Radial(CTFParser):
             BLim = int(radial_smed_angular_limit / Bstep)  # if not an integer will cause an error later on
 
             # convert bearing into bearing cell numbers
-            adj = int(5 - min(self.data['BEAR']))
-            Bcell = ((self.data['BEAR'] + adj) / Bstep) - 1
+            adj = np.mod(min(self.data['BEAR']),Bstep)
+            Bcell = ((self.data['BEAR'] - adj) / Bstep) - 1
             Bcell = Bcell.astype(int)
             # Btable = np.column_stack((self.data['BEAR'], Bcell))  #only for debugging
 
@@ -638,10 +638,7 @@ class Radial(CTFParser):
                     BRmed[bb][rr] = np.nanmedian(temp)
 
             # now remove the padding from the array containing the median values
-            # I should be able to index the cells I want, but I could not
-            # figure out how to do this so I did a two step deletion process instead!
-            BRmedtrim = np.delete(BRmed, [[0, BLim - 1, 1], [BRmed.shape[0] - BLim, BRmed.shape[0] - 1, 1]], axis=0)
-            BRmedtrim = np.delete(BRmedtrim, [[0, RLim - 1, 1], [BRmed.shape[1] - RLim, BRmed.shape[1] - 1, 1]], axis=1)
+            BRmedtrim = BRmed[BLim:-BLim, RLim:-RLim]
 
             # calculate velocity minus median of neighbors
             # and put back into single column using the indices saved in BRind
@@ -668,7 +665,7 @@ class Radial(CTFParser):
             boolean = diffcol.abs() > radial_smed_current_difference
 
         self.data['QC10'] = self.data['QC10'].where(~boolean, other=4)
-        # self.data['VFLG'] = self.data['VFLG'].where(~boolean, other=4) # for testing only, shows up as "marker" flag in SeaDisplay
+        #self.data['VFLG'] = self.data['VFLG'].where(~boolean, other=4) # for testing only, shows up as "marker" flag in SeaDisplay
         self._tables['1']['TableColumnTypes'] += ' QC10'
         self.metadata['QCTest'].append(f'"qc_qartod_spatial_median (QC10) [range_cell_limit={str(radial_smed_range_cell_limit)} (range cells) angular_limit={str(radial_smed_angular_limit)} (degrees) current_difference={str(radial_smed_current_difference)} (cm/s)]: See results in column QC10 below"')
 
