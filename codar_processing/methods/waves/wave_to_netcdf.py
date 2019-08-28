@@ -5,6 +5,7 @@
 @purpose Parse CODAR wave files utilizing the Wave subclass and convert to CF Compliant NetCDF4 files
 """
 # import click
+import glob
 import logging
 import os
 import sys
@@ -26,7 +27,7 @@ required_attributes = dict(ncei_template_version='NCEI_NetCDF_Point_Template_v2.
                            title='MARACOOS Wave Heights',
                            naming_authority='edu.rutgers.marine.rucool',
                            comment='Network maintained by MARACOOS. See references attribute',
-                           acknowledgement='This data is provided by the Mid-Atlantic Regional Association Coastal Ocean Observing System (MARACOOS). Funding is provided by the U.S. Integration Ocean Observing System (IOOS).',
+                           acknowledgment='This data is provided by the Mid-Atlantic Regional Association Coastal Ocean Observing System (MARACOOS). Funding is provided by the U.S. Integration Ocean Observing System (IOOS).',
                            standard_name_vocabulary='CF Standard Name Table v41',
                            creator_name='Michael Smith',
                            creator_email='michaesm@marine.rutgers.edu',
@@ -178,7 +179,8 @@ def main(wave_file, save_dir, wave_min=0.2, wave_max=5):
 
 
 if __name__ == '__main__':
-    wave_files = ['../../data/waves/wls/SEAB/WVLM_SEAB_2018_01_01_0000.wls', '../../data/waves/wls/SEAB/WVLR_SEAB_2018_01_01_0000.wls']
+    wave_dir = '../../data/waves/wls/SEAB'
+    wave_files = glob.glob(os.path.join(wave_dir, '*.wls'))
     save_dir = '../../data/waves/nc/SEAB'
 
     for f in wave_files:

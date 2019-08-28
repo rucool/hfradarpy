@@ -9,7 +9,7 @@ echo ---------------- Start ---------------------- >> $logfile
 date >> $logfile
 
 source activate codar_processing
-python /home/codaradm/operational_scripts/codar_processing/scripts/realtime_waves_to_netcdf.py >> $logfile
+python /home/codaradm/operational_scripts/codar_processing/scripts/realtime/realtime_waves_to_netcdf.py >> $logfile
 #$HOME/logs/parse_wave_files-`date +\%Y\%m\%d`.log
 source deactivate
 

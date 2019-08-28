@@ -370,9 +370,9 @@ if __name__ == '__main__':
     import glob
 
     # Define test inputs
-    files = sorted(glob.glob('../../data/totals/mat/*.mat'))
+    files = sorted(glob.glob('../../data/totals/oi/mat/*.mat'))
     grid_file = '../../data/grid_files/maracoos_grid_6km_extended.txt'
-    save_dir = '../../data/totals/nc/hourly'
+    save_dir = '../../data/totals/oi/nc/hourly'
     threshold = dict(u_err=0.6, v_err=0.6, uv_covariance=0.6)
 
     # load csv file containing the grid

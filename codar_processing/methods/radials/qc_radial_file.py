@@ -8,6 +8,7 @@
 import logging
 import os
 import sys
+import glob
 
 from codar_processing.src.radials import Radial
 
@@ -50,8 +51,10 @@ def main(radial_file, save_path, qc_values):
 
 
 if __name__ == '__main__':
-    radial = '../../data/radials/SEAB/2018_03/RDLi_SEAB_2018_03_01_0200.ruv'
-    save_path = '../../data/radials_nc/SEAB/2018_03/'
+    radial_path = '../../data/radials/SEAB'
+    radials = glob.glob(os.path.join(radial_path, '*.ruv'))
+    save_path = '../../data/radials_nc/SEAB/'
+
     qc_values = dict(
         qc_qartod_radial_count=dict(radial_min_count=50, radial_low_count=140),
         qc_qartod_maximum_velocity=dict(radial_max_speed=300),
@@ -59,4 +62,5 @@ if __name__ == '__main__':
                                       radial_smed_angular_limit=10,
                                       radial_smed_current_difference=30))
 
-    main(radial, save_path, qc_values)
+    for radial in radials:
+        main(radial, save_path, qc_values)

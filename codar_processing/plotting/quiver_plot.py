@@ -10,7 +10,7 @@ from oceans.ocfis import uv2spdir, spdir2uv
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from codar_processing.src.common import create_dir
 
-f = '../data/totals/nc/hourly/RU_MARA_20180301T000000Z.nc'
+f = '../data/totals/oi/nc/hourly/RU_MARA_20190101T000000Z.nc'
 save_dir = '../data/plots/totals/'
 title_str = 'MARACOOS'
 velocity_min = 0

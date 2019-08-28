@@ -73,7 +73,7 @@ class Waves(CTFParser):
             self.ds = self.data.to_xarray()
 
             # rename variables to something meaningful
-            self.ds.rename(rename, inplace=True)
+            self.ds = self.ds.rename(rename)
 
             # Clean up wave header and assign header data to global attributes
             self.clean_wave_header()

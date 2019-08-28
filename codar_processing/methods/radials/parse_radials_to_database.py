@@ -15,7 +15,7 @@ import codar_processing.src.database_common as db
 import codar_processing.src.database_radials as dbr
 from codar_processing.src.common import timestamp_from_lluv_filename
 from codar_processing.src.radials import Radial
-from codar_processing.configs import RadialMetadata, RadialDiagnostics, HardwareDiagnostics
+from codar_processing.configs.database_tables import RadialMetadata, RadialDiagnostics, HardwareDiagnostics
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     from glob import glob
 
     radial_dir = '/home/codaradm/data/radials/'
-    time_delta = 7  # days. Can be in fractions of a day.
+    time_delta = 1  # days. Can be in fractions of a day.
     site_codes = []  # Leave empty if you want the script to determine radial folders in root directory
     recursive = False  # If radials are in a subdirectory of the main radial folder, change to True
 

@@ -9,7 +9,7 @@ echo ---------------- Start ---------------------- >> $logfile
 date >> $logfile
 
 source activate codar_processing
-python /home/codaradm/operational_scripts/codar_processing/utilities/clean_radial_dirs.py >> $logfile
+python /home/codaradm/operational_scripts/codar_processing/codar_processing/utilities/clean_radial_dirs.py >> $logfile
 source deactivate
 
 echo ---------------- End ------------------------ >> $logfile
