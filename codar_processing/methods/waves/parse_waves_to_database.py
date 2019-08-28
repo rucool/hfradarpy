@@ -31,7 +31,7 @@ def parse_wave_file(wave_file, upload_file_id=None):
     :return:
     """
     mode = 1
-    w = Waves(wave_file, n_dimensional=False)
+    w = Waves(wave_file, multi_dimensional=False)
 
     if w.data['DIST'].isnull().all():
         mode = 2

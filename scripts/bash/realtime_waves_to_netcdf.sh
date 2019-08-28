@@ -8,9 +8,9 @@ logfile=$logdir/${log_file_name}
 echo ---------------- Start ---------------------- >> $logfile
 date >> $logfile
 
-source activate codar_processing
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate codar_processing
 python /home/codaradm/operational_scripts/codar_processing/scripts/realtime/realtime_waves_to_netcdf.py >> $logfile
-#$HOME/logs/parse_wave_files-`date +\%Y\%m\%d`.log
-source deactivate
+conda deactivate
 
 echo ---------------- End ------------------------ >> $logfile

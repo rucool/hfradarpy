@@ -21,7 +21,7 @@ log_level = 'INFO'
 log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
-source_dir = '/Users/mikesmith/Documents/radials_qc'  # main directory that contains radial files
+source_dir = '/home/codaradm/data/radials'  # main directory that contains radial files
 types = ('.ruv', '.euv')  # File types we want to move
 base_date = datetime.utcnow() - timedelta(days=30)
 
