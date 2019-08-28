@@ -14,3 +14,5 @@ configs/configs.py
 notebooks/.ipynb_checkpoints/wave_class_exploration-checkpoint.ipynb
 notebooks/.ipynb_checkpoints/radial_class_exploration-checkpoint.ipynb
 codar_processing/configs/configs.py
+codar_processing/data/radials/.DS_Store
+.DS_Store

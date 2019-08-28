@@ -33,11 +33,11 @@ def qc_data(radial):
 
 # List of sites to check. If left empty, we will find all available sites on the fileserver and run on everything
 # sites = ['AMAG', 'BLCK', 'BRIG','HEMP', 'HOOK', 'LISL', 'LOVE', 'MRCH', 'MVCO', 'NANT', 'NAUS',' WILD', 'CEDR', 'CORE', 'DUCK', 'HATY', ]
-sites=['BLCK']
+sites = ['AMAG', 'CEDR', 'CORE', 'DUCK', 'HATY', 'HEMP', 'HOOK', 'LISL', 'LOVE', 'MRCH', 'MVCO', 'NANT', 'NAUS', 'WILD']
 radial_dir = '/Volumes/home/codaradm/data_reprocessed/radials/'
 save_dir = '/Users/mikesmith/Documents/radials_qc/'
-workers = 16
-days_to_check = 1000
+# parallel = True
+days_to_check = 5000
 
 # Open up database connection. Database configuration is in ~/configs/configs.py
 global session
@@ -72,7 +72,8 @@ for site in qc_values.keys():
     site_dir = os.path.join(radial_dir, site)
     files = sorted(glob.glob(os.path.join(site_dir, '*/*.ruv'), recursive=True))
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+    with concurrent.futures.ProcessPoolExecutor() as executor:
         zip(files, executor.map(qc_data, files))
+
 elapsed_time = time.time() - start_time
 logging.info('Radial QC Complete. {} - seconds elapsed from start to finish.'.format(elapsed_time))
