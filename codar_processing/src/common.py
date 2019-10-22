@@ -34,9 +34,9 @@ def aggregate_netcdfs(files, save_dir, save_filename=None):
     pprint.pprint(files)
 
     # Opening files lazily (not into memory) using xarray
-    ds = xr.open_mfdataset(files)
-    ds.attrs['time_coverage_start'] = pd.Timestamp(ds['time'].min().data).strftime(datetime_format)
-    ds.attrs['time_coverage_end'] = pd.Timestamp(ds['time'].max().data).strftime(datetime_format)
+    ds = xr.open_mfdataset(files, combine='by_coords')
+    ds.attrs['time_coverage_start'] = pd.Timestamp(str(ds['time'].min().data)).strftime(datetime_format)
+    ds.attrs['time_coverage_end'] = pd.Timestamp(str(ds['time'].max().data)).strftime(datetime_format)
 
     # Encode variables for efficiency reasons
     encoding = make_encoding(ds)

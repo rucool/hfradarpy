@@ -24,8 +24,8 @@ def netcdf_global_attributes(required_attributes, time_start, time_end):
     datetime_format = '%Y%m%dT%H%M%SZ'
     created = pd.Timestamp(dt.datetime.utcnow()).strftime(datetime_format)  # creation time Timestamp
 
-    time_start = pd.Timestamp(time_start).strftime(datetime_format)
-    time_end = pd.Timestamp(time_end).strftime(datetime_format)
+    time_start = pd.Timestamp(str(time_start)).strftime(datetime_format)
+    time_end = pd.Timestamp(str(time_end)).strftime(datetime_format)
 
     # Required global attributes
     global_attrs = [('publisher_name', required_attributes['publisher_name']),

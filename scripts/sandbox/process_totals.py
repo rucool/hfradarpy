@@ -12,7 +12,7 @@ for site in sites:
 
 loaded = {}
 for radial in radials:
-    loaded[radial] = Radial(radial, multi_dimensional=False, mask_over_land=False)
+    loaded[radial] = Radial(radial, to_xarray=False, mask_over_land=False)
 
 grid_file = '../totals/grid_files/maracoos_grid_2km.txt'
 

@@ -24,7 +24,7 @@ def concatenate_radials(radial_list):
 
     radial_dict = {}
     for each in sorted(radial_list):
-        radial = Radial(each, multi_dimensional=True)
+        radial = Radial(each, to_xarray=True)
         radial_dict[radial.file_name] = radial.data
 
     ds = xr.concat(radial_dict.values(), 'time')
@@ -38,7 +38,7 @@ class Radial(CTFParser):
     This class should be used when loading a CODAR radial (.ruv) file. This class utilizes the generic LLUV class from
     ~/codar_processing/common.py in order to load CODAR Radial files
     """
-    def __init__(self, fname, replace_invalid=True, multi_dimensional=False, mask_over_land=False):
+    def __init__(self, fname, replace_invalid=True, to_xarray=False, mask_over_land=False):
         keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
 
         logging.info('Loading radial file: {}'.format(fname))
@@ -74,13 +74,13 @@ class Radial(CTFParser):
             self.data = self.data[keep][self.data['continent'].isna()]
             self.data = self.data.reset_index()
 
-        if multi_dimensional:
-            self.to_multi_dimensional()
+        if to_xarray:
+            self.to_xarray()
 
     def __repr__(self):
         return "<Radial: {}>".format(self.file_name)
 
-    def to_multi_dimensional(self, range_max=66.4466):
+    def to_xarray(self, range_max=66.4466):
         """
         Adapted from MATLAB code from Mark Otero
         http://cordc.ucsd.edu/projects/mapping/documents/HFRNet_Radial_NetCDF.pdf
@@ -247,7 +247,7 @@ class Radial(CTFParser):
                       SPRC='range_cell')
 
         # rename variables to something meaningful
-        self.data.rename(rename, inplace=True)
+        self.data = self.data.rename(rename)
 
         # set time attribute
         self.data['time'].attrs['standard_name'] = 'time'

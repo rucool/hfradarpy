@@ -72,7 +72,7 @@ def main(files, save_dir, average, error):
     :param g_v: Error in Northward seawater velocity (v). Default: .6
     """
     # open netcdf file or files
-    ds = xr.open_mfdataset(files)
+    ds = xr.open_mfdataset(files, combine='by_coords')
 
     # filter both u and v by .6. anything over will be removed
     ds = filter_by_error(ds, error[0], error[1])
@@ -88,8 +88,8 @@ def main(files, save_dir, average, error):
 
 
 if __name__ == '__main__':
-    files = '../data/totals/nc/hourly/*.nc'
-    save_dir = '../data/totals/nc/averaged'
+    files = '../data/totals/oi/nc/hourly/*.nc'
+    save_dir = '../data/totals/oi/nc/averaged'
     average = 'time.month'
     filter_error_u_v = [.6, .6]
     main(files, save_dir, average, filter_error_u_v)

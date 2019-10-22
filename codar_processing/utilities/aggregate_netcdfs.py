@@ -33,7 +33,7 @@ def main(data_dir, save_dir, save_name):
 
 
 if __name__ == '__main__':
-    data_dir = '../data/totals/nc/hourly/*.nc'
-    save_dir = '../data/totals/nc/aggregated/'
+    data_dir = '../data/totals/oi/nc/hourly/*.nc'
+    save_dir = '../data/totals/oi/nc/aggregated/'
     save_name = 'aggregated.nc'
     main(data_dir, save_dir, save_name)

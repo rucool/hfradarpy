@@ -27,7 +27,7 @@ def main(radial_file, save_path, qc_values):
     :param qc_values: Dictionary containing thresholds for each QC test
     """
     try:
-        r = Radial(radial_file, multi_dimensional=False)
+        r = Radial(radial_file, to_xarray=False)
     except Exception as err:
         logging.error('{} - {}'.format(radial_file, err))
         return
@@ -53,7 +53,7 @@ def main(radial_file, save_path, qc_values):
 if __name__ == '__main__':
     radial_path = '../../data/radials/SEAB'
     radials = glob.glob(os.path.join(radial_path, '*.ruv'))
-    save_path = '../../data/radials_nc/SEAB/'
+    save_path = '../../data/radials_qc/SEAB/'
 
     qc_values = dict(
         qc_qartod_radial_count=dict(radial_min_count=50, radial_low_count=140),
