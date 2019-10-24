@@ -65,15 +65,7 @@ def divide_chunks(l, n):
 
 
 def create_dir(new_dir):
-    # Check if dir exists.. if it doesn't... create it.
-    if not os.path.isdir(new_dir):
-        try:
-            os.makedirs(new_dir)
-        except OSError:
-            if os.path.exists(new_dir):
-                pass
-            else:
-                raise
+    os.makedirs(new_dir, exist_ok=True)
 
 
 def list_files(types, main_dir, avoid_sub_directories):
