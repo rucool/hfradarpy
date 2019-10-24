@@ -15,3 +15,5 @@ notebooks/.ipynb_checkpoints/radial_class_exploration-checkpoint.ipynb
 codar_processing/configs/configs.py
 codar_processing/data/radials/.DS_Store
 .DS_Store
+output/
+.pytest_cache
