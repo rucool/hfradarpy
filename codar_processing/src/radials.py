@@ -43,7 +43,7 @@ class Radial(CTFParser):
     ~/codar_processing/common.py in order to load CODAR Radial files
     """
     def __init__(self, fname, replace_invalid=True, mask_over_land=False):
-        keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'self.XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
+        keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
 
         logging.info('Loading radial file: {}'.format(fname))
         CTFParser.__init__(self, fname)
