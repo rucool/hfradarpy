@@ -14,21 +14,25 @@ from codar_processing.src.calc import reckon
 logger = logging.getLogger(__name__)
 
 
-def concatenate_radials(radial_list):
+def concatenate_radials(radial_list, enhance=False):
     """
-    This function takes a list of radial files. Loads them all separately using the Radial object and then combines
-    them along the time dimension using xarrays built-in concatenation routines.
-    :param radial_list: list of radial files that you want to concatenate
-    :return: radial files concatenated into an xarray dataset by range, bearing, and time
+    This function takes a list of Radial objects or radial file paths and
+    combines them along the time dimension using xarrays built-in concatenation
+    routines.
+    :param radial_list: list of radial files or Radial objects that you want to concatenate
+    :return: radials concatenated into an xarray dataset by range, bearing, and time
     """
 
     radial_dict = {}
-    for each in sorted(radial_list):
-        radial = Radial(each, to_xarray=True)
-        radial_dict[radial.file_name] = radial.data
+    for radial in radial_list:
+
+        if not isinstance(radial, Radial):
+            radial = Radial(radial)
+
+        radial_dict[radial.file_name] = radial.to_xarray(enhance=enhance)
 
     ds = xr.concat(radial_dict.values(), 'time')
-    return ds
+    return ds.sortby('time')
 
 
 class Radial(CTFParser):
@@ -38,8 +42,8 @@ class Radial(CTFParser):
     This class should be used when loading a CODAR radial (.ruv) file. This class utilizes the generic LLUV class from
     ~/codar_processing/common.py in order to load CODAR Radial files
     """
-    def __init__(self, fname, replace_invalid=True, to_xarray=False, mask_over_land=False):
-        keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
+    def __init__(self, fname, replace_invalid=True, mask_over_land=False):
+        keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'self.XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
 
         logging.info('Loading radial file: {}'.format(fname))
         CTFParser.__init__(self, fname)
@@ -74,13 +78,10 @@ class Radial(CTFParser):
             self.data = self.data[keep][self.data['continent'].isna()]
             self.data = self.data.reset_index()
 
-        if to_xarray:
-            self.to_xarray()
-
     def __repr__(self):
         return "<Radial: {}>".format(self.file_name)
 
-    def to_xarray(self, range_max=66.4466):
+    def to_xarray(self, range_max=66.4466, enhance=False):
         """
         Adapted from MATLAB code from Mark Otero
         http://cordc.ucsd.edu/projects/mapping/documents/HFRNet_Radial_NetCDF.pdf
@@ -128,14 +129,14 @@ class Radial(CTFParser):
         # Add extra dimension for time
         d = {k: np.expand_dims(np.float32(v), axis=0) for (k, v) in d.items()}
 
-        ds['lon'] = (('range', 'bearing'), lond.round(4))
-        ds['lat'] = (('range', 'bearing'), latd.round(4))
-
         # Add coordinate variables to dataset
         timestamp = dt.datetime(*[int(s) for s in self.metadata['TimeStamp'].split()])
-        ds.coords['time'] = pd.date_range(timestamp, periods=1)
+
         ds.coords['bearing'] = bearing_dim
         ds.coords['range'] = range_dim
+        ds.coords['time'] = pd.date_range(timestamp, periods=1)
+        ds.coords['lon'] = (('range', 'bearing'), lond.round(4))
+        ds.coords['lat'] = (('range', 'bearing'), latd.round(4))        
 
         # Add all variables to dataset
         for k, v in d.items():
@@ -153,7 +154,169 @@ class Radial(CTFParser):
         ds['VELO'] = -ds.VELO
 
         # Assign header data to global attributes
-        self.data = ds.assign_attrs(self.metadata)
+        ds = ds.assign_attrs(self.metadata)
+
+        if enhance is True:
+            ds = self.enhance_xarray(ds)
+            ds = xr.decode_cf(ds)
+
+        return ds
+
+    def enhance_xarray(self, xds):
+        rename = dict(VELU='u',
+                      VELV='v',
+                      VFLG='vector_flag',
+                      ESPC='spatial_quality',
+                      ETMP='temporal_quality',
+                      MAXV='velocity_max',
+                      MINV='velocity_min',
+                      ERSC='spatial_count',
+                      ERTC='temporal_count',
+                      XDST='dist_east_from_origin',
+                      YDST='dist_north_from_origin',
+                      VELO='velocity',
+                      HEAD='heading',
+                      SPRC='range_cell')
+
+        # rename variables to something meaningful
+        xds = xds.rename(rename)
+
+        # set time attribute
+        xds['time'].attrs['standard_name'] = 'time'
+
+        # Set lon attributes
+        xds['lon'].attrs['long_name'] = 'Longitude'
+        xds['lon'].attrs['standard_name'] = 'longitude'
+        xds['lon'].attrs['short_name'] = 'lon'
+        xds['lon'].attrs['units'] = 'degrees_east'
+        xds['lon'].attrs['axis'] = 'X'
+        xds['lon'].attrs['valid_min'] = np.float32(-180.0)
+        xds['lon'].attrs['valid_max'] = np.float32(180.0)
+
+        # Set lat attributes
+        xds['lat'].attrs['long_name'] = 'Latitude'
+        xds['lat'].attrs['standard_name'] = 'latitude'
+        xds['lat'].attrs['short_name'] = 'lat'
+        xds['lat'].attrs['units'] = 'degrees_north'
+        xds['lat'].attrs['axis'] = 'Y'
+        xds['lat'].attrs['valid_min'] = np.float32(-90.0)
+        xds['lat'].attrs['valid_max'] = np.float32(90.0)
+
+        # Set u attributes
+        xds['u'].attrs['long_name'] = 'Eastward Surface Current (cm/s)'
+        xds['u'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity'
+        xds['u'].attrs['short_name'] = 'u'
+        xds['u'].attrs['units'] = 'cm s-1'
+        xds['u'].attrs['valid_min'] = np.float32(-300)
+        xds['u'].attrs['valid_max'] = np.float32(300)
+        xds['u'].attrs['coordinates'] = 'lon lat'
+        xds['u'].attrs['grid_mapping'] = 'crs'
+
+        # Set v attributes
+        xds['v'].attrs['long_name'] = 'Northward Surface Current (cm/s)'
+        xds['v'].attrs['standard_name'] = 'surface_northward_sea_water_velocity'
+        xds['v'].attrs['short_name'] = 'v'
+        xds['v'].attrs['units'] = 'cm s-1'
+        xds['v'].attrs['valid_min'] = np.float32(-300)
+        xds['v'].attrs['valid_max'] = np.float32(300)
+        xds['v'].attrs['coordinates'] = 'lon lat'
+        xds['v'].attrs['grid_mapping'] = 'crs'
+
+        # Set bearing attributes
+        xds['bearing'].attrs['long_name'] = 'Bearing from origin (away from instrument)'
+        xds['bearing'].attrs['short_name'] = 'bearing'
+        xds['bearing'].attrs['units'] = 'degrees'
+        xds['bearing'].attrs['valid_min'] = np.float32(0)
+        xds['bearing'].attrs['valid_max'] = np.float32(360)
+        xds['bearing'].attrs['grid_mapping'] = 'crs'
+        xds['bearing'].attrs['axis'] = 'Y'
+
+        # Set range attributes
+        xds['range'].attrs['long_name'] = 'Range from origin (away from instrument)'
+        xds['range'].attrs['short_name'] = 'range'
+        xds['range'].attrs['units'] = 'km'
+        xds['range'].attrs['valid_min'] = np.float32(0)
+        xds['range'].attrs['valid_max'] = np.float32(1000)
+        xds['range'].attrs['grid_mapping'] = 'crs'
+        xds['range'].attrs['axis'] = 'X'
+
+        # vector_flag
+        xds['vector_flag'].attrs['long_name'] = 'Vector Flag Masks'
+        xds['vector_flag'].attrs['valid_range'] = [0, 2048]
+        xds['vector_flag'].attrs['flag_masks'] = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+        xds['vector_flag'].attrs['flag_meanings'] = 'grid_point_deleted grid_point_near_coast point_measurement no_radial_solution baseline_interpolation exceeds_max_speed invalid_solution solution_beyond_valid_spatial_domain insufficient_angular_resolution reserved reserved'
+        xds['vector_flag'].attrs['coordinates'] = 'lon lat'
+        xds['vector_flag'].attrs['grid_mapping'] = 'crs'
+
+        # spatial_quality
+        xds['spatial_quality'].attrs['long_name'] = 'Spatial Quality of radial sea water velocity'
+        xds['spatial_quality'].attrs['units'] = 'cm s-1'
+        xds['spatial_quality'].attrs['coordinates'] = 'lon lat'
+        xds['spatial_quality'].attrs['grid_mapping'] = 'crs'
+
+        # temporal_quality
+        xds['temporal_quality'].attrs['long_name'] = 'Temporal Quality of radial sea water velocity'
+        xds['temporal_quality'].attrs['units'] = 'cm s-1'
+        xds['temporal_quality'].attrs['coordinates'] = 'lon lat'
+        xds['temporal_quality'].attrs['grid_mapping'] = 'crs'
+
+        # velocity_max
+        xds['velocity_max'].attrs['long_name'] = 'Maximum Velocity of sea water (away from instrument)'
+        xds['velocity_max'].attrs['units'] = 'cm s-1'
+        xds['velocity_max'].attrs['coordinates'] = 'lon lat'
+        xds['velocity_max'].attrs['grid_mapping'] = 'crs'
+
+        # velocity_min
+        xds['velocity_min'].attrs['long_name'] = 'Minimum Velocity of sea water (away from instrument)'
+        xds['velocity_min'].attrs['units'] = 'cm s-1'
+        xds['velocity_min'].attrs['coordinates'] = 'lon lat'
+        xds['velocity_min'].attrs['grid_mapping'] = 'crs'
+
+        # spatial_count
+        xds['spatial_count'].attrs['long_name'] = 'Spatial count of sea water velocity (away from instrument)'
+        xds['spatial_count'].attrs['coordinates'] = 'lon lat'
+        xds['spatial_count'].attrs['grid_mapping'] = 'crs'
+
+        # temporal_count
+        xds['temporal_count'].attrs['long_name'] = 'Temporal count of sea water velocity (away from instrument)'
+        xds['temporal_count'].attrs['coordinates'] = 'lon lat'
+        xds['temporal_count'].attrs['grid_mapping'] = 'crs'
+
+        # east_dist_from_origin
+        xds['dist_east_from_origin'].attrs['long_name'] = 'Eastward distance from instrument'
+        xds['dist_east_from_origin'].attrs['units'] = 'km'
+        xds['dist_east_from_origin'].attrs['coordinates'] = 'lon lat'
+        xds['dist_east_from_origin'].attrs['grid_mapping'] = 'crs'
+
+        # north_dist_from_origin
+        xds['dist_north_from_origin'].attrs['long_name'] = 'Northward distance from instrument'
+        xds['dist_north_from_origin'].attrs['units'] = 'km'
+        xds['dist_north_from_origin'].attrs['coordinates'] = 'lon lat'
+        xds['dist_north_from_origin'].attrs['grid_mapping'] = 'crs'
+
+        # velocity
+        xds['velocity'].attrs['valid_range'] = [-1000, 1000]
+        xds['velocity'].attrs['standard_name'] = 'radial_sea_water_velocity_away_from_instrument'
+        xds['velocity'].attrs['units'] = 'cm s-1'
+        xds['velocity'].attrs['coordinates'] = 'lon lat'
+        xds['velocity'].attrs['grid_mapping'] = 'crs'
+
+        # heading
+        xds['heading'].attrs['valid_range'] = [0, 3600]
+        xds['heading'].attrs['standard_name'] = 'direction_of_radial_vector_away_from_instrument'
+        xds['heading'].attrs['units'] = 'degrees'
+        xds['heading'].attrs['coordinates'] = 'lon lat'
+        xds['heading'].attrs['scale_factor'] = 0.1
+        xds['heading'].attrs['grid_mapping'] = 'crs'
+
+        # range_cell
+        xds['range_cell'].attrs['long_name'] = 'Cross Spectra Range Cell  of sea water velocity (away from instrument)'
+        xds['range_cell'].attrs['coordinates'] = 'lon lat'
+        xds['range_cell'].attrs['grid_mapping'] = 'crs'
+
+        del xds.attrs['TimeStamp']
+
+        return xds
 
     def file_type(self):
         """Return a string representing the type of file this is."""
@@ -178,7 +341,7 @@ class Radial(CTFParser):
         # TableColumnTypes
         key_list = list(self.metadata.keys())
         for key in key_list:
-            if not key in keep:
+            if key not in keep:
                 del self.metadata[key]
 
         for k, v in self.metadata.items():
@@ -231,163 +394,21 @@ class Radial(CTFParser):
         :return:
         """
         create_dir(os.path.dirname(filename))
-        rename = dict(VELU='u',
-                      VELV='v',
-                      VFLG='vector_flag',
-                      ESPC='spatial_quality',
-                      ETMP='temporal_quality',
-                      MAXV='velocity_max',
-                      MINV='velocity_min',
-                      ERSC='spatial_count',
-                      ERTC='temporal_count',
-                      XDST='dist_east_from_origin',
-                      YDST='dist_north_from_origin',
-                      VELO='velocity',
-                      HEAD='heading',
-                      SPRC='range_cell')
 
-        # rename variables to something meaningful
-        self.data = self.data.rename(rename)
-
-        # set time attribute
-        self.data['time'].attrs['standard_name'] = 'time'
-
-        # Set lon attributes
-        self.data['lon'].attrs['long_name'] = 'Longitude'
-        self.data['lon'].attrs['standard_name'] = 'longitude'
-        self.data['lon'].attrs['short_name'] = 'lon'
-        self.data['lon'].attrs['units'] = 'degrees_east'
-        self.data['lon'].attrs['axis'] = 'X'
-        self.data['lon'].attrs['valid_min'] = np.float32(-180.0)
-        self.data['lon'].attrs['valid_max'] = np.float32(180.0)
-
-        # Set lat attributes
-        self.data['lat'].attrs['long_name'] = 'Latitude'
-        self.data['lat'].attrs['standard_name'] = 'latitude'
-        self.data['lat'].attrs['short_name'] = 'lat'
-        self.data['lat'].attrs['units'] = 'degrees_north'
-        self.data['lat'].attrs['axis'] = 'Y'
-        self.data['lat'].attrs['valid_min'] = np.float32(-90.0)
-        self.data['lat'].attrs['valid_max'] = np.float32(90.0)
-
-        # Set u attributes
-        self.data['u'].attrs['long_name'] = 'Eastward Surface Current (cm/s)'
-        self.data['u'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity'
-        self.data['u'].attrs['short_name'] = 'u'
-        self.data['u'].attrs['units'] = 'cm s-1'
-        self.data['u'].attrs['valid_min'] = np.float32(-300)
-        self.data['u'].attrs['valid_max'] = np.float32(300)
-        self.data['u'].attrs['coordinates'] = 'lon lat'
-        self.data['u'].attrs['grid_mapping'] = 'crs'
-
-        # Set v attributes
-        self.data['v'].attrs['long_name'] = 'Northward Surface Current (cm/s)'
-        self.data['v'].attrs['standard_name'] = 'surface_northward_sea_water_velocity'
-        self.data['v'].attrs['short_name'] = 'v'
-        self.data['v'].attrs['units'] = 'cm s-1'
-        self.data['v'].attrs['valid_min'] = np.float32(-300)
-        self.data['v'].attrs['valid_max'] = np.float32(300)
-        self.data['v'].attrs['coordinates'] = 'lon lat'
-        self.data['v'].attrs['grid_mapping'] = 'crs'
-
-        # Set bearing attributes
-        self.data['bearing'].attrs['long_name'] = 'Bearing from origin (away from instrument)'
-        self.data['bearing'].attrs['short_name'] = 'bearing'
-        self.data['bearing'].attrs['units'] = 'degrees'
-        self.data['bearing'].attrs['valid_min'] = np.float32(0)
-        self.data['bearing'].attrs['valid_max'] = np.float32(360)
-        self.data['bearing'].attrs['grid_mapping'] = 'crs'
-        self.data['bearing'].attrs['axis'] = 'Y'
-
-        # Set range attributes
-        self.data['range'].attrs['long_name'] = 'Range from origin (away from instrument)'
-        self.data['range'].attrs['short_name'] = 'range'
-        self.data['range'].attrs['units'] = 'km'
-        self.data['range'].attrs['valid_min'] = np.float32(0)
-        self.data['range'].attrs['valid_max'] = np.float32(1000)
-        self.data['range'].attrs['grid_mapping'] = 'crs'
-        self.data['range'].attrs['axis'] = 'X'
-
-        # vector_flag
-        self.data['vector_flag'].attrs['long_name'] = 'Vector Flag Masks'
-        self.data['vector_flag'].attrs['valid_range'] = [0, 2048]
-        self.data['vector_flag'].attrs['flag_masks'] = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
-        self.data['vector_flag'].attrs['flag_meanings'] = 'grid_point_deleted grid_point_near_coast point_measurement no_radial_solution baseline_interpolation exceeds_max_speed invalid_solution solution_beyond_valid_spatial_domain insufficient_angular_resolution reserved reserved'
-        self.data['vector_flag'].attrs['coordinates'] = 'lon lat'
-        self.data['vector_flag'].attrs['grid_mapping'] = 'crs'
-
-        # spatial_quality
-        self.data['spatial_quality'].attrs['long_name'] = 'Spatial Quality of radial sea water velocity'
-        self.data['spatial_quality'].attrs['units'] = 'cm s-1'
-        self.data['spatial_quality'].attrs['coordinates'] = 'lon lat'
-        self.data['spatial_quality'].attrs['grid_mapping'] = 'crs'
-
-        # temporal_quality
-        self.data['temporal_quality'].attrs['long_name'] = 'Temporal Quality of radial sea water velocity'
-        self.data['temporal_quality'].attrs['units'] = 'cm s-1'
-        self.data['temporal_quality'].attrs['coordinates'] = 'lon lat'
-        self.data['temporal_quality'].attrs['grid_mapping'] = 'crs'
-
-        # velocity_max
-        self.data['velocity_max'].attrs['long_name'] = 'Maximum Velocity of sea water (away from instrument)'
-        self.data['velocity_max'].attrs['units'] = 'cm s-1'
-        self.data['velocity_max'].attrs['coordinates'] = 'lon lat'
-        self.data['velocity_max'].attrs['grid_mapping'] = 'crs'
-
-        # velocity_min
-        self.data['velocity_min'].attrs['long_name'] = 'Minimum Velocity of sea water (away from instrument)'
-        self.data['velocity_min'].attrs['units'] = 'cm s-1'
-        self.data['velocity_min'].attrs['coordinates'] = 'lon lat'
-        self.data['velocity_min'].attrs['grid_mapping'] = 'crs'
-
-        # spatial_count
-        self.data['spatial_count'].attrs['long_name'] = 'Spatial count of sea water velocity (away from instrument)'
-        self.data['spatial_count'].attrs['coordinates'] = 'lon lat'
-        self.data['spatial_count'].attrs['grid_mapping'] = 'crs'
-
-        # temporal_count
-        self.data['temporal_count'].attrs['long_name'] = 'Temporal count of sea water velocity (away from instrument)'
-        self.data['temporal_count'].attrs['coordinates'] = 'lon lat'
-        self.data['temporal_count'].attrs['grid_mapping'] = 'crs'
-
-        # east_dist_from_origin
-        self.data['dist_east_from_origin'].attrs['long_name'] = 'Eastward distance from instrument'
-        self.data['dist_east_from_origin'].attrs['units'] = 'km'
-        self.data['dist_east_from_origin'].attrs['coordinates'] = 'lon lat'
-        self.data['dist_east_from_origin'].attrs['grid_mapping'] = 'crs'
-
-        # north_dist_from_origin
-        self.data['dist_north_from_origin'].attrs['long_name'] = 'Northward distance from instrument'
-        self.data['dist_north_from_origin'].attrs['units'] = 'km'
-        self.data['dist_north_from_origin'].attrs['coordinates'] = 'lon lat'
-        self.data['dist_north_from_origin'].attrs['grid_mapping'] = 'crs'
-
-        # velocity
-        self.data['velocity'].attrs['valid_range'] = [-1000, 1000]
-        self.data['velocity'].attrs['standard_name'] = 'radial_sea_water_velocity_away_from_instrument'
-        self.data['velocity'].attrs['units'] = 'cm s-1'
-        self.data['velocity'].attrs['coordinates'] = 'lon lat'
-        self.data['velocity'].attrs['grid_mapping'] = 'crs'
-
-        # heading
-        self.data['heading'].attrs['valid_range'] = [0, 3600]
-        self.data['heading'].attrs['standard_name'] = 'direction_of_radial_vector_away_from_instrument'
-        self.data['heading'].attrs['units'] = 'degrees'
-        self.data['heading'].attrs['coordinates'] = 'lon lat'
-        self.data['heading'].attrs['scale_factor'] = 0.1
-        self.data['heading'].attrs['grid_mapping'] = 'crs'
-
-        # range_cell
-        self.data['range_cell'].attrs['long_name'] = 'Cross Spectra Range Cell  of sea water velocity (away from instrument)'
-        self.data['range_cell'].attrs['coordinates'] = 'lon lat'
-        self.data['range_cell'].attrs['grid_mapping'] = 'crs'
-
-        del self.data.attrs['TimeStamp']
-        encoding = make_encoding(self.data, comp_level=4, fillvalue=np.nan)
+        xds = self.to_xarray(enhance=True)
+        
+        encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
         encoding['bearing'] = dict(zlib=False, _FillValue=False)
         encoding['range'] = dict(zlib=False, _FillValue=False)
         # encoding['z'] = dict(zlib=False, _FillValue=False)
-        self.data.to_netcdf(filename, encoding=encoding, format='netCDF4', engine='netcdf4', unlimited_dims=['time'])
+
+        xds.to_netcdf(
+            filename,
+            encoding=encoding,
+            format='netCDF4',
+            engine='netcdf4',
+            unlimited_dims=['time']
+        )
 
     def create_ruv(self, filename):
         """
@@ -408,7 +429,7 @@ class Radial(CTFParser):
             # Write data tables. Anything beyond the first table is commented out.
             for table in self._tables.keys():
                 for table_key, table_value in self._tables[table].items():
-                    if table_key is not 'data':
+                    if table_key != 'data':
                         if (table_key == 'TableType') & (table == '1'):
                             if 'QCTest' in self.metadata:
                                 f.write('%QCReference: Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n')
@@ -731,4 +752,3 @@ class Radial(CTFParser):
         logging.info('Resetting instance data variable to original dataset')
         self._tables['1']
         self.data = self._data_backup
-
