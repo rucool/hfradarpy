@@ -1,13 +1,15 @@
+from pathlib import Path
+
 import xarray as xr
 import numpy.ma as ma
 import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import os
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from oceans.ocfis import uv2spdir, spdir2uv
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from codar_processing.src.common import create_dir
 
 LAND = cfeature.NaturalEarthFeature(
@@ -24,8 +26,80 @@ state_lines = cfeature.NaturalEarthFeature(
 )
 
 
-def plot_totals(nc_file, save_dir, *,
+def plot_radials(dataset, *,
+                 output_file=None,
+                 sub=2, velocity_min=None, velocity_max=None, markers=None, title='HF Radar'):
+    """
+    param dataset:  a file-path to an xarray compatible object or an xarray Dataset object
+    """
+    try:
+        ds = xr.open_dataset(dataset)
+        closing = ds.close
+    except AttributeError:
+        if isinstance(dataset, xr.Dataset):
+            ds = dataset
+            closing = int  # dummy func to close nothing
+        else:
+            raise
+
+    tds = ds.squeeze()
+    u = tds['u'].data
+    v = tds['v'].data
+    time = str(ds.time.values[0])
+    lon = tds.coords['lon'].data
+    lat = tds.coords['lat'].data
+    closing()
+    plot_common(
+        time, lon, lat, u, v,
+        output_file=output_file,
+        meshgrid=False,
+        sub=sub,
+        velocity_min=velocity_min,
+        velocity_max=velocity_max,
+        markers=markers,
+        title=title
+    )
+
+
+def plot_totals(dataset, *,
+                output_file=None,
                 sub=2, velocity_min=None, velocity_max=None, markers=None, title='HF Radar'):
+    """
+    param dataset:  a file-path to an xarray compatible object or an xarray Dataset object
+    """
+    try:
+        ds = xr.open_dataset(dataset)
+        closing = ds.close
+    except AttributeError:
+        if isinstance(dataset, xr.Dataset):
+            ds = dataset
+            closing = int  # dummy func to close nothing
+        else:
+            raise
+
+    tds = ds.squeeze()
+    u = tds['u'].data
+    v = tds['v'].data
+    time = str(ds.time.values[0])
+    lon = tds.coords['lon'].data
+    lat = tds.coords['lat'].data
+    closing()
+
+    plot_common(
+        time, lon, lat, u, v,
+        output_file=output_file,
+        meshgrid=True,
+        sub=sub,
+        velocity_min=velocity_min,
+        velocity_max=velocity_max,
+        markers=markers,
+        title=title
+    )
+
+
+def plot_common(time, lon, lat, u, v, *,
+                output_file=None,
+                meshgrid=True, sub=2, velocity_min=None, velocity_max=None, markers=None, title='HF Radar'):
     """
     param markers:  a list of 3-tuple/lists containng [lon, lat, marker kwargs] as should be
                     passed into ax.plot()
@@ -36,17 +110,7 @@ def plot_totals(nc_file, save_dir, *,
     """
     markers = markers or []
 
-    with xr.open_dataset(str(nc_file)) as ds:
-        fig = plt.figure()
-
-        tds = ds.squeeze()
-
-        u = tds['u'].data
-        v = tds['v'].data
-
-        time = str(ds.time.values[0])
-        lon = tds.coords['lon'].data
-        lat = tds.coords['lat'].data
+    fig = plt.figure()
 
     u = ma.masked_invalid(u)
     v = ma.masked_invalid(v)
@@ -58,7 +122,10 @@ def plot_totals(nc_file, save_dir, *,
         deg=True
     )
 
-    lons, lats = np.meshgrid(lon, lat)
+    if meshgrid is True:
+        lons, lats = np.meshgrid(lon, lat)
+    else:
+        lons, lats = lon, lat
 
     velocity_min = velocity_min or 0
     velocity_max = velocity_max or np.nanmax(speed) or 15
@@ -132,10 +199,10 @@ def plot_totals(nc_file, save_dir, *,
     fig_size[1] = 8.5
     plt.rcParams["figure.figsize"] = fig_size
 
-    sname = '{}.png'.format(os.path.basename(str(nc_file)))
-    save_name = os.path.join(save_dir, sname)
-    create_dir(save_dir)
-
-    resoluton = 150  # plot resolution in DPI
-    plt.savefig(save_name, dpi=resoluton)
-    plt.close('all')
+    if output_file is not None:
+        create_dir(str(Path(output_file).parent))
+        resoluton = 150  # plot resolution in DPI
+        plt.savefig(output_file, dpi=resoluton)
+        plt.close('all')
+    else:
+        return plt
