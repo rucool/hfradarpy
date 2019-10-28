@@ -9,17 +9,16 @@ data_path = (Path(__file__).parent.with_name('codar_processing') / 'data').resol
 output_path = (Path(__file__).parent.with_name('output')).resolve()
 
 
-def test_radial_to_netcdf():
+def test_codar_radial_to_netcdf():
     radial_file = data_path / 'radials' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.ruv'
-    nc1_file = output_path / 'radials_nc' / 'SEAB' / '1_RDLi_SEAB_2019_01_01_0000.nc'
-    #nc2_file = output_path / 'radials_nc' / 'SEAB' / '2_RDLi_SEAB_2019_01_01_0000.nc'
+    nc_file = output_path / 'radials_nc' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.nc'
 
     # Converts the underlying .data (natively a pandas DataFrame)
     # to an xarray object when `create_netcdf` is called.
     # This automatically 'enhances' the netCDF file
     # with better variable names and attributes.
     rad1 = Radial(radial_file)
-    rad1.export(str(nc1_file), file_type='netcdf')
+    rad1.export(str(nc_file), file_type='netcdf')
 
     # Convert it to an xarray Dataset with no variable
     # or attribte enhancements
@@ -30,7 +29,7 @@ def test_radial_to_netcdf():
     # and decoding the CF standards like scale_factor
     xds3 = rad1.to_xarray(enhance=True)
 
-    with xr.open_dataset(nc1_file) as xds1:
+    with xr.open_dataset(nc_file) as xds1:
         # The two enhanced files should be identical
         assert xds1.identical(xds3)
 
@@ -38,6 +37,80 @@ def test_radial_to_netcdf():
         # be equal
         assert not xds1.identical(xds2)
 
+
+def test_wera_radial_to_netcdf():
+    radial_file = data_path / 'radials' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
+    nc_file = output_path / 'radials_nc' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
+
+    # Converts the underlying .data (natively a pandas DataFrame)
+    # to an xarray object when `create_netcdf` is called.
+    # This automatically 'enhances' the netCDF file
+    # with better variable names and attributes.
+    rad1 = Radial(radial_file)
+    rad1.export(str(nc_file), file_type='netcdf')
+
+    # Convert it to an xarray Dataset with no variable
+    # or attribte enhancements
+    xds2 = rad1.to_xarray(enhance=False)
+
+    # Convert it to xarray Dataset with increased usability
+    # by changing variables names, adding attributes,
+    # and decoding the CF standards like scale_factor
+    xds3 = rad1.to_xarray(enhance=True)
+
+    with xr.open_dataset(nc_file) as xds1:
+        # The two enhanced files should be identical
+        assert xds1.identical(xds3)
+
+        # Enhanced and non-enhanced files should not
+        # be equal
+        assert not xds1.identical(xds2)
+
+
+def test_wera_mask():
+    radial_file = data_path / 'radials' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
+    rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    # Total points before masking
+    assert len(rad1.data) == 6327
+    rad1.mask_over_land()
+    # Make sure we subset the land points
+    assert len(rad1.data) == 5745
+
+
+def test_wera_qc():
+    radial_file = data_path / 'radials' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
+    rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    assert len(rad1.data) == 6327
+    rad1.mask_over_land()
+    rad1.qc_qartod_radial_count()
+    rad1.qc_qartod_valid_location()
+    rad1.qc_qartod_maximum_velocity()
+    rad1.qc_qartod_spatial_median()
+    assert len(rad1.data) == 5745
+    assert 'QC07' in rad1.data
+    assert 'QC08' not in rad1.data  # no VFLG column so we can't run it
+    assert 'QC09' in rad1.data
+    assert 'QC10' in rad1.data
+
+
+def test_wera_raw_to_quality_nc():
+    radial_file = data_path / 'radials' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
+    nc_file = output_path / 'radials_qc_nc' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
+    rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    rad1.mask_over_land()
+    rad1.qc_qartod_radial_count()
+    rad1.qc_qartod_valid_location()
+    rad1.qc_qartod_maximum_velocity()
+    rad1.qc_qartod_spatial_median()
+    rad1.export(str(nc_file), file_type='netcdf')
+
+    xds2 = rad1.to_xarray(enhance=True)
+
+    with xr.open_dataset(nc_file) as xds1:
+        assert len(xds1.QCTest) == 3  # no VFLG column so one test not run
+        # The two enhanced files should be identical
+        assert xds1.identical(xds2)
+        
 
 class TestCombineRadials:
 

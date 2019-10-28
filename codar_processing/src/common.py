@@ -208,12 +208,12 @@ class CTFParser(object):
                         else:  # Uncommented lines are the main data table.
                             table_data += '{}'.format(line)
                 self.metadata['ProcessingTool'] = processing_info
-                if self.is_wera:
-                    self._tables['1']['data'] = pd.read_csv(io.StringIO(table_data),
-                                                            sep=' ',
-                                                            header=None,
-                                                            names=['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'EACC', 'RNGE', 'BEAR', 'VELO', 'HEAD'],  # WERA has incorrect TableColumnTypes in their files.....
-                                                            skipinitialspace=True, )
+                # if self.is_wera:
+                #     self._tables['1']['data'] = pd.read_csv(io.StringIO(table_data),
+                #                                             sep=' ',
+                #                                             header=None,
+                #                                             names=['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'EACC', 'RNGE', 'BEAR', 'VELO', 'HEAD'],  # WERA has incorrect TableColumnTypes in their files.....
+                #                                             skipinitialspace=True, )
                 self._iscorrupt = False
             else:
                 logging.error('{}: File corrupt. Skipping to next file.'.format(self.full_file))
