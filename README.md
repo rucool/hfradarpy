@@ -39,6 +39,10 @@ Now we need to install the toolbox to the conda environment. We can do this as f
 
 The toolbox should now be installed to your conda environment.
 
+If you are developing new code in the toolbox you should installed this library as "editable":
+
+`pip install --no-deps --force-reinstall --ignore-installed -e .`
+
 ## Using the toolbox
 ### Open your python interpreter
     (codar_processing)
