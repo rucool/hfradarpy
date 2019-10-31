@@ -39,6 +39,10 @@ Now we need to install the toolbox to the conda environment. We can do this as f
 
 The toolbox should now be installed to your conda environment.
 
+If you are developing new code in the toolbox you should installed this library as "editable":
+
+`pip install --no-deps --force-reinstall --ignore-installed -e .`
+
 ## Using the toolbox
 ### Open your python interpreter
     (codar_processing)
@@ -180,3 +184,10 @@ one (or all) of the the classes into your python environment before you can util
     %  30.0    29    41     0  5334251   0.0  5.08 -5.05  12.16         ...             0     0    31.52  2018     3     1     0    30     0 2018-03-01 00:30:00
     %  35.0    29    41     0  5334549   0.0  5.08 -5.05  12.16         ...             0     0    36.53  2018     3     1     0    35     0 2018-03-01 00:35:00
     [15 rows x 35 columns]
+
+
+## Running tests
+
+After setting up your environment you can run all of the tests:
+
+`pytest`

@@ -65,15 +65,7 @@ def divide_chunks(l, n):
 
 
 def create_dir(new_dir):
-    # Check if dir exists.. if it doesn't... create it.
-    if not os.path.isdir(new_dir):
-        try:
-            os.makedirs(new_dir)
-        except OSError:
-            if os.path.exists(new_dir):
-                pass
-            else:
-                raise
+    os.makedirs(new_dir, exist_ok=True)
 
 
 def list_files(types, main_dir, avoid_sub_directories):
@@ -216,12 +208,12 @@ class CTFParser(object):
                         else:  # Uncommented lines are the main data table.
                             table_data += '{}'.format(line)
                 self.metadata['ProcessingTool'] = processing_info
-                if self.is_wera:
-                    self._tables['1']['data'] = pd.read_csv(io.StringIO(table_data),
-                                                            sep=' ',
-                                                            header=None,
-                                                            names=['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'EACC', 'RNGE', 'BEAR', 'VELO', 'HEAD'],  # WERA has incorrect TableColumnTypes in their files.....
-                                                            skipinitialspace=True, )
+                # if self.is_wera:
+                #     self._tables['1']['data'] = pd.read_csv(io.StringIO(table_data),
+                #                                             sep=' ',
+                #                                             header=None,
+                #                                             names=['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'EACC', 'RNGE', 'BEAR', 'VELO', 'HEAD'],  # WERA has incorrect TableColumnTypes in their files.....
+                #                                             skipinitialspace=True, )
                 self._iscorrupt = False
             else:
                 logging.error('{}: File corrupt. Skipping to next file.'.format(self.full_file))

@@ -27,7 +27,7 @@ def main(radial_file, save_path, qc_values):
     :param qc_values: Dictionary containing thresholds for each QC test
     """
     try:
-        r = Radial(radial_file, to_xarray=False)
+        r = Radial(radial_file)
     except Exception as err:
         logging.error('{} - {}'.format(radial_file, err))
         return

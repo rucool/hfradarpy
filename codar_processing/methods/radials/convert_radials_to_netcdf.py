@@ -17,14 +17,17 @@ def main(radial_file, save_path):
     :param save_path: Path to save quality controlled radial file
     """
     try:
-        r = Radial(radial_file, to_xarray=True)
-    except Exception as err:
+        r = Radial(radial_file)
+    except Exception:
         return
 
     if r.is_valid():
         try:
-            r.export(os.path.join(save_path, r.file_name.replace('.ruv', '.nc')), 'netcdf')
-        except ValueError as err:
+            r.export(
+                os.path.join(save_path, r.file_name.replace('.ruv', '.nc')),
+                'netcdf'
+            )
+        except ValueError:
             pass
 
 
