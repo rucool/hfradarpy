@@ -90,7 +90,7 @@ def list_files(types, main_dir, avoid_sub_directories):
 def list_to_dataframe(list):
     df = pd.DataFrame(list, columns=['file'])
     df['time'] = df['file'].str.extract(r'(\d{4}_\d{2}_\d{2}_\d{4})')
-    df['time'] = df['time'].apply(lambda x: dt.datetime.strptime(x, '%Y_%m_%d_%H%M'))
+    df['time'] = df['time'].apply(lambda x: pd.datetime.strptime(x, '%Y_%m_%d_%H%M'))
     df = df.set_index(['time'])
     return df
 
