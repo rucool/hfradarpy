@@ -640,7 +640,7 @@ class Radial(CTFParser):
             f'{radial_count_flag}'
         ))
 
-    def qc_qartod_maximum_velocity(self, radial_max_speed=250):
+    def qc_qartod_maximum_velocity(self, radial_max_speed=250, radial_high_speed=150):
         """
         Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Max Threshold (Test 7)
