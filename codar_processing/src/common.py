@@ -68,17 +68,17 @@ def create_dir(new_dir):
     os.makedirs(new_dir, exist_ok=True)
 
 
-def list_files(types, main_dir, avoid_sub_directories):
+def list_files(types, main_dir, sub_directories=()):
     """
 
     :param types: file extension that you want to find
     :param main_dir: main directory that you want to recursively search for files
-    :param avoid_sub_directories: Tuple containing strings of subdirectories you want to avoid
+    :param sub_directories: Tuple containing strings of subdirectories you want to avoid
     :return:  file list
     """
     file_list = []  # create empty list for finding files
 
-    sub_dirs = [os.path.join(main_dir, o) for o in os.listdir(main_dir) if os.path.isdir(os.path.join(main_dir, o)) and o not in avoid_sub_directories]
+    sub_dirs = [os.path.join(main_dir, o) for o in os.listdir(main_dir) if os.path.isdir(os.path.join(main_dir, o)) and o in sub_directories]
 
     for sub in sub_dirs:
         for ext in types:
@@ -87,11 +87,11 @@ def list_files(types, main_dir, avoid_sub_directories):
     return file_list
 
 
-def list_to_dataframe(list):
-    df = pd.DataFrame(list, columns=['file'])
+def list_to_dataframe(file_list):
+    df = pd.DataFrame(sorted(file_list), columns=['file'])
     df['time'] = df['file'].str.extract(r'(\d{4}_\d{2}_\d{2}_\d{4})')
     df['time'] = df['time'].apply(lambda x: pd.datetime.strptime(x, '%Y_%m_%d_%H%M'))
-    df = df.set_index(['time'])
+    df = df.set_index(['time']).sort_index()
     return df
 
 
