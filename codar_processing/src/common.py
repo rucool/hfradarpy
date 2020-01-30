@@ -176,6 +176,7 @@ class CTFParser(object):
                             elif 'Manufacturer' in line:
                                 if 'WERA' in value:
                                     self.is_wera = True
+                                self.metadata[key] = value
                             elif table_count > 0:
                                 if key == 'ProcessingTool':
                                     processing_info.append(value)
