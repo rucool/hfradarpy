@@ -389,7 +389,10 @@ class Radial(CTFParser):
 
         for k, v in self.metadata.items():
             if 'Site' in k:
-                self.metadata[k] = ''.join(e for e in v if e.isalnum())
+                # WERA has lines like: '%Site: csw "CSW' and '%Site: gtn "gtn'
+                # This should work for both CODAR and WERA files
+                split_site = v.split(' ', 1)[0]
+                self.metadata[k] = ''.join(e for e in split_site if e.isalnum())
             elif k in ('TimeStamp', 'PatternDate'):
                 t_list = [int(s) for s in v.split()]
                 self.metadata[k] = dt.datetime(*t_list)
