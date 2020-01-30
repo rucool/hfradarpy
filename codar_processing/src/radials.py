@@ -70,7 +70,7 @@ class Radial(CTFParser):
 
         if mask_over_land:
             self.mask_over_land()
-            
+
     def __repr__(self):
         return "<Radial: {}>".format(self.file_name)
 
@@ -156,7 +156,7 @@ class Radial(CTFParser):
         ds.coords['range'] = range_dim
         ds.coords['time'] = pd.date_range(timestamp, periods=1)
         ds.coords['lon'] = (('range', 'bearing'), lond.round(4))
-        ds.coords['lat'] = (('range', 'bearing'), latd.round(4))        
+        ds.coords['lat'] = (('range', 'bearing'), latd.round(4))
 
         # Add all variables to dataset
         for k, v in d.items():
@@ -442,7 +442,7 @@ class Radial(CTFParser):
         create_dir(os.path.dirname(filename))
 
         xds = self.to_xarray(enhance=True)
-        
+
         encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
         encoding['bearing'] = dict(zlib=False, _FillValue=False)
         encoding['range'] = dict(zlib=False, _FillValue=False)
@@ -623,7 +623,7 @@ class Radial(CTFParser):
             num_radials = len(self.data[self.data['VFLG'] != 128])
         else:
             num_radials = len(self.data)
-    
+
         if num_radials < radial_min_count:
             radial_count_flag = 4
         elif (num_radials >= radial_min_count) and (num_radials <= radial_low_count):
