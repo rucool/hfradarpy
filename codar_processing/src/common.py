@@ -194,13 +194,17 @@ class CTFParser(object):
                                     table_data += '{}\n'.format(line)
                                 else:  # Table data
                                     key, value = self._parse_header_line(line)
-                                    if 'TableEnd' in line:
+                                    # if 'TableColumnTypes' not in self._tables[str(table_count)]:
+                                    #     raise ValueError("TableColumnTypes not defined")
+                                    if 'TableEnd' in line and 'TableColumnTypes' in self._tables[str(table_count)]:
                                         # use pandas read_csv because it interprets the datatype for each column of the csv
-                                        tdf = pd.read_csv(io.StringIO(table_data),
-                                                          sep=' ',
-                                                          header=None,
-                                                          names=self._tables[str(table_count)]['TableColumnTypes'].split(),
-                                                          skipinitialspace=True, )
+                                        tdf = pd.read_csv(
+                                            io.StringIO(table_data),
+                                            sep=' ',
+                                            header=None,
+                                            names=self._tables[str(table_count)]['TableColumnTypes'].split(),
+                                            skipinitialspace=True
+                                        )
 
                                         self._tables[str(table_count)]['data'] = tdf
                                         table = False
