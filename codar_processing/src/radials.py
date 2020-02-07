@@ -46,13 +46,15 @@ class Radial(CTFParser):
         #keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
 
         logging.info('Loading radial file: {}'.format(fname))
-        CTFParser.__init__(self, fname)
+        super().__init__(fname)
 
         # Initialize QC tests to empty
         self.metadata['QCTest'] = []
 
         if self._iscorrupt:
             return
+
+        self.data = pd.DataFrame()
 
         for key in self._tables.keys():
             table = self._tables[key]
@@ -65,11 +67,13 @@ class Radial(CTFParser):
                 self.diagnostics_hardware = table['data']
                 self.diagnostics_hardware['datetime'] = self.diagnostics_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
 
-        if replace_invalid:
-            self.replace_invalid_values()
+        if not self.data.empty:
 
-        if mask_over_land:
-            self.mask_over_land()
+            if replace_invalid:
+                self.replace_invalid_values()
+
+            if mask_over_land:
+                self.mask_over_land()
 
     def __repr__(self):
         return "<Radial: {}>".format(self.file_name)
