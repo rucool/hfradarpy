@@ -46,13 +46,15 @@ class Radial(CTFParser):
         #keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
 
         logging.info('Loading radial file: {}'.format(fname))
-        CTFParser.__init__(self, fname)
+        super().__init__(fname)
 
         # Initialize QC tests to empty
         self.metadata['QCTest'] = []
 
         if self._iscorrupt:
             return
+
+        self.data = pd.DataFrame()
 
         for key in self._tables.keys():
             table = self._tables[key]
@@ -65,12 +67,14 @@ class Radial(CTFParser):
                 self.diagnostics_hardware = table['data']
                 self.diagnostics_hardware['datetime'] = self.diagnostics_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
 
-        if replace_invalid:
-            self.replace_invalid_values()
+        if not self.data.empty:
 
-        if mask_over_land:
-            self.mask_over_land()
-            
+            if replace_invalid:
+                self.replace_invalid_values()
+
+            if mask_over_land:
+                self.mask_over_land()
+
     def __repr__(self):
         return "<Radial: {}>".format(self.file_name)
 
@@ -156,7 +160,7 @@ class Radial(CTFParser):
         ds.coords['range'] = range_dim
         ds.coords['time'] = pd.date_range(timestamp, periods=1)
         ds.coords['lon'] = (('range', 'bearing'), lond.round(4))
-        ds.coords['lat'] = (('range', 'bearing'), latd.round(4))        
+        ds.coords['lat'] = (('range', 'bearing'), latd.round(4))
 
         # Add all variables to dataset
         for k, v in d.items():
@@ -389,7 +393,10 @@ class Radial(CTFParser):
 
         for k, v in self.metadata.items():
             if 'Site' in k:
-                self.metadata[k] = ''.join(e for e in v if e.isalnum())
+                # WERA has lines like: '%Site: csw "CSW' and '%Site: gtn "gtn'
+                # This should work for both CODAR and WERA files
+                split_site = v.split(' ', 1)[0]
+                self.metadata[k] = ''.join(e for e in split_site if e.isalnum())
             elif k in ('TimeStamp', 'PatternDate'):
                 t_list = [int(s) for s in v.split()]
                 self.metadata[k] = dt.datetime(*t_list)
@@ -439,7 +446,7 @@ class Radial(CTFParser):
         create_dir(os.path.dirname(filename))
 
         xds = self.to_xarray(enhance=True)
-        
+
         encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
         encoding['bearing'] = dict(zlib=False, _FillValue=False)
         encoding['range'] = dict(zlib=False, _FillValue=False)
@@ -620,7 +627,7 @@ class Radial(CTFParser):
             num_radials = len(self.data[self.data['VFLG'] != 128])
         else:
             num_radials = len(self.data)
-    
+
         if num_radials < radial_min_count:
             radial_count_flag = 4
         elif (num_radials >= radial_min_count) and (num_radials <= radial_low_count):
