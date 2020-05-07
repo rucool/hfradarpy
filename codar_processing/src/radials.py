@@ -278,12 +278,13 @@ class Radial(CTFParser):
         xds['velocity'].attrs['grid_mapping'] = 'crs'
 
         # heading
-        xds['heading'].attrs['valid_range'] = [0, 3600]
-        xds['heading'].attrs['standard_name'] = 'direction_of_radial_vector_away_from_instrument'
-        xds['heading'].attrs['units'] = 'degrees'
-        xds['heading'].attrs['coordinates'] = 'lon lat'
-        xds['heading'].attrs['scale_factor'] = 0.1
-        xds['heading'].attrs['grid_mapping'] = 'crs'
+        if 'heading' in xds:
+            xds['heading'].attrs['valid_range'] = [0, 3600]
+            xds['heading'].attrs['standard_name'] = 'direction_of_radial_vector_away_from_instrument'
+            xds['heading'].attrs['units'] = 'degrees'
+            xds['heading'].attrs['coordinates'] = 'lon lat'
+            xds['heading'].attrs['scale_factor'] = 0.1
+            xds['heading'].attrs['grid_mapping'] = 'crs'
 
         # vector_flag
         if 'vector_flag' in xds:
