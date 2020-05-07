@@ -449,9 +449,9 @@ class Radial(CTFParser):
         xds = self.to_xarray(enhance=True)
 
         encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
-        encoding['bearing'] = dict(zlib=False, _FillValue=False)
-        encoding['range'] = dict(zlib=False, _FillValue=False)
-        encoding['time'] = dict(zlib=False, _FillValue=False)
+        encoding['bearing'] = dict(zlib=False, _FillValue=None)
+        encoding['range'] = dict(zlib=False, _FillValue=None)
+        encoding['time'] = dict(zlib=False, _FillValue=None)
 
         xds.to_netcdf(
             filename,

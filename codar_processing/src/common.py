@@ -125,7 +125,7 @@ def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=4,
             encoding[k]['chunksizes'] = shape
 
     # add the encoding for time so xarray exports the proper time
-    encoding['time'] = dict(units=time_start, calendar='gregorian', zlib=False, _FillValue=False, dtype=np.double)
+    encoding['time'] = dict(units=time_start, calendar='gregorian', zlib=False, _FillValue=None, dtype=np.double)
     # encoding['site_code_flags'] = dict(zlib=True, _FillValue=int(0))
 
     return encoding
