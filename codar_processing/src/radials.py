@@ -399,8 +399,12 @@ class Radial(CTFParser):
                 split_site = v.split(' ', 1)[0]
                 self.metadata[k] = ''.join(e for e in split_site if e.isalnum())
             elif k in ('TimeStamp', 'PatternDate'):
-                t_list = [int(s) for s in v.split()]
-                self.metadata[k] = dt.datetime(*t_list)
+                try:
+                    t_list = [int(s) for s in v.split()]
+                    self.metadata[k] = dt.datetime(*t_list)
+                except ValueError:
+                    # Can't parse a date, set to None
+                    self.metadata[k] = None
             elif 'TimeZone' in k:
                 self.metadata[k] = v.split('"')[1]
             elif 'TableColumnTypes' in k:
@@ -421,14 +425,20 @@ class Radial(CTFParser):
                     try:
                         self.metadata[k] = int(temp)
                     except ValueError:
-                        self.metadata[k] = int(temp.split('.')[0])
+                        try:
+                            self.metadata[k] = int(temp.split('.')[0])
+                        except ValueError:
+                            self.metadata[k] = None
             elif k in ('RangeResolutionKMeters', 'CTF', 'TransmitCenterFreqMHz', 'DopplerResolutionHzPerBin',
                        'RadialBraggPeakDropOff', 'RadialBraggPeakNull', 'RadialBraggNoiseThreshold', 'TransmitSweepRateHz',
                        'TransmitBandwidthKHz'):
                 try:
                     self.metadata[k] = float(v)
                 except ValueError:
-                    self.metadata[k] = float(v.split(' ')[0])
+                    try:
+                        self.metadata[k] = float(v.split(' ')[0])
+                    except ValueError:
+                        self.metadata[k] = None
             else:
                 continue
 
