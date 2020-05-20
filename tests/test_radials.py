@@ -1,3 +1,4 @@
+import unittest
 from pathlib import Path
 
 import numpy as np
@@ -110,32 +111,62 @@ def test_wera_raw_to_quality_nc():
         assert len(xds1.QCTest) == 3  # no VFLG column so one test not run
         # The two enhanced files should be identical
         assert xds1.identical(xds2)
-        
 
-class TestCombineRadials:
 
-    file_paths = list(
-        (data_path / 'radials' / 'SEAB').glob('*.ruv')
-    )
+def test_miami_radial():
+    radial_file = data_path / 'radials' / 'WERA' / 'RDL_UMiami_STF_2019_06_01_0000.hfrweralluv1.0'
+    nc_file = output_path / 'radials_nc' / 'WERA' / 'RDL_UMiami_STF_2019_06_01_0000.nc'
 
-    radial_files = [
-        str(r) for r in file_paths
-    ]
+    # Converts the underlying .data (natively a pandas DataFrame)
+    # to an xarray object when `create_netcdf` is called.
+    # This automatically 'enhances' the netCDF file
+    # with better variable names and attributes.
+    rad1 = Radial(radial_file)
+    rad1.export(str(nc_file), file_type='netcdf')
 
-    radial_objects = [
-        Radial(str(r)) for r in radial_files
-    ]
+    # Convert it to an xarray Dataset with no variable
+    # or attribte enhancements
+    xds2 = rad1.to_xarray(enhance=False)
 
-    # Select even indexed file_paths and odd indexed radial objects
-    # into one array of mixed content types for concating
-    radial_mixed = radial_files[::2] + radial_objects[1:][::2]
+    # Convert it to xarray Dataset with increased usability
+    # by changing variables names, adding attributes,
+    # and decoding the CF standards like scale_factor
+    xds3 = rad1.to_xarray(enhance=True)
+
+    with xr.open_dataset(nc_file) as xds1:
+        # The two enhanced files should be identical
+        assert xds1.identical(xds3)
+
+        # Enhanced and non-enhanced files should not
+        # be equal
+        assert not xds1.identical(xds2)
+
+
+class TestCombineRadials(unittest.TestCase):
+
+    def setUp(self):
+        self.file_paths = list(
+            (data_path / 'radials' / 'SEAB').glob('*.ruv')
+        )
+
+        self.radial_files = [
+            str(r) for r in self.file_paths
+        ]
+
+        self.radial_objects = [
+            Radial(str(r)) for r in self.radial_files
+        ]
+
+        # Select even indexed file_paths and odd indexed radial objects
+        # into one array of mixed content types for concating
+        self.radial_mixed = self.radial_files[::2] + self.radial_objects[1:][::2]
 
     def test_concat_radial_objects(self):
         combined = concatenate_radials(self.radial_objects)
         assert combined.time.size == len(self.file_paths)
         # Make sure the dataset was sorted by time
         assert np.array_equal(
-            combined.time.values, 
+            combined.time.values,
             np.sort(combined.time.values)
         )
 
@@ -144,7 +175,7 @@ class TestCombineRadials:
         assert combined.time.size == len(self.file_paths)
         # Make sure the dataset was sorted by time
         assert np.array_equal(
-            combined.time.values, 
+            combined.time.values,
             np.sort(combined.time.values)
         )
 
@@ -153,7 +184,7 @@ class TestCombineRadials:
         assert combined.time.size == len(self.file_paths)
         # Make sure the dataset was sorted by time
         assert np.array_equal(
-            combined.time.values, 
+            combined.time.values,
             np.sort(combined.time.values)
         )
 
@@ -164,6 +195,6 @@ class TestCombineRadials:
         assert combined.time.size == len(self.file_paths)
         # Make sure the dataset was sorted by time
         assert np.array_equal(
-            combined.time.values, 
+            combined.time.values,
             np.sort(combined.time.values)
         )

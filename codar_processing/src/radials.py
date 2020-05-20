@@ -278,12 +278,13 @@ class Radial(CTFParser):
         xds['velocity'].attrs['grid_mapping'] = 'crs'
 
         # heading
-        xds['heading'].attrs['valid_range'] = [0, 3600]
-        xds['heading'].attrs['standard_name'] = 'direction_of_radial_vector_away_from_instrument'
-        xds['heading'].attrs['units'] = 'degrees'
-        xds['heading'].attrs['coordinates'] = 'lon lat'
-        xds['heading'].attrs['scale_factor'] = 0.1
-        xds['heading'].attrs['grid_mapping'] = 'crs'
+        if 'heading' in xds:
+            xds['heading'].attrs['valid_range'] = [0, 3600]
+            xds['heading'].attrs['standard_name'] = 'direction_of_radial_vector_away_from_instrument'
+            xds['heading'].attrs['units'] = 'degrees'
+            xds['heading'].attrs['coordinates'] = 'lon lat'
+            xds['heading'].attrs['scale_factor'] = 0.1
+            xds['heading'].attrs['grid_mapping'] = 'crs'
 
         # vector_flag
         if 'vector_flag' in xds:
@@ -398,8 +399,12 @@ class Radial(CTFParser):
                 split_site = v.split(' ', 1)[0]
                 self.metadata[k] = ''.join(e for e in split_site if e.isalnum())
             elif k in ('TimeStamp', 'PatternDate'):
-                t_list = [int(s) for s in v.split()]
-                self.metadata[k] = dt.datetime(*t_list)
+                try:
+                    t_list = [int(s) for s in v.split()]
+                    self.metadata[k] = dt.datetime(*t_list)
+                except ValueError:
+                    # Can't parse a date, set to None
+                    self.metadata[k] = None
             elif 'TimeZone' in k:
                 self.metadata[k] = v.split('"')[1]
             elif 'TableColumnTypes' in k:
@@ -420,14 +425,20 @@ class Radial(CTFParser):
                     try:
                         self.metadata[k] = int(temp)
                     except ValueError:
-                        self.metadata[k] = int(temp.split('.')[0])
+                        try:
+                            self.metadata[k] = int(temp.split('.')[0])
+                        except ValueError:
+                            self.metadata[k] = None
             elif k in ('RangeResolutionKMeters', 'CTF', 'TransmitCenterFreqMHz', 'DopplerResolutionHzPerBin',
                        'RadialBraggPeakDropOff', 'RadialBraggPeakNull', 'RadialBraggNoiseThreshold', 'TransmitSweepRateHz',
                        'TransmitBandwidthKHz'):
                 try:
                     self.metadata[k] = float(v)
                 except ValueError:
-                    self.metadata[k] = float(v.split(' ')[0])
+                    try:
+                        self.metadata[k] = float(v.split(' ')[0])
+                    except ValueError:
+                        self.metadata[k] = None
             else:
                 continue
 
@@ -448,9 +459,9 @@ class Radial(CTFParser):
         xds = self.to_xarray(enhance=True)
 
         encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
-        encoding['bearing'] = dict(zlib=False, _FillValue=False)
-        encoding['range'] = dict(zlib=False, _FillValue=False)
-        encoding['time'] = dict(zlib=False, _FillValue=False)
+        encoding['bearing'] = dict(zlib=False, _FillValue=None)
+        encoding['range'] = dict(zlib=False, _FillValue=None)
+        encoding['time'] = dict(zlib=False, _FillValue=None)
 
         xds.to_netcdf(
             filename,

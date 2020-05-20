@@ -125,7 +125,7 @@ def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=4,
             encoding[k]['chunksizes'] = shape
 
     # add the encoding for time so xarray exports the proper time
-    encoding['time'] = dict(units=time_start, calendar='gregorian', zlib=False, _FillValue=False, dtype=np.double)
+    encoding['time'] = dict(units=time_start, calendar='gregorian', zlib=False, _FillValue=None, dtype=np.double)
     # encoding['site_code_flags'] = dict(zlib=True, _FillValue=int(0))
 
     return encoding
@@ -157,9 +157,15 @@ class CTFParser(object):
 
         with open(self.full_file, 'r', encoding='ISO-8859-1') as open_file:
             open_lluv = open_file.readlines()
-            if any('%End:' in s for s in open_lluv):  # if there is no %End: the file is corrupt!
+            if any('%End:' in s or s.strip() == '%End' for s in open_lluv):  # if there is no %End: the file is corrupt!
                 # Parse header and footer metadata
                 for line in open_lluv:
+
+                    # Fix for older WERA files
+                    # Add a colon to the end of '%End'
+                    if line.strip() == '%End':
+                        line += ':'
+
                     if not table:  # If we are not looking at a table or a tables header information
                         if line.startswith('%%'):
                             continue
@@ -193,7 +199,6 @@ class CTFParser(object):
                                     line = line.replace('%', '').strip()
                                     table_data += '{}\n'.format(line)
                                 else:  # Table data
-                                    key, value = self._parse_header_line(line)
                                     # if 'TableColumnTypes' not in self._tables[str(table_count)]:
                                     #     raise ValueError("TableColumnTypes not defined")
                                     if 'TableEnd' in line and 'TableColumnTypes' in self._tables[str(table_count)]:
@@ -205,10 +210,10 @@ class CTFParser(object):
                                             names=self._tables[str(table_count)]['TableColumnTypes'].split(),
                                             skipinitialspace=True
                                         )
-
                                         self._tables[str(table_count)]['data'] = tdf
                                         table = False
                                     else:
+                                        key, value = self._parse_header_line(line)
                                         self._tables[str(table_count)][key] = value
                         else:  # Uncommented lines are the main data table.
                             table_data += '{}'.format(line)
