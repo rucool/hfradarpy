@@ -493,6 +493,7 @@ class Radial(CTFParser):
                     if table_key != 'data':
                         if (table_key == 'TableType') & (table == '1'):
                             if 'QCTest' in self.metadata:
+                                f.write('%QCFileVersion: 1.0.0')
                                 f.write('%QCReference: Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n')
                                 f.write('%QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data\n')
                                 f.write('%QCTestFormat: "test_name [qc_thresholds]: test_result"\n')
