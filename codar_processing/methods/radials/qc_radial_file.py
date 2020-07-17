@@ -9,7 +9,7 @@ import logging
 import os
 import sys
 import glob
-
+import datetime as dt
 from codar_processing.src.radials import Radial
 
 # Set up the parse_wave_files logger
@@ -33,6 +33,10 @@ def main(radial_file, save_path, qc_values):
         return
 
     if r.is_valid():
+        t0 = r.time - dt.timedelta(hours=1)
+        previous_radial = '{}_{}'.format('_'.join(r.file_name.split('_')[:2]), t0.strftime('%Y_%m_%d_%H00.ruv'))
+        previous_full_file = os.path.join(os.path.dirname(r.full_file), previous_radial)
+
         # run high frequency radar qartod tests on open radial file
         r.initialize_qc()
         r.qc_qartod_syntax()
@@ -40,7 +44,13 @@ def main(radial_file, save_path, qc_values):
         r.qc_qartod_valid_location()
         r.qc_qartod_radial_count(**qc_values['qc_qartod_radial_count'])
         r.qc_qartod_spatial_median(**qc_values['qc_qartod_spatial_median'])
-        # r.qc_qartod_avg_radial_bearing(qc_values['average_bearing_threshold'])
+
+        if os.path.exists(previous_full_file):
+            r.qc_qartod_temporal_gradient(previous_full_file)
+        else:
+            logging.error('{} does not exist at specified location. Bypassing temporal gradient test'.format(previous_full_file))
+        r.qc_qartod_avg_radial_bearing(**qc_values['qc_qartod_avg_radial_bearing'])
+        r.qc_qartod_summary_flag()
 
         # Export radial file to either a radial or netcdf
         try:
@@ -56,11 +66,12 @@ if __name__ == '__main__':
     save_path = '../../data/radials_qc/SEAB/'
 
     qc_values = dict(
+        qc_qartod_avg_radial_bearing=dict(reference_bearing=151, warning_threshold=15, failure_threshold=30),
         qc_qartod_radial_count=dict(radial_min_count=50, radial_low_count=140),
-        qc_qartod_maximum_velocity=dict(radial_max_speed=300),
+        qc_qartod_maximum_velocity=dict(radial_max_speed=120, radial_high_speed=100),
         qc_qartod_spatial_median=dict(radial_smed_range_cell_limit=2.1,
                                       radial_smed_angular_limit=10,
                                       radial_smed_current_difference=30))
 
-    for radial in radials:
+    for radial in sorted(radials):
         main(radial, save_path, qc_values)

@@ -43,8 +43,6 @@ class Radial(CTFParser):
     ~/codar_processing/common.py in order to load CODAR Radial files
     """
     def __init__(self, fname, replace_invalid=True, mask_over_land=False):
-        #keep = ['LOND', 'LATD', 'VELU', 'VELV', 'VFLG', 'ESPC', 'ETMP', 'MAXV', 'MINV', 'ERSC', 'ERTC', 'XDST', 'YDST', 'RNGE', 'BEAR', 'VELO', 'HEAD', 'SPRC']
-
         logging.info('Loading radial file: {}'.format(fname))
         super().__init__(fname)
 
@@ -170,7 +168,7 @@ class Radial(CTFParser):
         # plt.plot(ds.lon, ds.lat, 'bo', ds.LOND.squeeze(), ds.LATD.squeeze(), 'rx')
 
         # Drop extraneous variables
-        ds = ds.drop(['LOND', 'LATD', 'BEAR', 'RNGE'])
+        ds = ds.drop_vars(['LOND', 'LATD', 'BEAR', 'RNGE'])
 
         # Flip sign so positive velocities are away from the radar as per cf conventions
         flips = ['MINV', 'MAXV', 'VELO']
@@ -362,6 +360,70 @@ class Radial(CTFParser):
             xds['accuracy'].attrs['grid_mapping'] = 'crs'
             xds['accuracy'].attrs['units'] = 'cm s-1'
 
+
+        # QC06
+        if 'QC06' in xds:
+            xds['QC06'].attrs['long_name'] = 'Syntax (QARTOD Test 06) Flag Masks'
+            xds['QC06'].attrs['valid_range'] = [1, 9]
+            xds['QC06'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC06'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['QC06'].attrs['coordinates'] = 'lon lat'
+            xds['QC06'].attrs['grid_mapping'] = 'crs'
+
+        # QC07
+        if 'QC07' in xds:
+            xds['QC07'].attrs['long_name'] = 'Maximum Threshold (QARTOD Test 07) Flag Masks'
+            xds['QC07'].attrs['valid_range'] = [1, 9]
+            xds['QC07'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC07'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['QC07'].attrs['coordinates'] = 'lon lat'
+            xds['QC07'].attrs['grid_mapping'] = 'crs'
+
+        # QC08
+        if 'QC08' in xds:
+            xds['QC08'].attrs['long_name'] = 'Valid Location (QARTOD Test 08) Flag Masks'
+            xds['QC08'].attrs['valid_range'] = [1, 9]
+            xds['QC08'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC08'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['QC08'].attrs['coordinates'] = 'lon lat'
+            xds['QC08'].attrs['grid_mapping'] = 'crs'
+
+        # QC09
+        if 'QC09' in xds:
+            xds['QC09'].attrs['long_name'] = 'Radial Count (QARTOD Test 09) Flag Masks'
+            xds['QC09'].attrs['valid_range'] = [1, 9]
+            xds['QC09'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC09'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['QC09'].attrs['coordinates'] = 'lon lat'
+            xds['QC09'].attrs['grid_mapping'] = 'crs'
+
+        # QC10
+        if 'QC10' in xds:
+            xds['QC10'].attrs['long_name'] = 'Spatial Median Filter (QARTOD Test 10) Flag Masks'
+            xds['QC10'].attrs['valid_range'] = [1, 9]
+            xds['QC10'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC10'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['QC10'].attrs['coordinates'] = 'lon lat'
+            xds['QC10'].attrs['grid_mapping'] = 'crs'
+
+        # QC11
+        if 'QC11' in xds:
+            xds['QC11'].attrs['long_name'] = 'Temporal Gradient (QARTOD Test 11) Flag Masks'
+            xds['QC11'].attrs['valid_range'] = [1, 9]
+            xds['QC11'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC11'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['QC11'].attrs['coordinates'] = 'lon lat'
+            xds['QC11'].attrs['grid_mapping'] = 'crs'
+
+        # QC12
+        if 'QC12' in xds:
+            xds['QC12'].attrs['long_name'] = 'Average Radial Bearing (QARTOD Test 11) Flag Masks'
+            xds['QC12'].attrs['valid_range'] = [1, 9]
+            xds['QC12'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC12'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['QC12'].attrs['coordinates'] = 'lon lat'
+            xds['QC12'].attrs['grid_mapping'] = 'crs'
+
         del xds.attrs['TimeStamp']
 
         return xds
@@ -493,7 +555,7 @@ class Radial(CTFParser):
                     if table_key != 'data':
                         if (table_key == 'TableType') & (table == '1'):
                             if 'QCTest' in self.metadata:
-                                f.write('%QCFileVersion: 1.0.0')
+                                f.write('%QCFileVersion: 1.0.0\n')
                                 f.write('%QCReference: Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n')
                                 f.write('%QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data\n')
                                 f.write('%QCTestFormat: "test_name [qc_thresholds]: test_result"\n')
@@ -503,10 +565,10 @@ class Radial(CTFParser):
                             f.write('%{}: {}\n'.format(table_key, table_value))
                         elif table_key == 'TableColumns':
                             f.write('%TableColumns: {}\n'.format(len(self._tables[table]['data'].columns)))
+                        elif table_key == 'TableColumnTypes':
+                            f.write('%TableColumnTypes: {}\n'.format(' '.join(self._tables[table]['data'].columns.to_list())))
                         elif table_key == 'TableStart':
                             f.write('%{}: {}\n'.format(table_key, table_value))
-                            for line in self._tables[table]['_TableHeader']:
-                                f.write(line)
                         elif table_key == '_TableHeader':
                             pass
                         else:
@@ -516,15 +578,23 @@ class Radial(CTFParser):
                     self._tables[table]['data'] = self._tables[table]['data'].drop(['datetime'], axis=1)
 
                 if table == '1':
-                    # f.write('%{}\n'.format(self._tables[table]['TableColumnTypes']))
                     # Fill NaN with 999.000 which is the standard fill value for codar lluv filesself._tables[table]['TableColumnTypes']
                     self.data = self.data.fillna(999.000)
-                    self.data.to_string(f, index=False, justify='center', header=False)
+
+                    # Convert _TableHeader to a new dataframe and concatenate to dataframe containing radial data
+                    # This allows for the output format to follow CODARS CTF specifications
+                    row_df = pd.DataFrame([self._tables['1']['_TableHeader'][1]], columns=self._tables['1']['_TableHeader'][0])
+                    self.data.columns = self._tables['1']['_TableHeader'][0]
+                    self.data = pd.concat([row_df, self.data], ignore_index=True)
+                    self.data.insert(0, '%%', np.nan)  # Insert column at the beginning of dataframe of NaNs
+                    self.data.iloc[0, self.data.columns.get_loc('%%')] = '%%'  # make the first row in the first column a '%%'
+
+                    # Output data table to string
+                    self.data.to_string(f, index=False, justify='center', header=True, na_rep=' ')
                 else:
-                    f.write('%%{}\n'.format(self._tables[table]['TableColumnTypes']))
                     self._tables[table]['data'].insert(0, '%%', '%')
                     self._tables[table]['data'] = self._tables[table]['data'].fillna(999.000)
-                    self._tables[table]['data'].to_string(f, index=False, justify='center', header=False)
+                    self._tables[table]['data'].to_string(f, index=False, justify='center', header=True)
 
                 if int(table) > 1:
                     f.write('\n%TableEnd: {}\n'.format(table))
@@ -573,24 +643,27 @@ class Radial(CTFParser):
         or failure thresholds.
         :return:
         """
+        test_str = 'QC12'
         # Absolute value of the difference between the bearing mean and reference bearing
         absolute_difference = np.abs(self.data['BEAR'].mean() - reference_bearing)
 
         if absolute_difference >= failure_threshold:
             flag = 4
-        elif absolute_difference >= warning_threshold & absolute_difference < failure_threshold:
+        elif (absolute_difference >= warning_threshold) & (absolute_difference < failure_threshold):
             flag = 3
         elif absolute_difference < warning_threshold:
             flag = 1
+
+        self.data[test_str] = flag  # Assign the flags to the column
         self.metadata['QCTest'].append((
-            'qc_qartod_avg_radial_bearing (QC12) '
+            f'qc_qartod_avg_radial_bearing ({test_str}) - Test applies to entire file. Thresholds='
             '[ '
             f'reference_bearing={reference_bearing} (degrees) '
             f'warning={warning_threshold} (degrees) '
             f'failure={failure_threshold} (degrees) '
-            ']: '
-            f'{flag}'
+            f']: See result in column {test_str} below'
         ))
+        self.append_to_tableheader(test_str, '(flag)')
 
     def qc_qartod_valid_location(self):
         """
@@ -606,17 +679,20 @@ class Radial(CTFParser):
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
         :return:
         """
-        if 'VFLG' in self.data:
-            self.data['QC08'] = 1
-            boolean = self.data['VFLG'] == 128
-            self.data['QC08'] = self.data['QC08'].where(~boolean, other=4)
-            self._tables['1']['TableColumnTypes'] += ' QC08'
+        test_str = 'QC08'
+        flag_column = 'VFLG'
+
+        if flag_column in self.data:
+            self.data[test_str] = 1  # add new column of passing values
+            self.data.loc[(self.data[flag_column] == 128), test_str] = 4  # set value equal to 4 where land is flagged
             self.metadata['QCTest'].append((
-                'qc_qartod_valid_location (QC08)[VFLG==128]: '
-                'See results in column QC08 below'
+                f'qc_qartod_valid_location ({test_str}) - Test applies to each row. Thresholds=[{flag_column}==128]: '
+                f'See results in column {test_str} below'
             ))
+            self.append_to_tableheader(test_str, '(flag)')
+
         else:
-            logger.warning("qc_qartod_valid_location not run, no VFLG column")
+            logger.warning(f"qc_qartod_valid_location not run, no {flag_column} column")
 
     def qc_qartod_radial_count(self, radial_min_count=150, radial_low_count=300):
         """
@@ -634,9 +710,12 @@ class Radial(CTFParser):
         :param low_radials: Low radial count threshold below which the file should be considered suspect. low_radials > min_radials
         :return:
         """
+        test_str = 'QC09'
+        column_flag = 'VFLG'
+
         # If a vector flag is supplied by the vendor, subset by that first
-        if 'VFLG' in self.data:
-            num_radials = len(self.data[self.data['VFLG'] != 128])
+        if column_flag in self.data:
+            num_radials = len(self.data[self.data[column_flag] != 128])
         else:
             num_radials = len(self.data)
 
@@ -647,17 +726,16 @@ class Radial(CTFParser):
         elif num_radials > radial_low_count:
             radial_count_flag = 1
 
-        self.data['QC09'] = radial_count_flag
-        self._tables['1']['TableColumnTypes'] += ' QC09'
+        self.data[test_str] = radial_count_flag
         self.metadata['QCTest'].append((
-            'qc_qartod_radial_count (QC09) '
+            f'qc_qartod_radial_count ({test_str}) - Test applies to entire file. Thresholds='
             '[ '
-            f'failure={radial_min_count} (number of valid radials) '
-            f'warning_num={radial_low_count} (number of valid radials) '
+            f'failure={radial_min_count} (radials) '
+            f'warning_num={radial_low_count} (radials) '
             f'<valid_radials={num_radials}> '
-            ']: '
-            f'{radial_count_flag}'
+            f']:  See results in column {test_str} below'
         ))
+        self.append_to_tableheader(test_str, '(flag)')
 
     def qc_qartod_maximum_velocity(self, radial_max_speed=250, radial_high_speed=150):
         """
@@ -672,21 +750,28 @@ class Radial(CTFParser):
         :param threshold: Maximum Radial Speed (cm/s)
         :return:
         """
-        self.data['QC07'] = 1
-        try:
-            boolean = self.data['VELO'].abs() > radial_max_speed
-        except TypeError:
-            self.data['VELO'] = self.data['VELO'].astype(float)
-            boolean = self.data['VELO'].abs() > radial_max_speed
+        test_str = 'QC07'
 
-        self.data['QC07'] = self.data['QC07'].where(~boolean, other=4)
-        self._tables['1']['TableColumnTypes'] += ' QC07'
+        self.data['VELO'] = self.data['VELO'].astype(float)  # make sure VELO is a float
+
+        # Add new column to dataframe for test, and set every row as passing, 1, flag
+        self.data[test_str] = 1
+
+        # velocity is less than radial_max_speed but greater than radial_high_speed, set that row as a warning, 3, flag
+        self.data.loc[(self.data['VELO'].abs() < radial_max_speed) & (self.data['VELO'].abs() > radial_high_speed), test_str] = 3
+
+        # if velocity is greater than radial_max_speed, set that row as a fail, 4, flag
+        self.data.loc[(self.data['VELO'].abs() > radial_max_speed), test_str] = 4
+
         self.metadata['QCTest'].append((
-            'qc_qartod_maximum_velocity (QC07) '
+            f'qc_qartod_maximum_velocity ({test_str}) - Test applies to each row. Thresholds='
             '[ '
+            f'high_vel={str(radial_high_speed)} (cm/s) '
             f'max_vel={str(radial_max_speed)} (cm/s) '
-            ']: See results in column QC07 below'
+            f']: See results in column {test_str} below'
         ))
+
+        self.append_to_tableheader(test_str, '(flag)')
 
     def qc_qartod_spatial_median(self, radial_smed_range_cell_limit=2.1, radial_smed_angular_limit=10, radial_smed_current_difference=30):
         """
@@ -703,7 +788,9 @@ class Radial(CTFParser):
         :param CurLim: Current difference radial_smed_current_difference (cm/s)
         :return:
         """
-        self.data['QC10'] = 1
+        test_str = 'QC10'
+
+        self.data[test_str] = 1
         try:
             Rstep = float(self.metadata['RangeResolutionKMeters'])
             # Rstep = np.floor(min(np.diff(np.unique(self.data['RNGE'])))) #use as backup method if other fails?
@@ -779,17 +866,16 @@ class Radial(CTFParser):
             diffcol = diffcol.astype(float)
             boolean = diffcol.abs() > radial_smed_current_difference
 
-        self.data['QC10'] = self.data['QC10'].where(~boolean, other=4)
-        #self.data['VFLG'] = self.data['VFLG'].where(~boolean, other=4) # for testing only, shows up as "marker" flag in SeaDisplay
-        self._tables['1']['TableColumnTypes'] += ' QC10'
+        self.data[test_str] = self.data[test_str].where(~boolean, other=4)
         self.metadata['QCTest'].append((
-            f'qc_qartod_spatial_median (QC10) '
+            f'qc_qartod_spatial_median ({test_str}) - Test applies to each row. Thresholds='
             '[ '
             f'range_cell_limit={str(radial_smed_range_cell_limit)} (range cells) '
             f'angular_limit={str(radial_smed_angular_limit)} (degrees) '
             f'current_difference={str(radial_smed_current_difference)} (cm/s) '
-            ']: See results in column QC10 below'
+            f']: See results in column {test_str} below'
         ))
+        self.append_to_tableheader(test_str, '(flag)')
 
     def qc_qartod_syntax(self):
         """
@@ -813,6 +899,8 @@ class Radial(CTFParser):
         :param threshold: Maximum Radial Speed (cm/s)
         :return:
         """
+        test_str = 'QC06'
+
         i = 0
 
         # check for timestamp in filename
@@ -847,7 +935,91 @@ class Radial(CTFParser):
             syntax = 1
         else:
             syntax = 4
-        self.metadata['QCTest'].append(f'qc_qartod_syntax (QC06) [N/A]: {syntax}')
+
+        self.data[test_str] = syntax
+        self.metadata['QCTest'].append(f'qc_qartod_syntax ({test_str}) - Test applies to entire file. Thresholds=[N/A]: See results in column {test_str} below')
+        self.append_to_tableheader(test_str, '(flag)')
+
+    def qc_qartod_temporal_gradient(self, r0, gradient_temp_fail=54, gradient_temp_warn=36):
+        """
+        Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Temporal Gradient (Test 11)
+        Checks for satisfactory temporal rate of change of radial components
+
+        Test determines whether changes between successive radial velocity measurements at a particular range
+        and bearing cell are within an acceptable range. GRADIENT_TEMP = |Rt-1 - Rt|
+
+        Flags Condition Codable Instructions
+        Fail = 4 The temporal change between successive radial velocities exceeds the gradient failure threshold.
+
+        If GRADIENT_TEMP ≥ GRADIENT_TEMP_FAIL,
+        flag = 4
+
+        Suspect = 3 The temporal change between successive radial velocities is less than the gradient failure threshold but exceeds the gradient warn threshold.
+        
+        If GRADIENT_TEMP < GRADIENT_TEMP_FAIL & GRADIENT_TEMP ≥ GRADIENT_TEMP_WARN,
+        flag = 3
+
+        Pass = 1 The temporal change between successive radial velocities is less than the gradient warn threshold.
+
+        If GRADIENT_TEMP < GRADIENT_TEMP_WARN,
+        flag = 1
+
+        Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
+        :param r0: Full path to the filename of the previous hourly radial.
+        :param gradient_temp_fail: Maximum Radial Speed (cm/s)
+        :param gradient_temp_warn: Warning Radial Speed (cm/s)
+        :return:
+        """
+        test_str = 'QC11'
+
+        r0 = Radial(r0)
+
+        merged = self.data.merge(r0.data, on=['LOND', 'LATD'], how='left', suffixes=(None, '_x'), indicator='Exist')
+        difference = (merged['VELO'] - merged['VELO_x']).abs()
+
+        # Add new column to dataframe for test, and set every row as passing, 1, flag
+        self.data[test_str] = 1
+
+        # If any point in the recent radial does not exist in the previous radial, set row as a not evaluated, 2, flag
+        self.data.loc[merged['Exist'] == 'left_only', test_str] = 2
+
+        # velocity is less than radial_max_speed but greater than radial_high_speed, set row as a warning, 3, flag
+        self.data.loc[(difference < gradient_temp_fail) & (difference > gradient_temp_warn), test_str] = 3
+
+        # if velocity is greater than radial_max_speed, set that row as a fail, 4, flag
+        self.data.loc[(difference > gradient_temp_fail), test_str] = 4
+
+        # self.data[test_str] = data
+        self.metadata['QCTest'].append((
+            f'qc_qartod_temporal_gradient ({test_str}) - Test applies to each row. Thresholds='
+            '[ '
+            f'gradient_temp_warn={str(gradient_temp_warn)} (cm/s*hr) '
+            f'gradient_temp_fail={str(gradient_temp_fail)} (cm/s*hr) '
+            f']: See results in column {test_str} below'
+        ))
+        self.append_to_tableheader(test_str, '(flag)')
+
+    def qc_qartod_summary_flag(self):
+        test_str = 'PRIM'
+
+        # Set summary flag column all equal to 1
+        self.data[test_str] = 1
+
+        #
+        equals_3 = self.data.loc[:, self.data.columns.str.contains('QC*')].eq(3).any(axis=1)
+        self.data[test_str] = self.data[test_str].where(~equals_3, other=3)
+
+        equals_4 = self.data.loc[:, self.data.columns.str.contains('QC*')].eq(4).any(axis=1)
+        self.data[test_str] = self.data[test_str].where(~equals_4, other=4)
+
+        self.metadata['QCTest'].append((f'qc_qartod_summary_flag ({test_str}) - Summary Flag - Highest flag value for any of the applied QARTOD tests.'))
+        self.append_to_tableheader(test_str, '(flag)')
+        # %QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data
+
+    def append_to_tableheader(self, test_string, test_unit):
+        self._tables['1']['_TableHeader'][0].append(test_string)
+        self._tables['1']['_TableHeader'][1].append(test_unit)
 
     def reset(self):
         logging.info('Resetting instance data variable to original dataset')

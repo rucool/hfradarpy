@@ -18,3 +18,4 @@ codar_processing/data/radials/.DS_Store
 output/
 .pytest_cache
 *.egg-info/
+scripts/realtime/radial_qc_driver_mongodb.py

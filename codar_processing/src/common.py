@@ -89,9 +89,12 @@ def list_files(types, main_dir, sub_directories=()):
 
 def list_to_dataframe(file_list):
     df = pd.DataFrame(sorted(file_list), columns=['file'])
-    df['time'] = df['file'].str.extract(r'(\d{4}_\d{2}_\d{2}_\d{4})')
-    df['time'] = df['time'].apply(lambda x: pd.datetime.strptime(x, '%Y_%m_%d_%H%M'))
-    df = df.set_index(['time']).sort_index()
+    try:
+        df['time'] = df['file'].str.extract(r'(\d{4}_\d{2}_\d{2}_\d{4})')
+        df['time'] = df['time'].apply(lambda x: pd.datetime.strptime(x, '%Y_%m_%d_%H%M'))
+        df = df.set_index(['time']).sort_index()
+    except ValueError:
+        logging.error('Cannot pass empty file_list to function. Returning empty dataframe.')
     return df
 
 
@@ -193,12 +196,20 @@ class CTFParser(object):
                     elif table:
                         if line.startswith('%'):
                             if line.startswith('%%'):  # table header information
-                                self._tables[str(table_count)]['_TableHeader'].append(line)
+                                rep = {' comp': '_comp', ' Distance': '_Distance'}
+                                rep = dict((re.escape(k), v) for k, v in rep.items())
+                                pattern = re.compile('|'.join(rep.keys()))
+                                temp = pattern.sub(lambda m: rep[re.escape(m.group(0))], line).strip('% \n')
+                                temp = [x.replace('_', ' ') for x in re.sub(' +', ' ', temp).split(' ')]  # Get rid of underscores
+                                # temp[0] = '%%   {}'.format(temp[0])
+
+                                self._tables[str(table_count)]['_TableHeader'].append(temp)
                             else:  # Table metadata and diagnostic data are prepended by at least 1 % sign
                                 if len(line.split(':')) == 1:  # Diagnostic Data
                                     line = line.replace('%', '').strip()
                                     table_data += '{}\n'.format(line)
                                 else:  # Table data
+                                    key, value = self._parse_header_line(line)
                                     # if 'TableColumnTypes' not in self._tables[str(table_count)]:
                                     #     raise ValueError("TableColumnTypes not defined")
                                     if 'TableEnd' in line and 'TableColumnTypes' in self._tables[str(table_count)]:
@@ -210,6 +221,7 @@ class CTFParser(object):
                                             names=self._tables[str(table_count)]['TableColumnTypes'].split(),
                                             skipinitialspace=True
                                         )
+
                                         self._tables[str(table_count)]['data'] = tdf
                                         table = False
                                     else:
@@ -228,6 +240,10 @@ class CTFParser(object):
             else:
                 logging.error('{}: File corrupt. Skipping to next file.'.format(self.full_file))
                 self._iscorrupt = True
+        try:
+            self.time = dt.datetime(*[int(s) for s in self.metadata['TimeStamp'].split()])
+        except KeyError:
+            pass
 
     def is_valid(self, table='1'):
         """
