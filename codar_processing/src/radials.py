@@ -84,7 +84,7 @@ class Radial(CTFParser):
 
         geodata = gpd.GeoDataFrame(
             self.data[['LOND', 'LATD']],
-            crs={'init': 'epsg:4326'},
+            crs='EPSG:4326',
             geometry=[
                 Point(xy) for xy in zip(self.data.LOND.values, self.data.LATD.values)
             ]
