@@ -14,7 +14,7 @@ from codar_processing.src.calc import reckon
 logger = logging.getLogger(__name__)
 
 
-def concatenate_radials(radial_list, enhance=False):
+def concatenate_multidimensional_radials(radial_list, enhance=False):
     """
     This function takes a list of Radial objects or radial file paths and
     combines them along the time dimension using xarrays built-in concatenation
@@ -29,7 +29,7 @@ def concatenate_radials(radial_list, enhance=False):
         if not isinstance(radial, Radial):
             radial = Radial(radial)
 
-        radial_dict[radial.file_name] = radial.to_xarray(enhance=enhance)
+        radial_dict[radial.file_name] = radial.to_xarray_multidimensional(enhance=enhance)
 
     ds = xr.concat(radial_dict.values(), 'time')
     return ds.sortby('time')
@@ -701,7 +701,11 @@ class Radial(CTFParser):
         if file_type == 'radial':
             self.create_ruv(filename)
         elif 'netcdf' in file_type:
-            self.create_netcdf(filename + '.nc', file_type)
+            if '.nc' in filename:
+                save_file = filename
+            else:
+                save_file = filename + '.nc'
+            self.create_netcdf(save_file, file_type)
 
     def initialize_qc(self):
         self.metadata['QCTest'] = []
