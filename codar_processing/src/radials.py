@@ -76,7 +76,7 @@ class Radial(CTFParser):
     def __repr__(self):
         return "<Radial: {}>".format(self.file_name)
 
-    def mask_over_land(self):
+    def mask_over_land(self, subset=True):
         logging.info('Masking radials over land')
 
         land = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
@@ -91,12 +91,34 @@ class Radial(CTFParser):
         )
         # Join the geodataframe containing radial points with geodataframe containing leasing areas
         geodata = gpd.tools.sjoin(geodata, land, how='left', op='intersects')
+
         # All data in the continent column that lies over water should be nan.
         water_index = geodata['continent'].isna()
-        # Subset the data to water only
-        self.data = self.data.loc[water_index].reset_index()
 
-    def to_xarray(self, range_min=None, range_max=None, enhance=False):
+        if subset:
+            # Subset the data to water only
+            self.data = self.data.loc[water_index].reset_index()
+        else:
+            return water_index
+
+    # def to_xarray(self, range_min=None, range_max=None, enhance=False, dim='tabular'):
+    #     """
+    #     Adapted from MATLAB code from Mark Otero
+    #     http://cordc.ucsd.edu/projects/mapping/documents/HFRNet_Radial_NetCDF.pdf
+    #     :param range_min:
+    #     :param range_max:
+    #     :return:
+    #     """
+    #     if dim == 'tabular':
+    #         self.to_xarray_tabular(enhance)
+    #     elif dim == 'multidimensional':
+    #         self.to_xarray_multidimensional(range_min, range_max, enhance)
+    #     # Clean radial header
+    #     # self.clean_header()
+    #
+    #     # return ds
+
+    def to_xarray_multidimensional(self, range_min=None, range_max=None, enhance=False):
         """
         Adapted from MATLAB code from Mark Otero
         http://cordc.ucsd.edu/projects/mapping/documents/HFRNet_Radial_NetCDF.pdf
@@ -185,6 +207,41 @@ class Radial(CTFParser):
 
         return ds
 
+    def to_xarray_tabular(self, range_min=None, range_max=None, enhance=False):
+        """
+        :param range_min:
+        :param range_max:
+        :return:
+        """
+        logging.info('Converting radial matrix to tabular dataset')
+
+        # Clean radial header
+        # self.clean_header()
+
+        # get timestamp from radial metadata
+        timestamp = dt.datetime(*[int(s) for s in self.metadata['TimeStamp'].split()])
+
+        # Intitialize xarray dataset
+        ds = self.data.to_xarray().expand_dims('time').assign_coords(time=('time', [timestamp]))
+
+        # Check if calculated longitudes and latitudes align with given longitudes and latitudes
+        # plt.plot(ds.lon, ds.lat, 'bo', ds.LOND.squeeze(), ds.LATD.squeeze(), 'rx')
+
+        # Flip sign so positive velocities are away from the radar as per cf conventions
+        flips = ['MINV', 'MAXV', 'VELO']
+        for f in flips:
+            if f in ds:
+                ds[f] = -ds[f]
+
+        # Assign header data to global attributes
+        ds = ds.assign_attrs(self.metadata)
+
+        if enhance is True:
+            ds = self.enhance_xarray(ds)
+            ds = xr.decode_cf(ds)
+
+        return ds
+
     def enhance_xarray(self, xds):
         rename = dict(
             VELU='u',
@@ -202,6 +259,10 @@ class Radial(CTFParser):
             HEAD='heading',
             SPRC='range_cell',
             EACC='accuracy',  # WERA specific
+            LOND='lon',
+            LATD='lat',
+            BEAR='bearing',
+            RNGE='range'
         )
 
         # rename variables to something meaningful if they existin
@@ -417,12 +478,21 @@ class Radial(CTFParser):
 
         # QC12
         if 'QC12' in xds:
-            xds['QC12'].attrs['long_name'] = 'Average Radial Bearing (QARTOD Test 11) Flag Masks'
+            xds['QC12'].attrs['long_name'] = 'Average Radial Bearing (QARTOD Test 12) Flag Masks'
             xds['QC12'].attrs['valid_range'] = [1, 9]
             xds['QC12'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
             xds['QC12'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['QC12'].attrs['coordinates'] = 'lon lat'
             xds['QC12'].attrs['grid_mapping'] = 'crs'
+
+        # QC12
+        if 'PRIM' in xds:
+            xds['PRIM'].attrs['long_name'] = 'Primary Flag Masks'
+            xds['PRIM'].attrs['valid_range'] = [1, 9]
+            xds['PRIM'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['PRIM'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['PRIM'].attrs['coordinates'] = 'lon lat'
+            xds['PRIM'].attrs['grid_mapping'] = 'crs'
 
         del xds.attrs['TimeStamp']
 
@@ -510,7 +580,7 @@ class Radial(CTFParser):
             if key not in present_keys:
                 self.metadata[key] = None
 
-    def create_netcdf(self, filename):
+    def create_netcdf(self, filename, file_type='netcdf-tabular'):
         """
         Create a compressed netCDF4 (.nc) file from the radial instance
         :param filename: User defined filename of radial file you want to save
@@ -518,11 +588,16 @@ class Radial(CTFParser):
         """
         create_dir(os.path.dirname(filename))
 
-        xds = self.to_xarray(enhance=True)
+        if 'tabular' in file_type:
+            xds = self.to_xarray_tabular(enhance=True)
+        elif 'multidimensional' in file_type:
+            xds = self.to_xarray_multidimensional(enhance=True)
 
         encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
-        encoding['bearing'] = dict(zlib=False, _FillValue=None)
-        encoding['range'] = dict(zlib=False, _FillValue=None)
+
+        if 'multidimensional' in file_type:
+            encoding['bearing'] = dict(zlib=False, _FillValue=None)
+            encoding['range'] = dict(zlib=False, _FillValue=None)
         encoding['time'] = dict(zlib=False, _FillValue=None)
 
         xds.to_netcdf(
@@ -625,8 +700,8 @@ class Radial(CTFParser):
 
         if file_type == 'radial':
             self.create_ruv(filename)
-        elif file_type == 'netcdf':
-            self.create_netcdf(filename)
+        elif 'netcdf' in file_type:
+            self.create_netcdf(filename + '.nc', file_type)
 
     def initialize_qc(self):
         self.metadata['QCTest'] = []
@@ -684,7 +759,8 @@ class Radial(CTFParser):
 
         if flag_column in self.data:
             self.data[test_str] = 1  # add new column of passing values
-            self.data.loc[(self.data[flag_column] == 128), test_str] = 4  # set value equal to 4 where land is flagged
+            self.data.loc[(self.data[flag_column] == 128), test_str] = 4  # set value equal to 4 where land is flagged (manufacturer)
+            self.data.loc[~self.mask_over_land(subset=False), test_str] = 4  # set value equal to 4 where land is flagged (mask_over_land)
             self.metadata['QCTest'].append((
                 f'qc_qartod_valid_location ({test_str}) - Test applies to each row. Thresholds=[{flag_column}==128]: '
                 f'See results in column {test_str} below'
@@ -973,47 +1049,51 @@ class Radial(CTFParser):
         """
         test_str = 'QC11'
 
-        r0 = Radial(r0)
+        if os.path.exists(r0):
+            r0 = Radial(r0)
 
-        merged = self.data.merge(r0.data, on=['LOND', 'LATD'], how='left', suffixes=(None, '_x'), indicator='Exist')
-        difference = (merged['VELO'] - merged['VELO_x']).abs()
+            merged = self.data.merge(r0.data, on=['LOND', 'LATD'], how='left', suffixes=(None, '_x'), indicator='Exist')
+            difference = (merged['VELO'] - merged['VELO_x']).abs()
 
-        # Add new column to dataframe for test, and set every row as passing, 1, flag
-        self.data[test_str] = 1
+            # Add new column to dataframe for test, and set every row as passing, 1, flag
+            self.data[test_str] = 1
 
-        # If any point in the recent radial does not exist in the previous radial, set row as a not evaluated, 2, flag
-        self.data.loc[merged['Exist'] == 'left_only', test_str] = 2
+            # If any point in the recent radial does not exist in the previous radial, set row as a not evaluated, 2, flag
+            self.data.loc[merged['Exist'] == 'left_only', test_str] = 2
 
-        # velocity is less than radial_max_speed but greater than radial_high_speed, set row as a warning, 3, flag
-        self.data.loc[(difference < gradient_temp_fail) & (difference > gradient_temp_warn), test_str] = 3
+            # velocity is less than radial_max_speed but greater than radial_high_speed, set row as a warning, 3, flag
+            self.data.loc[(difference < gradient_temp_fail) & (difference > gradient_temp_warn), test_str] = 3
 
-        # if velocity is greater than radial_max_speed, set that row as a fail, 4, flag
-        self.data.loc[(difference > gradient_temp_fail), test_str] = 4
+            # if velocity is greater than radial_max_speed, set that row as a fail, 4, flag
+            self.data.loc[(difference > gradient_temp_fail), test_str] = 4
 
-        # self.data[test_str] = data
-        self.metadata['QCTest'].append((
-            f'qc_qartod_temporal_gradient ({test_str}) - Test applies to each row. Thresholds='
-            '[ '
-            f'gradient_temp_warn={str(gradient_temp_warn)} (cm/s*hr) '
-            f'gradient_temp_fail={str(gradient_temp_fail)} (cm/s*hr) '
-            f']: See results in column {test_str} below'
-        ))
-        self.append_to_tableheader(test_str, '(flag)')
+            # self.data[test_str] = data
+            self.metadata['QCTest'].append((
+                f'qc_qartod_temporal_gradient ({test_str}) - Test applies to each row. Thresholds='
+                '[ '
+                f'gradient_temp_warn={str(gradient_temp_warn)} (cm/s*hr) '
+                f'gradient_temp_fail={str(gradient_temp_fail)} (cm/s*hr) '
+                f']: See results in column {test_str} below'
+            ))
+            self.append_to_tableheader(test_str, '(flag)')
+        else:
+            # Add new column to dataframe for test, and set every row as not_evaluated, 2, flag
+            self.data[test_str] = 2
+            logging.error('{} does not exist at specified location. Setting column {} to not_evaluated flag'.format(r0, test_str))
 
-    def qc_qartod_summary_flag(self):
+    def qc_qartod_primary_flag(self):
         test_str = 'PRIM'
 
         # Set summary flag column all equal to 1
         self.data[test_str] = 1
 
-        #
         equals_3 = self.data.loc[:, self.data.columns.str.contains('QC*')].eq(3).any(axis=1)
         self.data[test_str] = self.data[test_str].where(~equals_3, other=3)
 
         equals_4 = self.data.loc[:, self.data.columns.str.contains('QC*')].eq(4).any(axis=1)
         self.data[test_str] = self.data[test_str].where(~equals_4, other=4)
 
-        self.metadata['QCTest'].append((f'qc_qartod_summary_flag ({test_str}) - Summary Flag - Highest flag value for any of the applied QARTOD tests.'))
+        self.metadata['QCTest'].append((f'qc_qartod_primary_flag ({test_str}) - Primary Flag - Highest flag value of QC06, QC07, QC08, QC09, QC10, QC11, QC12 ("not_evaluated" flag results ignored)'))
         self.append_to_tableheader(test_str, '(flag)')
         # %QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data
 
