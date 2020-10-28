@@ -50,13 +50,13 @@
 %QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data
 %QCTestFormat: "test_name [qc_thresholds]: test_result"
 %QCTest: qc_qartod_syntax (QC06) - Test applies to entire file. Thresholds=[N/A]: See results in column QC06 below
-%QCTest: qc_qartod_maximum_velocity (QC07) - Test applies to each row. Thresholds=[ high_vel=100 (cm/s) max_vel=120 (cm/s) ]: See results in column QC07 below
+%QCTest: qc_qartod_maximum_velocity (QC07) - Test applies to each row. Thresholds=[ high_vel=100.0 (cm/s) max_vel=300.0 (cm/s) ]: See results in column QC07 below
 %QCTest: qc_qartod_valid_location (QC08) - Test applies to each row. Thresholds=[VFLG==128]: See results in column QC08 below
-%QCTest: qc_qartod_radial_count (QC09) - Test applies to entire file. Thresholds=[ failure=50 (radials) warning_num=140 (radials) <valid_radials=426> ]:  See results in column QC09 below
+%QCTest: qc_qartod_radial_count (QC09) - Test applies to entire file. Thresholds=[ failure=75.0 (radials) warning_num=225.0 (radials) <valid_radials=426> ]:  See results in column QC09 below
 %QCTest: qc_qartod_spatial_median (QC10) - Test applies to each row. Thresholds=[ range_cell_limit=2.1 (range cells) angular_limit=10 (degrees) current_difference=30 (cm/s) ]: See results in column QC10 below
 %QCTest: qc_qartod_temporal_gradient (QC11) - Test applies to each row. Thresholds=[ gradient_temp_warn=36 (cm/s*hr) gradient_temp_fail=54 (cm/s*hr) ]: See results in column QC11 below
 %QCTest: qc_qartod_avg_radial_bearing (QC12) - Test applies to entire file. Thresholds=[ reference_bearing=151 (degrees) warning=15 (degrees) failure=30 (degrees) ]: See result in column QC12 below
-%QCTest: qc_qartod_summary_flag (PRIM) - Summary Flag - Highest flag value for any of the applied QARTOD tests.
+%QCTest: qc_qartod_primary_flag (PRIM) - Primary Flag - Highest flag value of QC06, QC07, QC08, QC09, QC10, QC11, QC12 ("not_evaluated" flag results ignored)
 %TableType: LLUV RDL9
 %TableColumns: 26
 %TableColumnTypes: LOND LATD VELU VELV VFLG ESPC ETMP MAXV MINV ERSC ERTC XDST YDST RNGE BEAR VELO HEAD SPRC QC06 QC07 QC08 QC09 QC10 QC11 QC12 PRIM
@@ -423,7 +423,7 @@
      -74.2492  40.1953   7.719    6.29         128      999   24.293   12.135    7.779       1       3   -23.4721   -19.0074    30.203     231   9.957      50.8        10       1       1       4       1       1       2       3       4
      -74.2677  40.2143   4.633   3.147         128      999   21.216    5.601      5.6       1       6   -25.0394   -16.8893    30.203     236   5.601      55.8        10       1       1       4       1       1       1       3       4
      -74.2839  40.2345   5.839   3.263         128      999   24.517     6.69    6.689       1       4   -26.4161   -14.6427    30.203     241   6.689      60.8        10       1       1       4       1       1       3       3       4
-     -73.8014  40.6356  12.463  25.426           0      999   12.135  -28.316  -28.317       1       2    14.5641    29.8609   33.2233      26 -28.316     206.1        11       1       1       1       1       1       2       3       3
+     -73.8014  40.6356  12.463  25.426           0      999   12.135  -28.316  -28.317       1       2    14.5641    29.8609   33.2233      26 -28.316     206.1        11       1       1       4       1       1       2       3       4
      -73.7713  40.6231    7.24  11.986         128      999   15.329  -14.003  -14.003       1       3    17.1113    28.4779   33.2233      31 -14.003     211.1        11       1       1       4       1       1       2       3       4
      -73.7428  40.6086    4.13   5.654         128    1.244    8.091   -4.201   -9.802       2       2    19.5282    26.8782   33.2233      36  -7.002     216.1        11       1       1       4       1       1       2       3       4
       -73.716  40.5923   7.118   8.141           0    5.446    5.175   -6.379  -11.825       2       4    21.7964    25.0739   33.2233      41 -10.814     221.2        11       1       1       1       1       1       1       3       3

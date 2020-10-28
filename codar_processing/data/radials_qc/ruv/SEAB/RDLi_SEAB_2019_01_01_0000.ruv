@@ -1,0 +1,63 @@
+%CTF: 1.00
+%FileType: LLUV rdls "RadialMap"
+%LLUVSpec: 1.27  2017 01 13
+%UUID: 7DE1A9F2-F3A2-4157-B12B-4645D81CF04F
+%Manufacturer: CODAR Ocean Sensors. SeaSonde
+%Site: SEAB ""
+%TimeStamp: 2019 01 01  00 00 00
+%TimeZone: "UTC" +0.000 0 "Atlantic/Reykjavik"
+%TimeCoverage: 75.000 Minutes
+%Origin: 40.3668167  -73.9735333
+%GreatCircle: "WGS84" 6378137.000  298.257223562997
+%GeodVersion: "CGEO" 1.85  2017 10 05
+%LLUVTrustData: all  all lluv xyuv rbvd
+%RangeStart: 2
+%RangeEnd: 24
+%RangeResolutionKMeters: 3.020300
+%RangeCells: 31
+%DopplerCells: 512
+%DopplerInterpolation: 2
+%AntennaBearing: 151.0 True
+%ReferenceBearing: 0 True
+%AngularResolution: 5 Deg
+%SpatialResolution: 5 Deg
+%PatternType: Ideal
+%PatternDate: 2016 12 01  20 05 43
+%PatternResolution: 1.0 deg
+%TransmitCenterFreqMHz: 13.450000
+%TransmitBandwidthKHz: -49.629688
+%TransmitSweepRateHz: 2.000000
+%DopplerResolutionHzPerBin: 0.001953125
+%FirstOrderMethod: 0
+%BraggSmoothingPoints: 4
+%CurrentVelocityLimit: 100.0
+%BraggHasSecondOrder: 1
+%RadialBraggPeakDropOff: 100.000
+%RadialBraggPeakNull: 6.310
+%RadialBraggNoiseThreshold: 5.000
+%PatternAmplitudeCorrections: 1.0000  1.0000
+%PatternPhaseCorrections: 59.00  80.00
+%PatternAmplitudeCalculations: 0.2613  0.4548
+%PatternPhaseCalculations: 58.10  79.50
+%RadialMusicParameters: 40.000 20.000 2.000
+%RadialMinimumMergePoints: 2
+%FirstOrderCalc: 1
+%MergeMethod: 1 MedianVectors
+%PatternMethod: 1 PatternVectors
+%MergedCount: 7
+%QCFileVersion: 1.0.0
+%QCReference: Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016
+%QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data
+%QCTestFormat: "test_name [qc_thresholds]: test_result"
+%QCTest: qc_qartod_syntax (QC06) - Test applies to entire file. Thresholds=[N/A]: See results in column QC06 below
+%QCTest: qc_qartod_maximum_velocity (QC07) - Test applies to each row. Thresholds=[ high_vel=100.0 (cm/s) max_vel=300.0 (cm/s) ]: See results in column QC07 below
+%QCTest: qc_qartod_valid_location (QC08) - Test applies to each row. Thresholds=[VFLG==128]: See results in column QC08 below
+%QCTest: qc_qartod_radial_count (QC09) - Test applies to entire file. Thresholds=[ failure=75.0 (radials) warning_num=225.0 (radials) <valid_radials=404> ]:  See results in column QC09 below
+%QCTest: qc_qartod_spatial_median (QC10) - Test applies to each row. Thresholds=[ range_cell_limit=2.1 (range cells) angular_limit=10 (degrees) current_difference=30 (cm/s) ]: See results in column QC10 below
+%QCTest: qc_qartod_avg_radial_bearing (QC12) - Test applies to entire file. Thresholds=[ reference_bearing=151 (degrees) warning=15 (degrees) failure=30 (degrees) ]: See result in column QC12 below
+%QCTest: qc_qartod_primary_flag (PRIM) - Primary Flag - Highest flag value of QC06, QC07, QC08, QC09, QC10, QC11, QC12 ("not_evaluated" flag results ignored)
+%TableType: LLUV RDL9
+%TableColumns: 26
+%TableColumnTypes: LOND LATD VELU VELV VFLG ESPC ETMP MAXV MINV ERSC ERTC XDST YDST RNGE BEAR VELO HEAD SPRC QC06 QC07 QC08 QC09 QC10 QC11 QC12 PRIM
+%TableRows: 745
+%TableStart: 
