@@ -25,11 +25,11 @@ Change your current working directory to the location that you downloaded codar_
 
 Create conda environment from the included environment.yml file:
 
-`conda create env -f environment.yml`
+`conda env create -f environment.yml`
 
 Once the environment is done building, you can activate the environment by typing:
 
-    source activate codar_processing # OSX/Unix
+    conda activate codar_processing # OSX/Unix
     
 ## Install toolbox to environment
 

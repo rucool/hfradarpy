@@ -15,7 +15,10 @@ import xarray as xr
 
 from codar_processing.src.common import make_encoding, create_dir
 from codar_processing.src.waves import Waves
-from codar_processing.configs.configs import netcdf_global_attributes
+try:
+    from codar_processing.configs.configs import netcdf_global_attributes
+except ModuleNotFoundError:
+    from codar_processing.configs.configs_default import netcdf_global_attributes
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)

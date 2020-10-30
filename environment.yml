@@ -3,17 +3,15 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - xarray
-  - netcdf4
-  - dask
-  - sqlalchemy
-  - mysql-connector-python=2.2.3=py36_0
-  - scipy
-  - geopandas
+  - python=3.7
+  - xarray=0.16.1
+  - netcdf4=1.5.4
   - cartopy
+  - geopandas
+  - sqlalchemy
+  - mysql-connector-python
   - oceans
-  - gsw
-  - seawater
   - jupyter
   - numba
   - pytest
+  - cmocean

@@ -19,7 +19,7 @@ log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
 
-def main(radial_file, save_path, qc_values):
+def main(radial_file, save_path, qc_values, export_type='radial'):
     """
     Main function to parse and qc radial files
     :param radial_file: Path to radial file
@@ -27,7 +27,7 @@ def main(radial_file, save_path, qc_values):
     :param qc_values: Dictionary containing thresholds for each QC test
     """
     try:
-        r = Radial(radial_file)
+        r = Radial(radial_file, mask_over_land=False)
     except Exception as err:
         logging.error('{} - {}'.format(radial_file, err))
         return
@@ -44,34 +44,33 @@ def main(radial_file, save_path, qc_values):
         r.qc_qartod_valid_location()
         r.qc_qartod_radial_count(**qc_values['qc_qartod_radial_count'])
         r.qc_qartod_spatial_median(**qc_values['qc_qartod_spatial_median'])
-
-        if os.path.exists(previous_full_file):
-            r.qc_qartod_temporal_gradient(previous_full_file)
-        else:
-            logging.error('{} does not exist at specified location. Bypassing temporal gradient test'.format(previous_full_file))
+        r.qc_qartod_temporal_gradient(previous_full_file)
         r.qc_qartod_avg_radial_bearing(**qc_values['qc_qartod_avg_radial_bearing'])
-        r.qc_qartod_summary_flag()
+        r.qc_qartod_primary_flag()
 
         # Export radial file to either a radial or netcdf
         try:
-            r.export(os.path.join(save_path, r.file_name), 'radial')
+            r.export(os.path.join(save_path, r.file_name), export_type)
         except ValueError as err:
             logging.error('{} - {}'.format(radial_file, err))
             pass
 
 
 if __name__ == '__main__':
-    radial_path = '../../data/radials/SEAB'
+    radial_path = '../../data/radials/ruv/SEAB/'
     radials = glob.glob(os.path.join(radial_path, '*.ruv'))
-    save_path = '../../data/radials_qc/SEAB/'
+    save_path = '../../data/radials_qc/ruv/SEAB/'
+    export_type = 'radial'
 
     qc_values = dict(
         qc_qartod_avg_radial_bearing=dict(reference_bearing=151, warning_threshold=15, failure_threshold=30),
-        qc_qartod_radial_count=dict(radial_min_count=50, radial_low_count=140),
-        qc_qartod_maximum_velocity=dict(radial_max_speed=120, radial_high_speed=100),
-        qc_qartod_spatial_median=dict(radial_smed_range_cell_limit=2.1,
-                                      radial_smed_angular_limit=10,
-                                      radial_smed_current_difference=30))
+        qc_qartod_radial_count=dict(radial_min_count=75.0, radial_low_count=225.0),
+        qc_qartod_maximum_velocity=dict(radial_max_speed=300.0, radial_high_speed=100.0),
+        qc_qartod_spatial_median=dict(radial_smed_range_cell_limit=2.1, radial_smed_angular_limit=10, radial_smed_current_difference=30),
+        qc_qartod_temporal_gradient=dict(gradient_temp_fail=32, gradient_temp_warn=25)
+    )
+
+    radials = glob.glob(os.path.join(radial_path, '*.ruv'))
 
     for radial in sorted(radials):
-        main(radial, save_path, qc_values)
+        main(radial, save_path, qc_values, export_type)
