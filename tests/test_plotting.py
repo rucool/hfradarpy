@@ -1,8 +1,8 @@
 from pathlib import Path
-from codar_processing.plotting.plot_nc import plot_totals as nctotalsplot
-from codar_processing.plotting.plot_nc import plot_radials as ncradialsplot
+from hfradar.plotting.plot_nc import plot_totals as nctotalsplot
+from hfradar.plotting.plot_nc import plot_radials as ncradialsplot
 
-data_path = (Path(__file__).parent.with_name('codar_processing') / 'data').resolve()
+data_path = (Path(__file__).parent.with_name('hfradar') / 'data').resolve()
 output_path = (Path(__file__).parent.with_name('output')).resolve()
 types = ['velocity', 'motion']
 

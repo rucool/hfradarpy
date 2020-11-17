@@ -1,4 +1,4 @@
-name: codar_processing
+name: hfradar
 channels:
   - conda-forge
   - defaults

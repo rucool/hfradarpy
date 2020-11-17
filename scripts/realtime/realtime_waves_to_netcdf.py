@@ -9,7 +9,7 @@ import glob
 import logging
 import os
 import sys
-from codar_processing.methods.waves.wave_to_netcdf import main as wave_to_netcdf
+from hfradar.methods.waves.wave_to_netcdf import main as wave_to_netcdf
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)

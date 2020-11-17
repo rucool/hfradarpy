@@ -8,8 +8,8 @@ import logging
 import os
 import pandas as pd
 import sys
-from codar_processing.src.common import list_files, list_to_dataframe
-from codar_processing.methods.totals import hfrprogs_mat_to_netcdf4
+from hfradar.src.common import list_files, list_to_dataframe
+from hfradar.methods.totals import hfrprogs_mat_to_netcdf4
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)

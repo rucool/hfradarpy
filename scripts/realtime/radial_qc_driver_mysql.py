@@ -4,7 +4,7 @@
 @email michaesm@marine.rutgers.edu
 @purpose Parse CODAR radial files utilizing the Radial subclass and download qc values from MySQL database
 """
-import codar_processing.src.database_common as db
+import hfradar.src.database_common as db
 import concurrent.futures
 import datetime as dt
 import glob
@@ -12,8 +12,8 @@ import logging
 import os
 import sys
 import time
-from codar_processing.configs.database_tables import Sites, QCValues
-from codar_processing.methods.radials.qc_radial_file import main as qc_radial
+from hfradar.configs.database_tables import Sites, QCValues
+from hfradar.methods.radials.qc_radial_file import main as qc_radial
 
 # Set up the parse_wave_files logger
 logger = logging.getLogger(__name__)

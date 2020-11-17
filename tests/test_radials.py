@@ -4,9 +4,9 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from codar_processing.src.radials import Radial, concatenate_multidimensional_radials
+from hfradar.src.radials import Radial, concatenate_multidimensional_radials
 
-data_path = (Path(__file__).parent.with_name('codar_processing') / 'data').resolve()
+data_path = (Path(__file__).parent.with_name('hfradar') / 'data').resolve()
 output_path = (Path(__file__).parent.with_name('output')).resolve()
 
 
