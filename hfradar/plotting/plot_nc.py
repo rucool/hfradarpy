@@ -136,9 +136,14 @@ def plot_totals(dataset, *,
     tds = ds.squeeze()
     u = tds['u'].data
     v = tds['v'].data
-    time = str(ds.time.values[0])
     lon = tds.coords['lon'].data
     lat = tds.coords['lat'].data
+
+    try:
+        time = str(ds.time.values[0])
+    except IndexError:
+        time = ds.time.values
+
     closing()
 
     if scale:
@@ -169,8 +174,12 @@ def plot_totals(dataset, *,
     ).squeeze()
     kwargs['offset'] = Normalize(vmin=velocity_min, vmax=velocity_max, clip=True)
     kwargs['ticks'] = np.append(np.arange(velocity_min, velocity_max, cbar_step), velocity_max)
+    kwargs['extent'] = extent
 
-    plot_common(
+    plt = plot_common(
         time, lon, lat, u, v,
         **kwargs
     )
+
+    if output_file is None:
+        return plt
