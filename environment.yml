@@ -15,3 +15,5 @@ dependencies:
   - numba
   - pytest
   - cmocean
+  - pymongo
+  - dask

@@ -31,22 +31,8 @@ class Waves(CTFParser):
     """
 
     def __init__(self, fname, replace_invalid=True, multi_dimensional=True):
-        rename = dict(datetime='time',
-                      MWHT='wave_height',
-                      MWPD='wave_period',
-                      WAVB='wave_bearing',
-                      WNDB='wind_bearing',
-                      PMWH='maximum_observable_wave_height',
-                      ACNT='cross_spectra_averaged_count',
-                      DIST='distance_from_origin',
-                      RCLL='range_cell_result',
-                      WDPT='doppler_points_used',
-                      MTHD='wave_method',
-                      FLAG='vector_flag',
-                      WHNM='num_valid_source_wave_vectors',
-                      WHSD='standard_deviation_of_wave_heights')
-
         CTFParser.__init__(self, fname)
+
         if self._tables['1']['data']['DIST'].isnull().all():
             df = self._tables['1']['data']
             self.data = df
@@ -61,6 +47,28 @@ class Waves(CTFParser):
 
         # Use separate date and time columns to create datetime column and drop those columns.
         self.data['datetime'] = self.data[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+
+        rename = dict()
+        rename['MWHT'] = 'wave_height'
+        rename['MWPD'] = 'wave_period'
+        rename['WAVB'] = 'wave_bearing'
+        rename['WNDB'] = 'wind_bearing'
+        rename['ACNT'] = 'cross_spectra_averaged_count'
+        rename['DIST'] = 'distance_from_origin'
+        rename['RCLL'] = 'range_cell_result'
+        rename['WDPT'] = 'doppler_points_used'
+        rename['MTHD'] = 'wave_method'
+        rename['FLAG'] = 'vector_flag'
+        rename['datetime'] = 'time'
+
+        if 'PMWH' in self.data.keys():
+            rename['PMWH'] = 'maximum_observable_wave_height'
+
+        if 'WHNM' in self.data.keys():
+            rename['WHNM'] = 'num_valid_source_wave_vectors'
+
+        if 'WHSD' in self.data.keys():
+            rename['WHSD'] = 'standard_deviation_of_wave_heights'
 
         if replace_invalid:
             self.replace_invalid_values()

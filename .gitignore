@@ -5,8 +5,6 @@
 
 *.xml
 
-configs/configs.py
-
 *.pyc
 
 *.swp
@@ -18,5 +16,6 @@ hfradar/data/radials/.DS_Store
 output/
 .pytest_cache
 *.egg-info/
-scripts/realtime/radial_qc_driver_mongodb.py
-codar_processing/data/radials_qc/ruv/RDLi_SEAB_2019_01_01_0100.ruv
+.idea/.name
+.idea/.name
+hfradar/data/totals/oi/nc/aggregated/20190101T000000Z-20190101T230000Z_aggregated.nc

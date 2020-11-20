@@ -3,10 +3,15 @@ import os
 import pandas as pd
 import re
 from hfradar.configs import database_tables
-from hfradar.configs.configs import db_configs
 from sqlalchemy.engine.url import URL
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+try:
+    from hfradar.configs.configs import mysql_configs
+except ModuleNotFoundError:
+    from hfradar.configs.configs_default import mysql_configs
+
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +68,7 @@ def db_engine():
     Performs database connection using database settings from settings.py.
     Returns sqlalchemy engine instance
     """
-    return create_engine(URL(**db_configs()))
+    return create_engine(URL(**mysql_configs()))
 
 
 def get_file_type_id(session, file_type):

@@ -3,13 +3,19 @@ import pandas as pd
 from collections import OrderedDict
 
 
-def db_configs():
+def mysql_configs():
     database = {
-        'drivername': 'mysql',
+        'drivername': 'mysql+mysqlconnector',
         'username': 'admin',
         'password': 'root',
         'host': 'localhost',
         'database': 'coolops'}
+    return database
+
+
+def mongodb_configs():
+    database = {
+        'uri': 'mongodb://127.0.0.1:27017'}
     return database
 
 

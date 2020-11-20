@@ -1085,19 +1085,37 @@ class Radial(CTFParser):
             self.data[test_str] = 2
             logging.warning('{} does not exist at specified location. Setting column {} to not_evaluated flag'.format(r0, test_str))
 
-    def qc_qartod_primary_flag(self):
+    def qc_qartod_primary_flag(self, include=None):
+        """
+         A primary flag is a single flag set to the worst case of all QC flags within the data record.
+        :param include: list of quality control tests which should be included in the primary flag
+        :return:
+        """
         test_str = 'PRIM'
 
         # Set summary flag column all equal to 1
         self.data[test_str] = 1
 
-        equals_3 = self.data.loc[:, self.data.columns.str.contains('QC*')].eq(3).any(axis=1)
+        # generate dictionary of executed qc tests found in the header
+        executed = dict()
+        for b in [x.split('-')[0].strip() for x in self.metadata['QCTest']]:
+            i = b.split(' ')
+            executed[i[0]] = re.sub(r'[()]', '', i[1])
+
+        if include:
+            # only add qartod tests which were set by user to executed dictionary
+            included_tests = list({key: value for key, value in executed.items() if key in include}.values())
+        else:
+            included_tests = list(executed.values())
+
+        equals_3 = self.data[included_tests].eq(3).any(axis=1)
         self.data[test_str] = self.data[test_str].where(~equals_3, other=3)
 
-        equals_4 = self.data.loc[:, self.data.columns.str.contains('QC*')].eq(4).any(axis=1)
+        equals_4 = self.data[included_tests].eq(4).any(axis=1)
         self.data[test_str] = self.data[test_str].where(~equals_4, other=4)
 
-        self.metadata['QCTest'].append((f'qc_qartod_primary_flag ({test_str}) - Primary Flag - Highest flag value of QC06, QC07, QC08, QC09, QC10, QC11, QC12 ("not_evaluated" flag results ignored)'))
+        included_test_strs = ', '.join(included_tests)
+        self.metadata['QCTest'].append((f'qc_qartod_primary_flag ({test_str}) - Primary Flag - Highest flag value of {included_test_strs} ("not_evaluated" flag results ignored)'))
         self.append_to_tableheader(test_str, '(flag)')
         # %QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data
 

@@ -3,7 +3,6 @@ import datetime as dt
 import logging
 import os
 import sys
-
 import hfradar.src.database_common as db
 import hfradar.src.database_waves as dbw
 from hfradar.src.waves import Waves

@@ -24,6 +24,7 @@ days_to_check = 30
 sites = ['BRAD', 'BRMR', 'BRNT', 'RATH', 'SEAB', 'SPRK', 'WOOD', 'BISL', 'CMPT', 'CAPE', 'CPHN', 'GCAP', 'HLPN', 'MISQ',
          'MNTK', 'OLDB', 'PALM', 'PORT', 'SILD', 'STLI', 'SUNS', 'VIEW']
 
+
 # Calculate datetime of time delta set in days_to_check from now
 now = dt.datetime.now()
 ago = now-dt.timedelta(days=days_to_check)
