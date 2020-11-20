@@ -80,8 +80,8 @@ def main(wave_file, save_dir, wave_min=0.2, wave_max=5):
     lonlat = [float(x) for x in w.data.Origin.split()]
 
     length = len(w.data['time'])
-    w.data['lon'] = xr.DataArray(np.full(length, lonlat[0]), dims=('time'))
-    w.data['lat'] = xr.DataArray(np.full(length, lonlat[1]), dims=('time'))
+    w.data['lon'] = xr.DataArray(np.full(length, lonlat[1]), dims=('time'))
+    w.data['lat'] = xr.DataArray(np.full(length, lonlat[0]), dims=('time'))
 
     # Assign global attributes for CF compliant time series files
     global_attr = netcdf_global_attributes(required_attributes, time_start, time_end)
