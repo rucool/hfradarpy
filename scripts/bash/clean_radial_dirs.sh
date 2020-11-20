@@ -9,8 +9,8 @@ echo ---------------- Start ---------------------- >> $logfile
 date >> $logfile
 
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate codar_processing
-python /home/codaradm/operational_scripts/codar_processing/codar_processing/utilities/clean_radial_dirs.py >> $logfile
+conda activate hfradar
+python /home/codaradm/operational_scripts/hfradarpy/codar_processing/utilities/clean_radial_dirs.py >> $logfile
 conda deactivate
 
 echo ---------------- End ------------------------ >> $logfile
