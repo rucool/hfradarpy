@@ -10,7 +10,7 @@ date >> $logfile
 
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate hfradar
-python /home/codaradm/operational_scripts/hfradarpy/codar_processing/utilities/clean_radial_dirs.py >> $logfile
+python /home/codaradm/operational_scripts/hfradarpy/hfradar/utilities/clean_radial_dirs.py >> $logfile
 conda deactivate
 
 echo ---------------- End ------------------------ >> $logfile
