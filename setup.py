@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='hfradar',
     version='0.3.5',
-    packages=['scripts', 'scripts.sandbox', 'hfradar.utilities', 'hfradar', 'hfradar.src', 'hfradar.configs', 'hfradar.methods', 'hfradar.methods.waves', 'hfradar.methods.totals', 'hfradar.methods.radials', 'hfradar.plotting'],
+    packages=['hfradar.utilities', 'hfradar', 'hfradar.src', 'hfradar.configs', 'hfradar.methods', 'hfradar.methods.waves', 'hfradar.methods.totals', 'hfradar.methods.radials', 'hfradar.plotting'],
     url='https://github.com/rucool/hfradarpy',
     license='MIT',
     author='mikesmith',
