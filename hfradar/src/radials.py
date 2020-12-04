@@ -10,6 +10,11 @@ import xarray as xr
 from hfradar.src.common import CTFParser, create_dir, make_encoding
 from hfradar.src.calc import reckon
 
+try:
+    from hfradar.configs.configs import netcdf_global_attributes
+except ModuleNotFoundError:
+    from hfradar.configs.configs_default import netcdf_global_attributes
+
 
 logger = logging.getLogger(__name__)
 
@@ -198,13 +203,6 @@ class Radial(CTFParser):
             if f in ds:
                 ds[f] = -ds[f]
 
-        # Assign header data to global attributes
-        ds = ds.assign_attrs(self.metadata)
-
-        if enhance is True:
-            ds = self.enhance_xarray(ds)
-            ds = xr.decode_cf(ds)
-
         return ds
 
     def to_xarray_tabular(self, range_min=None, range_max=None, enhance=False):
@@ -221,8 +219,13 @@ class Radial(CTFParser):
         # get timestamp from radial metadata
         timestamp = dt.datetime(*[int(s) for s in self.metadata['TimeStamp'].split()])
 
+        self.data['time'] = timestamp
+        self.data.set_index('time', inplace=True)
+
         # Intitialize xarray dataset
-        ds = self.data.to_xarray().expand_dims('time').assign_coords(time=('time', [timestamp]))
+        ds = self.data.to_xarray()
+        # ds.coords['time'] = pd.date_range(timestamp, periods=1)
+        # ds.expand_dims('time').assign_coords(time=('time', [timestamp]))
 
         # Check if calculated longitudes and latitudes align with given longitudes and latitudes
         # plt.plot(ds.lon, ds.lat, 'bo', ds.LOND.squeeze(), ds.LATD.squeeze(), 'rx')
@@ -232,13 +235,6 @@ class Radial(CTFParser):
         for f in flips:
             if f in ds:
                 ds[f] = -ds[f]
-
-        # Assign header data to global attributes
-        ds = ds.assign_attrs(self.metadata)
-
-        if enhance is True:
-            ds = self.enhance_xarray(ds)
-            ds = xr.decode_cf(ds)
 
         return ds
 
@@ -264,6 +260,8 @@ class Radial(CTFParser):
             BEAR='bearing',
             RNGE='range'
         )
+
+        rename_qc = dict()
 
         # rename variables to something meaningful if they existin
         # in the xarray dataset
@@ -426,75 +424,96 @@ class Radial(CTFParser):
         if 'QC06' in xds:
             xds['QC06'].attrs['long_name'] = 'Syntax (QARTOD Test 06) Flag Masks'
             xds['QC06'].attrs['valid_range'] = [1, 9]
-            xds['QC06'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC06'].attrs['flag_values'] =  [1, 2, 3, 4, 5]
             xds['QC06'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['QC06'].attrs['coordinates'] = 'lon lat'
             xds['QC06'].attrs['grid_mapping'] = 'crs'
+            rename_qc['QC06'] = 'syntax_qc'
 
         # QC07
         if 'QC07' in xds:
-            xds['QC07'].attrs['long_name'] = 'Maximum Threshold (QARTOD Test 07) Flag Masks'
+            xds['QC07'].attrs['long_name'] = 'Maximum Velocity Threshold (QARTOD Test 07) Flag Masks'
             xds['QC07'].attrs['valid_range'] = [1, 9]
-            xds['QC07'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC07'].attrs['flag_values'] = [1, 2, 3, 4, 5]
             xds['QC07'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['QC07'].attrs['coordinates'] = 'lon lat'
             xds['QC07'].attrs['grid_mapping'] = 'crs'
+            rename_qc['QC07'] = 'max_threshold_qc'
 
         # QC08
         if 'QC08' in xds:
             xds['QC08'].attrs['long_name'] = 'Valid Location (QARTOD Test 08) Flag Masks'
             xds['QC08'].attrs['valid_range'] = [1, 9]
-            xds['QC08'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC08'].attrs['flag_values'] = [1, 2, 3, 4, 5]
             xds['QC08'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['QC08'].attrs['coordinates'] = 'lon lat'
             xds['QC08'].attrs['grid_mapping'] = 'crs'
+            rename_qc['QC08'] = 'valid_location_qc'
 
         # QC09
         if 'QC09' in xds:
             xds['QC09'].attrs['long_name'] = 'Radial Count (QARTOD Test 09) Flag Masks'
             xds['QC09'].attrs['valid_range'] = [1, 9]
-            xds['QC09'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC09'].attrs['flag_values'] = [1, 2, 3, 4, 5]
             xds['QC09'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['QC09'].attrs['coordinates'] = 'lon lat'
             xds['QC09'].attrs['grid_mapping'] = 'crs'
+            rename_qc['QC09'] = 'radial_count_qc'
 
         # QC10
         if 'QC10' in xds:
             xds['QC10'].attrs['long_name'] = 'Spatial Median Filter (QARTOD Test 10) Flag Masks'
             xds['QC10'].attrs['valid_range'] = [1, 9]
-            xds['QC10'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC10'].attrs['flag_values'] = [1, 2, 3, 4, 5]
             xds['QC10'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['QC10'].attrs['coordinates'] = 'lon lat'
             xds['QC10'].attrs['grid_mapping'] = 'crs'
+            rename_qc['QC10'] = 'spatial_median_filter_qc'
 
         # QC11
         if 'QC11' in xds:
             xds['QC11'].attrs['long_name'] = 'Temporal Gradient (QARTOD Test 11) Flag Masks'
             xds['QC11'].attrs['valid_range'] = [1, 9]
-            xds['QC11'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC11'].attrs['flag_values'] = [1, 2, 3, 4, 5]
             xds['QC11'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['QC11'].attrs['coordinates'] = 'lon lat'
             xds['QC11'].attrs['grid_mapping'] = 'crs'
+            rename_qc['QC11'] = 'temporal_gradient_qc'
 
         # QC12
         if 'QC12' in xds:
             xds['QC12'].attrs['long_name'] = 'Average Radial Bearing (QARTOD Test 12) Flag Masks'
             xds['QC12'].attrs['valid_range'] = [1, 9]
-            xds['QC12'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['QC12'].attrs['flag_values'] = [1, 2, 3, 4, 5]
             xds['QC12'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['QC12'].attrs['coordinates'] = 'lon lat'
             xds['QC12'].attrs['grid_mapping'] = 'crs'
+            rename_qc['QC12'] = 'average_radial_bearing_qc'
 
         # QC12
         if 'PRIM' in xds:
             xds['PRIM'].attrs['long_name'] = 'Primary Flag Masks'
             xds['PRIM'].attrs['valid_range'] = [1, 9]
-            xds['PRIM'].attrs['flag_masks'] = [1, 2, 3, 4, 5]
+            xds['PRIM'].attrs['flag_values'] = [1, 2, 3, 4, 5]
             xds['PRIM'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
             xds['PRIM'].attrs['coordinates'] = 'lon lat'
             xds['PRIM'].attrs['grid_mapping'] = 'crs'
+            rename_qc['PRIM'] = 'primary_flag_qc'
 
-        del xds.attrs['TimeStamp']
+        if 'QCOP' in xds:
+            xds['QCOP'].attrs['long_name'] = 'Operator Flag Masks'
+            xds['QCOP'].attrs['valid_range'] = [1, 9]
+            xds['QCOP'].attrs['flag_values'] = [1, 2, 3, 4, 5]
+            xds['QCOP'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+            xds['QCOP'].attrs['coordinates'] = 'lon lat'
+            xds['QCOP'].attrs['grid_mapping'] = 'crs'
+            xds['QCOP'].attrs['comment'] = 'Flag that is manually set by operator. Used for flagging vectors that are not detected by QC tests but are clearly wrong.'
+            rename_qc['QCOP'] = 'operator_flag_qc'
+
+
+        # rename variables to something meaningful if they exist in the xarray dataset
+        xds = xds.rename({ k: v for k, v in rename_qc.items() if k in xds })
+        # del xds.attrs['TimeStamp']
 
         return xds
 
@@ -580,25 +599,57 @@ class Radial(CTFParser):
             if key not in present_keys:
                 self.metadata[key] = None
 
-    def create_netcdf(self, filename, file_type='netcdf-tabular'):
+    def create_netcdf(self, filename,
+                      user_attributes,
+                      nc_shape = 'netcdf-tabular',
+                      enhance = True):
         """
         Create a compressed netCDF4 (.nc) file from the radial instance
         :param filename: User defined filename of radial file you want to save
         :return:
         """
+        if 'reference_time' in user_attributes:
+            reference_time = user_attributes['reference_time']
+            user_attributes.pop('reference_time')
+        else:
+            reference_time = 'seconds since 1970-01-01 00:00:00'
+
         create_dir(os.path.dirname(filename))
 
-        if 'tabular' in file_type:
+        if 'tabular' in nc_shape:
             xds = self.to_xarray_tabular(enhance=True)
-        elif 'multidimensional' in file_type:
+        elif 'multidimensional' in nc_shape:
             xds = self.to_xarray_multidimensional(enhance=True)
 
-        encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
+        if enhance is True:
+            xds = self.enhance_xarray(xds)
+            xds = xr.decode_cf(xds)
 
-        if 'multidimensional' in file_type:
+        encoding = make_encoding(xds, time_start=reference_time, comp_level=1, fillvalue=np.nan)
+
+        if 'multidimensional' in nc_shape:
             encoding['bearing'] = dict(zlib=False, _FillValue=None)
             encoding['range'] = dict(zlib=False, _FillValue=None)
-        encoding['time'] = dict(zlib=False, _FillValue=None)
+        # encoding['time'] = dict(zlib=False, _FillValue=None)
+
+        # Assign header data to global attributes
+        xds['site'] = self.metadata['Site'].strip('"').strip()
+        xds['site'] = xds['site'].assign_attrs(self.metadata)
+
+
+        # Grab min and max time in dataset for entry into global attributes for cf compliance
+        time_start = xds['time'].min().data
+        time_end = xds['time'].max().data
+
+        global_attributes = netcdf_global_attributes(user_attributes, time_start, time_end)
+
+        global_attributes['geospatial_lat_min'] = np.double(xds.lat.min())
+        global_attributes['geospatial_lat_max'] = np.double(xds.lat.max())
+        global_attributes['geospatial_lon_min'] = np.double(xds.lon.min())
+        global_attributes['geospatial_lon_max'] = np.double(xds.lon.max())
+
+        logging.debug('{} - Assigning global attributes to dataset'.format(self.file_name))
+        xds = xds.assign_attrs(global_attributes)
 
         xds.to_netcdf(
             filename,
@@ -684,7 +735,7 @@ class Radial(CTFParser):
                 # f.write('%{}: {}\n'.format(footer_key, footer_value))
             f.write('%End:')
 
-    def export(self, filename, file_type='radial'):
+    def export(self, filename, user_attributes, file_type='radial', ):
         """
         Export radial file as either a codar .ruv file or a netcdf .nc file
         :param filename: User defined filename of radial file you want to save
@@ -705,7 +756,7 @@ class Radial(CTFParser):
                 save_file = filename
             else:
                 save_file = filename + '.nc'
-            self.create_netcdf(save_file, file_type)
+            self.create_netcdf(save_file, user_attributes, nc_shape=file_type, enhance=True)
 
     def initialize_qc(self):
         self.metadata['QCTest'] = []

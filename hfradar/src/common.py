@@ -105,7 +105,7 @@ def timestamp_from_lluv_filename(filename):
     return timestamp
 
 
-def make_encoding(ds, time_start='days since 2006-01-01 00:00:00', comp_level=4, chunksize=10000, fillvalue=-999.00):
+def make_encoding(ds, time_start='seconds since 1970-01-01 00:00:00', comp_level=4, chunksize=10000, fillvalue=-999.00):
     encoding = {}
 
     for k in ds.data_vars:
@@ -212,15 +212,18 @@ class CTFParser(object):
                                     key, value = self._parse_header_line(line)
                                     # if 'TableColumnTypes' not in self._tables[str(table_count)]:
                                     #     raise ValueError("TableColumnTypes not defined")
-                                    if 'TableEnd' in line and 'TableColumnTypes' in self._tables[str(table_count)]:
-                                        # use pandas read_csv because it interprets the datatype for each column of the csv
-                                        tdf = pd.read_csv(
-                                            io.StringIO(table_data),
-                                            sep=' ',
-                                            header=None,
-                                            names=self._tables[str(table_count)]['TableColumnTypes'].split(),
-                                            skipinitialspace=True
-                                        )
+                                    if 'TableEnd' in line:
+                                        if 'TableColumnTypes' in self._tables[str(table_count)]:
+                                            # use pandas read_csv because it interprets the datatype for each column of the csv
+                                            tdf = pd.read_csv(
+                                                io.StringIO(table_data),
+                                                sep=' ',
+                                                header=None,
+                                                names=self._tables[str(table_count)]['TableColumnTypes'].split(),
+                                                skipinitialspace=True
+                                            )
+                                        else:
+                                            tdf = pd.DataFrame()
 
                                         self._tables[str(table_count)]['data'] = tdf
                                         table = False
