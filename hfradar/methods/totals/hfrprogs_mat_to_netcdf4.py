@@ -39,16 +39,28 @@ def matlab2datetime(matlab_time):
     return day + day_frac
 
 
-def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], method='oi'):
+def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], method='oi',
+         reference_time=None,
+         comp_level=None,
+         chunksize=None,
+         fillvalue=None
+         ):
     """
     Convert MAT files created using the hfrProgs MATLAB toolbox into CF-1.6/NCEI Grid 2.0 compliant netCDF4 files
+
     :param grid: CSV file containing lon,lat grid information
     :param mat_file: Filepath to MAT file containing HFRProgs
     :param save_dir: Directory to save netCDF files to
     :param user_attributes: User defined dataset attributes for netCDF global attribute. Required for CF/NCEI compliance
     :param flags: Dictionary of thresholds at which we should filter data above
     :param method: 'oi' or 'lsq'. OI is optimal interpolation. LSQ is unweighted least squares
+    :param reference_time: approved CF convention with approved UDUNITS for time.. eg 'seconds since 1970-01-01 00:00:00'
+    :param comp_level: compression level of netCDF. defaults to 1
+    :param chunksize: user defined size to divide dataset into separate chunks
+    :param fillvalue: fill value you want to use
+    :return:
     """
+
     fname = os.path.basename(mat_file)
     try:
         # load .mat file
@@ -336,7 +348,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     logging.debug('{} - Setting variable encoding and fill values for netCDF4 output'.format(fname))
 
     # encode variables for export to netcdf
-    encoding = make_encoding(ds)
+    encoding = make_encoding(ds, reference_time, comp_level, chunksize, fillvalue)
     encoding['lon'] = dict(zlib=False, _FillValue=False)
     encoding['lat'] = dict(zlib=False, _FillValue=False)
     encoding['z'] = dict(zlib=False, _FillValue=False)

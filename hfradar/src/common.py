@@ -105,8 +105,13 @@ def timestamp_from_lluv_filename(filename):
     return timestamp
 
 
-def make_encoding(ds, time_start='seconds since 1970-01-01 00:00:00', comp_level=4, chunksize=10000, fillvalue=-999.00):
+def make_encoding(ds, time_start=None, comp_level=None, chunksize=None, fillvalue=None):
     encoding = {}
+
+    time_start = time_start or 'seconds since 1970-01-01 00:00:00'
+    comp_level = comp_level or 4
+    chunksize = chunksize or 10000
+    fillvalue = fillvalue or -999.00
 
     for k in ds.data_vars:
         values = ds[k].values

@@ -56,15 +56,24 @@ required_attributes = dict(ncei_template_version='NCEI_NetCDF_Point_Template_v2.
                            publisher_url='rucool.marine.rutgers.edu')
 
 
-def main(wave_file, save_dir, wave_min=0.2, wave_max=5):
+def main(wave_file, save_dir, wave_min=0.2, wave_max=5,
+         reference_time=None,
+         comp_level=None,
+         chunksize=None,
+         fillvalue=None):
     """
 
     :param wave_file: Path to wave file
     :param save_dir: Path to save directory for generated NetCDF4 files
     :param wave_min: Minimum wave height to include in netCDF file
     :param wave_max: Maximum wave height to include in netCDF file
+    :param reference_time:
+    :param comp_level:
+    :param chunksize:
+    :param fillvalue:
     :return:
     """
+
     w = Waves(wave_file, multi_dimensional=True)
 
     # Remove wave heights less than 0.2 and greater than 5 m
@@ -155,7 +164,7 @@ def main(wave_file, save_dir, wave_min=0.2, wave_max=5):
     ds['lat'].attrs['valid_max'] = np.double(90.0)
     ds['lat'].attrs['grid_mapping'] = 'crs'
 
-    encoding = make_encoding(ds)
+    encoding = make_encoding(ds, reference_time, comp_level, chunksize, fillvalue)
 
     # add container variables that contain no data
     kwargs = dict(crs=None, instrument=None)
