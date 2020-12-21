@@ -184,7 +184,12 @@ def main(wave_file, save_dir, wave_min=0.2, wave_max=5,
     ds['instrument'].attrs['serial_number'] = 1
 
     create_dir(save_dir)
-    nc_file = '{}.nc'.format(os.path.join(save_dir, os.path.basename(wave_file).split('.')[0]))
+    if 'distance_from_origin' in w.data.coords:
+        pre_ext = 'ranged'
+    else:
+        pre_ext = 'averaged'
+
+    nc_file = '{}.{}.nc'.format(os.path.join(save_dir, os.path.basename(wave_file).split('.')[0]), pre_ext)
 
     # Convert files to netcdf
     ds.to_netcdf(nc_file, encoding=encoding, format='netCDF4', engine='netcdf4', unlimited_dims=['time'])
@@ -195,8 +200,9 @@ if __name__ == '__main__':
     wave_files = glob.glob(os.path.join(wave_dir, '*.wls'))
     save_dir = '../../data/waves/nc/SEAB'
 
-    for f in wave_files:
+    for f in sorted(wave_files):
         try:
+            print(f)
             main(f, save_dir)
         except Exception:
             logger.exception('Exception in main(): ')
