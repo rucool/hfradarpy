@@ -70,9 +70,11 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     # convert matlab time to python datetime
     # time = dt.datetime.strptime(mat_time, '%Y_%m_%d_%H00')
     time_index = pd.date_range(time.strftime('%Y-%m-%d %H:%M:%S'), periods=1)  # create pandas datetimeindex from time
-    time_string = time.strftime('%Y%m%dT%H%M%SZ')  # create timestring from time
+    #time_string = time.strftime('%Y%m%dT%H%M%SZ')  # create timestring from time
+    time_string = time.strftime('%Y%m%d%H%M')  # create timestring from time
 
-    file_name = 'RU_{}_{}.nc'.format(domain, time_string)
+    #file_name = 'RU_{}_{}.nc'.format(domain, time_string)
+    file_name = '{}_hfr_midatl_6km_rtv_oi_maracoos.nc'.format(time_string,domain)
     file_and_path = os.path.join(save_dir, file_name)
 
     try:
@@ -81,8 +83,13 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         lonlat = data['TUV'].LonLat.astype(np.float32)
 
         # create variables for eastward and northward velocities
-        u = data['TUV'].U.astype(np.float32)
-        v = data['TUV'].V.astype(np.float32)
+        u_int = round(['TUV'].U)
+        v_int = round(['TUV'].V)
+        #u = data['TUV'].U.astype(np.float32)
+        #v = data['TUV'].V.astype(np.float32)
+        # rounds to the whole number for velocity
+        u = data['TUV'].U.astype(np.int32)
+        v = data['TUV'].V.astype(np.int32)
         u_units = data['TUV'].UUnits
         v_units = data['TUV'].VUnits
 
@@ -94,7 +101,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             u_err = data['TUV'].ErrorEstimates.Uerr.astype(np.float32)
             v_err = data['TUV'].ErrorEstimates.Verr.astype(np.float32)
             uv_covariance = data['TUV'].ErrorEstimates.UVCovariance.astype(np.float32)
-            total_errors = data['TUV'].ErrorEstimates[1].TotalErrors.astype(np.float32)
+            total_errors = data['TUV'].ErrorEstimates.TotalErrors.astype(np.float32)
 
             # Data Processing Information
             num_rads = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsNumRads.astype(int)
@@ -123,17 +130,17 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             verr_threshold = data['conf'].Totals.OI.cleanTotalsVarargin[1][2]
             qc_info = 'Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n'
             qc_info += 'QCFlagDefinitions: 1 = pass, 2 = not_evaluated, 3 = suspect, 4 = fail, 9 = missing_data\n'
-            qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of QC16, QC18, QC19, QC20\n'
+            qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of qc303, qc305, qc306, qc307\n'
             qc_primary_flag_info += 'This flag will be set to not_evaluated only if ALL individual tests were not_evaluated.'
             qc_operator_mask_info = qc_info + 'The qc_operator_mask follows QCFlagDefinitions and is set at discretion of the operator or data manager.'
-            qc16_info = qc_info + 'QC16 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
-            qc18_info = qc_info + 'QC18 Valid Location [landmask file = ' + data['conf'].Totals.MaskFile + ']'
-            qc19_info = qc_info + 'QC19 OI Uncertainty Threshold [' + uerr_testname + ' ' + str(uerr_threshold) + ']'
-            qc20_info = qc_info + 'QC20 OI Uncertainty Threshold [' + verr_testname + ' ' + str(verr_threshold) + ']'
-            qc16 = data['TUVqc'].QC16.astype(np.int32)
-            qc18 = data['TUVqc'].QC18.astype(np.int32)
-            qc19 = data['TUVqc'].QC19.astype(np.int32)
-            qc20 = data['TUVqc'].QC20.astype(np.int32)
+            qc303_info = qc_info + 'qc303 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
+            qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['conf'].Totals.MaskFile + ']'
+            qc306_info = qc_info + 'qc306 OI Uncertainty Threshold [' + uerr_testname + ' ' + str(uerr_threshold) + ']'
+            qc307_info = qc_info + 'qc307 OI Uncertainty Threshold [' + verr_testname + ' ' + str(verr_threshold) + ']'
+            qc303 = data['TUVqc'].qc303.astype(np.int32)
+            qc305 = data['TUVqc'].qc305.astype(np.int32)
+            qc306 = data['TUVqc'].qc306.astype(np.int32)
+            qc307 = data['TUVqc'].qc307.astype(np.int32)
             qc_primary_flag = data['TUVqc'].PRIM.astype(np.int32)
             qc_operator_mask = data['TUVqc'].qc_operator_mask.astype(np.int32)
 
@@ -165,15 +172,15 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             gdopthreshold = data['conf'].Totals.cleanTotalsVarargin[2]
             qc_info = 'Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n'
             qc_info += 'QCFlagDefinitions: 1 = pass, 2 = not_evaluated, 3 = suspect, 4 = fail, 9 = missing_data\n'
-            qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of QC16, QC18, QC19, QC20\n'
+            qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of qc303, qc305, qc306, qc307\n'
             qc_primary_flag_info += 'This flag will be set to not_evaluated only if ALL tests were not_evaluated.'
             qc_operator_mask_info = qc_info + 'The qc_operator_mask follows QCFlagDefinitions and is set at discretion of the operator or data manager.'
-            qc16_info = qc_info + 'QC16 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
-            qc18_info = qc_info + 'QC18 Valid Location [landmask file = ' + data['conf'].Totals.MaskFile + ']'
-            qc15_info = qc_info + 'QC15 GDOP Threshold [' + gdoptestname + ' ' + str(gdopthreshold) + ']'
-            qc15 = data['TUVqc'].QC15.astype(np.int)
-            qc16 = data['TUVqc'].QC16.astype(np.int)
-            qc18 = data['TUVqc'].QC18.astype(np.int)
+            qc303_info = qc_info + 'qc303 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
+            qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['conf'].Totals.MaskFile + ']'
+            qc302_info = qc_info + 'qc302 GDOP Threshold [' + gdoptestname + ' ' + str(gdopthreshold) + ']'
+            qc302 = data['TUVqc'].qc302.astype(np.int)
+            qc303 = data['TUVqc'].qc303.astype(np.int)
+            qc305 = data['TUVqc'].qc305.astype(np.int)
             qc_primary_flag = data['TUVqc'].PRIM.astype(np.int)
             qc_operator_mask = data['TUVqc'].qc_operator_mask.astype(np.int)
 
@@ -195,10 +202,10 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
                          uv_covariance=uv_covariance,
                          total_errors=total_errors,
                          num_radials=num_rads,
-                         qc16_maxspeed=qc16,
-                         qc18_validlocation=qc18,
-                         qc19_uerr=qc19,
-                         qc20_verr=qc20,
+                         qc303_maxspeed=qc303,
+                         qc305_validlocation=qc305,
+                         qc306_uerr=qc306,
+                         qc307_verr=qc307,
                          qc_primary_flag=qc_primary_flag,
                          qc_operator_mask=qc_operator_mask,
                          )
@@ -210,9 +217,9 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
                          uv_covariance=uv_covariance,
                          total_errors = total_errors,
                          num_radials=num_rads,
-                         qc15_total_errors=qc15,
-                         qc16_maxspeed=qc16,
-                         qc18_validlocation=qc18,
+                         qc302_total_errors=qc302,
+                         qc303_maxspeed=qc303,
+                         qc305_validlocation=qc305,
                          qc_primary_flag=qc_primary_flag,
                          qc_operator_mask=qc_operator_mask,
                          )
@@ -238,19 +245,20 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     # initialize xarray dataset. Add variables. Add coordinates
     ds = xr.Dataset()
     coords = ('time', 'z', 'lat', 'lon')
-    ds['u'] = (coords, np.float32(data_dict['u']))
-    ds['v'] = (coords, np.float32(data_dict['v']))
-    ds['u_err'] = (coords, np.float32(data_dict['u_err']))
-    ds['v_err'] = (coords, np.float32(data_dict['v_err']))
-    ds['uv_covariance'] = (coords, np.float32(data_dict['uv_covariance']))
+    ds['u'] = (coords, np.short(data_dict['u']))
+    ds['v'] = (coords, np.short(data_dict['v']))
+    ds['u_err'] = (coords, np.short(data_dict['u_err']))
+    ds['v_err'] = (coords, np.short(data_dict['v_err']))
+    ds['total_errors'] = (coords, np.short(data_dict['total_errors']))
+    ds['uv_covariance'] = (coords, np.short(data_dict['uv_covariance']))
     ds['num_radials'] = (coords, data_dict['num_radials'])
-    ds['qc16_maxspeed'] = (coords, np.int32(data_dict['qc16_maxspeed']))
-    ds['qc18_validlocation'] = (coords, np.int32(data_dict['qc18_validlocation']))
+    ds['qc303_maxspeed'] = (coords, np.int32(data_dict['qc303_maxspeed']))
+    ds['qc305_validlocation'] = (coords, np.int32(data_dict['qc305_validlocation']))
     if method == 'oi':
-        ds['qc19_uerr'] = (coords, np.int32(data_dict['qc19_uerr']))
-        ds['qc20_verr'] = (coords, np.int32(data_dict['qc20_verr']))
+        ds['qc306_uerr'] = (coords, np.int32(data_dict['qc306_uerr']))
+        ds['qc307_verr'] = (coords, np.int32(data_dict['qc307_verr']))
     elif method == 'lsq':
-        ds['qc15_gdop'] = (coords, np.int32(data_dict['qc15_gdop']))
+        ds['qc302_gdop'] = (coords, np.int32(data_dict['qc302_gdop']))
     ds['qc_primary_flag'] = (coords, np.int32(data_dict['qc_primary_flag']))
     ds['qc_operator_mask'] = (coords, np.int32(data_dict['qc_operator_mask']))
 
@@ -318,41 +326,45 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     ds['u'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity'
     ds['u'].attrs['short_name'] = 'u'
     ds['u'].attrs['units'] = u_units
-    ds['u'].attrs['valid_min'] = np.float32(-300)
-    ds['u'].attrs['valid_max'] = np.float32(300)
+    ds['u'].attrs['scale_factor'] = 0.01
+    #ds['u'].attrs['valid_min'] = np.short(-300)
+    #ds['u'].attrs['valid_max'] = np.short(300)
     ds['u'].attrs['coordinates'] = 'lon lat'
     ds['u'].attrs['grid_mapping'] = 'crs'
     if method == 'oi':
-        ds['u'].attrs['ancillary_variables'] = 'qc16_maxspeed qc18_validlocation qc19_uerr qc20_verr qc_primary_flag qc_operator_mask'
+        ds['u'].attrs['ancillary_variables'] = 'qc303_maxspeed qc305_validlocation qc306_uerr qc307_verr qc_primary_flag qc_operator_mask'
     elif method == 'lsq':
-        ds['u'].attrs['ancillary_variables'] = 'qc15_gdop qc16_maxspeed qc18_validlocation qc_primary_flag qc_operator_mask'
+        ds['u'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation qc_primary_flag qc_operator_mask'
 
     # Set v attributes
     ds['v'].attrs['long_name'] = 'Northward Surface Current (cm/s)'
     ds['v'].attrs['standard_name'] = 'surface_northward_sea_water_velocity'
     ds['v'].attrs['short_name'] = 'v'
     ds['v'].attrs['units'] = v_units
-    ds['v'].attrs['valid_min'] = np.float32(-300)
-    ds['v'].attrs['valid_max'] = np.float32(300)
+    ds['v'].attrs['scale_factor'] = 0.01
+    #ds['v'].attrs['valid_min'] = np.short(-300)
+    #ds['v'].attrs['valid_max'] = np.short(300)
     ds['v'].attrs['coordinates'] = 'lon lat'
     ds['v'].attrs['grid_mapping'] = 'crs'
     if method == 'oi':
-        ds['v'].attrs['ancillary_variables'] = 'qc16_maxspeed qc18_validlocation qc19_uerr qc20_verr qc_primary_flag qc_operator_mask'
+        ds['v'].attrs['ancillary_variables'] = 'qc303_maxspeed qc305_validlocation qc306_uerr qc307_verr qc_primary_flag qc_operator_mask'
     elif method == 'lsq':
-        ds['v'].attrs['ancillary_variables'] = 'qc15_gdop qc16_maxspeed qc18_validlocation qc_primary_flag qc_operator_mask'
+        ds['v'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation qc_primary_flag qc_operator_mask'
 
 
     # Set u_err attributes
     ds['u_err'].attrs['units'] = '1'
-    ds['u_err'].attrs['valid_min'] = np.float32(0)
-    ds['u_err'].attrs['valid_max'] = np.float32(1)
+    ds['u_err'].attrs['scale_factor'] = 0.01
+    #ds['u_err'].attrs['valid_min'] = np.float32(0)
+    #ds['u_err'].attrs['valid_max'] = np.float32(1)
     ds['u_err'].attrs['coordinates'] = 'lon lat'
     ds['u_err'].attrs['grid_mapping'] = 'crs'
 
     # Set v_err attributes
     ds['v_err'].attrs['units'] = '1'
-    ds['v_err'].attrs['valid_min'] = np.float32(0)
-    ds['v_err'].attrs['valid_max'] = np.float32(1)
+    ds['v_err'].attrs['scale_factor'] = 0.01
+    #ds['v_err'].attrs['valid_min'] = np.float32(0)
+    #ds['v_err'].attrs['valid_max'] = np.float32(1)
     ds['v_err'].attrs['coordinates'] = 'lon lat'
     ds['v_err'].attrs['grid_mapping'] = 'crs'
 
@@ -376,6 +388,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     # Set uv_covariance attributes
     ds['uv_covariance'].attrs['long_name'] = 'Eastward and Northward covariance directional information of u and v'
     ds['uv_covariance'].attrs['units'] = '1'
+    ds['uv_covariance'].attrs['scale_factor'] = 0.01
     ds['uv_covariance'].attrs['comment'] = 'directional information of u and v'
     ds['uv_covariance'].attrs['coordinates'] = 'lon lat'
     ds['uv_covariance'].attrs['grid_mapping'] = 'crs'
@@ -392,57 +405,57 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     # ds['processing_parameters'].attrs['coordinates'] = 'parameters'
 
     # Set qc flag attributes
-    ds['qc16_maxspeed'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
-    ds['qc16_maxspeed'].attrs['units'] = '1'
-    ds['qc16_maxspeed'].attrs['valid_min'] = 1
-    ds['qc16_maxspeed'].attrs['valid_max'] = 9
-    ds['qc16_maxspeed'].attrs['coordinates'] = 'lon lat'
-    ds['qc16_maxspeed'].attrs['grid_mapping'] = 'crs'
-    ds['qc16_maxspeed'].attrs['flag_values'] = '1 2 3 4 9'
-    ds['qc16_maxspeed'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
-    ds['qc16_maxspeed'].attrs['comment'] = qc16_info
+    ds['qc303_maxspeed'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
+    ds['qc303_maxspeed'].attrs['units'] = '1'
+    ds['qc303_maxspeed'].attrs['valid_min'] = 1
+    ds['qc303_maxspeed'].attrs['valid_max'] = 9
+    ds['qc303_maxspeed'].attrs['coordinates'] = 'lon lat'
+    ds['qc303_maxspeed'].attrs['grid_mapping'] = 'crs'
+    ds['qc303_maxspeed'].attrs['flag_values'] = '1 2 3 4 9'
+    ds['qc303_maxspeed'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+    ds['qc303_maxspeed'].attrs['comment'] = qc303_info
 
-    ds['qc18_validlocation'].attrs['standard_name'] = 'sea_water_velocity location_test_quality_flag'
-    ds['qc18_validlocation'].attrs['units'] = '1'
-    ds['qc18_validlocation'].attrs['valid_min'] = 1
-    ds['qc18_validlocation'].attrs['valid_max'] = 9
-    ds['qc18_validlocation'].attrs['coordinates'] = 'lon lat'
-    ds['qc18_validlocation'].attrs['grid_mapping'] = 'crs'
-    ds['qc18_validlocation'].attrs['flag_values'] = '1 2 3 4 9'
-    ds['qc18_validlocation'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
-    ds['qc18_validlocation'].attrs['comment'] = qc18_info
+    ds['qc305_validlocation'].attrs['standard_name'] = 'sea_water_velocity location_test_quality_flag'
+    ds['qc305_validlocation'].attrs['units'] = '1'
+    ds['qc305_validlocation'].attrs['valid_min'] = 1
+    ds['qc305_validlocation'].attrs['valid_max'] = 9
+    ds['qc305_validlocation'].attrs['coordinates'] = 'lon lat'
+    ds['qc305_validlocation'].attrs['grid_mapping'] = 'crs'
+    ds['qc305_validlocation'].attrs['flag_values'] = '1 2 3 4 9'
+    ds['qc305_validlocation'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+    ds['qc305_validlocation'].attrs['comment'] = qc305_info
 
     if method == 'oi':
-        ds['qc19_uerr'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
-        ds['qc19_uerr'].attrs['units'] = '1'
-        ds['qc19_uerr'].attrs['valid_min'] = 1
-        ds['qc19_uerr'].attrs['valid_max'] = 9
-        ds['qc19_uerr'].attrs['coordinates'] = 'lon lat'
-        ds['qc19_uerr'].attrs['grid_mapping'] = 'crs'
-        ds['qc19_uerr'].attrs['flag_values'] = '1 2 3 4 9'
-        ds['qc19_uerr'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
-        ds['qc19_uerr'].attrs['comment'] = qc19_info
+        ds['qc306_uerr'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
+        ds['qc306_uerr'].attrs['units'] = '1'
+        ds['qc306_uerr'].attrs['valid_min'] = 1
+        ds['qc306_uerr'].attrs['valid_max'] = 9
+        ds['qc306_uerr'].attrs['coordinates'] = 'lon lat'
+        ds['qc306_uerr'].attrs['grid_mapping'] = 'crs'
+        ds['qc306_uerr'].attrs['flag_values'] = '1 2 3 4 9'
+        ds['qc306_uerr'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+        ds['qc306_uerr'].attrs['comment'] = qc306_info
 
-        ds['qc20_verr'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
-        ds['qc20_verr'].attrs['units'] = '1'
-        ds['qc20_verr'].attrs['valid_min'] = 1
-        ds['qc20_verr'].attrs['valid_max'] = 9
-        ds['qc20_verr'].attrs['coordinates'] = 'lon lat'
-        ds['qc20_verr'].attrs['grid_mapping'] = 'crs'
-        ds['qc20_verr'].attrs['flag_values'] = '1 2 3 4 9'
-        ds['qc20_verr'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
-        ds['qc20_verr'].attrs['comment'] = qc20_info
+        ds['qc307_verr'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
+        ds['qc307_verr'].attrs['units'] = '1'
+        ds['qc307_verr'].attrs['valid_min'] = 1
+        ds['qc307_verr'].attrs['valid_max'] = 9
+        ds['qc307_verr'].attrs['coordinates'] = 'lon lat'
+        ds['qc307_verr'].attrs['grid_mapping'] = 'crs'
+        ds['qc307_verr'].attrs['flag_values'] = '1 2 3 4 9'
+        ds['qc307_verr'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+        ds['qc307_verr'].attrs['comment'] = qc307_info
 
     elif method == 'lsq':
-        ds['qc15_gdop'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
-        ds['qc15_gdop'].attrs['units'] = '1'
-        ds['qc15_gdop'].attrs['valid_min'] = 1
-        ds['qc15_gdop'].attrs['valid_max'] = 9
-        ds['qc15_gdop'].attrs['coordinates'] = 'lon lat'
-        ds['qc15_gdop'].attrs['grid_mapping'] = 'crs'
-        ds['qc15_gdop'].attrs['flag_values'] = '1 2 3 4 9'
-        ds['qc15_gdop'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
-        ds['qc15_gdop'].attrs['comment'] = qc15_info
+        ds['qc302_gdop'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
+        ds['qc302_gdop'].attrs['units'] = '1'
+        ds['qc302_gdop'].attrs['valid_min'] = 1
+        ds['qc302_gdop'].attrs['valid_max'] = 9
+        ds['qc302_gdop'].attrs['coordinates'] = 'lon lat'
+        ds['qc302_gdop'].attrs['grid_mapping'] = 'crs'
+        ds['qc302_gdop'].attrs['flag_values'] = '1 2 3 4 9'
+        ds['qc302_gdop'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+        ds['qc302_gdop'].attrs['comment'] = qc302_info
 
     ds['qc_primary_flag'].attrs['standard_name'] = 'sea_water_velocity aggregate_quality_flag'
     ds['qc_primary_flag'].attrs['units'] = '1'
@@ -454,9 +467,9 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     ds['qc_primary_flag'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail'
     ds['qc_primary_flag'].attrs['comment'] = qc_primary_flag_info
     if method == 'oi':
-        ds['qc_primary_flag'].attrs['ancillary_variables'] = 'qc16_maxspeed qc18_validlocation qc19_uerr qc20_verr'
+        ds['qc_primary_flag'].attrs['ancillary_variables'] = 'qc303_maxspeed qc305_validlocation qc306_uerr qc307_verr'
     elif method == 'lsq':
-        ds['qc_primary_flag'].attrs['ancillary_variables'] = 'qc15_gdop qc16_maxspeed qc18_validlocation'
+        ds['qc_primary_flag'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation'
 
     ds['qc_operator_mask'].attrs['units'] = '1'
     ds['qc_operator_mask'].attrs['valid_min'] = 1
@@ -528,8 +541,8 @@ if __name__ == '__main__':
                            contributor_name='Scott Glenn, Josh Kohut, Hugh Roarty, Ethan Handel, Michael Smith, Laura Nazzaro, Teresa Updyke, Larry Atkinson, Rich Arena, Wendell Brown, Patterson Taylor, Mike Muglia, Harvey Seim',
                            contributor_role='Principal Investigator, Principal Investigator, Principal Investigator, Hardware Maintenance, Data Manager, Data Manager, Principal Investigator, Principal Investigator, Hardware Maintenance, Principal Investigator, Hardware Maintenance, Principal Investigator, Principal Investigator',
                            platform='MARACOOS HF Radar 5MHz Network',
-                           instrument='Network includes CODAR sites AMAG, ASSA, BLCK, BRIG, CEDR, CORE, DUCK, FARO, HATY, HEMP, HOOK, LISL, LOVE, MABO, MRCH, MVCO, NANT, NAUS, PYFC, and WILD',
-                           references='http://maracoos.org/node/146 https://rucool.marine.rutgers.edu/facilities https://rucool.marine.rutgers.edu/data',
+                           instrument='Network includes CODAR sites AMAG, ASSA, BLCK, BRIG, CEDR, CORE, DUCK, HATY, HEMP, HOOK, LISL, LOVE, MRCH, MVCO, NANT, NAUS, and WILD',
+                           references='DOI:10.1029/2007JC004244 DOI:10.1007/s10236-012-0533-9 http://maracoos.org https://rucool.marine.rutgers.edu/facilities https://rucool.marine.rutgers.edu/data',
                            summary='Optimally Interpolated Total Vectors calculated by HFRProgs toolbox using MATLAB. Mercator lat/lon projection',
                            ncei_template_version='NCEI_NetCDF_Grid_Template_v2.0',
                            history='Hourly codar radial data combined into one hourly file containing vectors.',
