@@ -85,13 +85,11 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         lonlat = data['TUV'].LonLat.astype(np.float32)
 
         # create variables for eastward and northward velocities
-        u_int = round(['TUV'].U)
-        v_int = round(['TUV'].V)
-        #u = data['TUV'].U.astype(np.float32)
-        #v = data['TUV'].V.astype(np.float32)
+        u_vel = data['TUV'].U.astype(np.float32)
+        v_vel = data['TUV'].V.astype(np.float32)
         # rounds to the whole number for velocity
-        u = data['TUV'].U.astype(np.int32)
-        v = data['TUV'].V.astype(np.int32)
+        u = np.round(u_vel).astype(np.short)
+        v = np.round(v_vel).astype(np.short)
         u_units = data['TUV'].UUnits
         v_units = data['TUV'].VUnits
 
