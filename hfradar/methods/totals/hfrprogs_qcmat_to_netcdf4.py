@@ -9,6 +9,7 @@ import datetime as dt
 import logging
 import os
 import sys
+import re
 
 import numpy as np
 import pandas as pd
@@ -70,7 +71,12 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     # convert matlab time to python datetime
     ## time = dt.datetime.strptime(mat_time, '%Y_%m_%d_%H00')
 
-    #time_index = pd.date_range(time.strftime('%Y-%m-%d %H:%M:%S'), periods=1)  # create pandas datetimeindex from time
+    timestamp_regex = re.compile('\d{12}')
+    mat_time = timestamp_regex.search(fname).group()
+    time = dt.datetime.strptime(mat_time, '%Y%m%d%H%M')
+
+
+    time_index = pd.date_range(time.strftime('%Y-%m-%d %H:%M:%S'), periods=1)  # create pandas datetimeindex from time
     ##time_string = time.strftime('%Y%m%dT%H%M%SZ')  # create timestring from time
     #time_string = time.strftime('%Y%m%d%H%M')  # create timestring from time
 
