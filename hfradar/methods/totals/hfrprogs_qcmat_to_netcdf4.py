@@ -94,7 +94,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         v_units = data['TUV'].VUnits
 
         #maxspd = data['TUV'].OtherMetadata.cleanTotals.maxspd
-        maxspd = data['conf'].Totals.MaxTotSpeed
+        maxspd = data['TUVmetadata'].conf.Totals.MaxTotSpeed
 
         if method == 'oi':
             # create variables for associated error values
@@ -124,17 +124,17 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             processing_parameters_info += '7) Data error variance of the input radial velocities (cm2 s-2)\n'
 
             #QC Information
-            uerr_testname = data['conf'].Totals.OI.cleanTotalsVarargin[0][0] + ' ' + data['conf'].Totals.OI.cleanTotalsVarargin[0][1]
-            uerr_threshold = data['conf'].Totals.OI.cleanTotalsVarargin[0][2]
-            verr_testname = data['conf'].Totals.OI.cleanTotalsVarargin[1][0] + ' ' + data['conf'].Totals.OI.cleanTotalsVarargin[1][1]
-            verr_threshold = data['conf'].Totals.OI.cleanTotalsVarargin[1][2]
+            uerr_testname = data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[0][0] + ' ' + data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[0][1]
+            uerr_threshold = data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[0][2]
+            verr_testname = data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[1][0] + ' ' + data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[1][1]
+            verr_threshold = data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[1][2]
             qc_info = 'Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n'
             qc_info += 'QCFlagDefinitions: 1 = pass, 2 = not_evaluated, 3 = suspect, 4 = fail, 9 = missing_data\n'
             qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of qc303, qc305, qc306, qc307\n'
             qc_primary_flag_info += 'This flag will be set to not_evaluated only if ALL individual tests were not_evaluated.'
             qc_operator_mask_info = qc_info + 'The qc_operator_mask follows QCFlagDefinitions and is set at discretion of the operator or data manager.'
             qc303_info = qc_info + 'qc303 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
-            qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['conf'].Totals.MaskFile + ']'
+            qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['TUVmetadata'].conf.Totals.MaskFile + ']'
             qc306_info = qc_info + 'qc306 OI Uncertainty Threshold [' + uerr_testname + ' ' + str(uerr_threshold) + ']'
             qc307_info = qc_info + 'qc307 OI Uncertainty Threshold [' + verr_testname + ' ' + str(verr_threshold) + ']'
             qc303 = data['TUVqc'].qc303.astype(np.int32)
@@ -168,15 +168,15 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
 
             #QC Information
-            gdoptestname = data['conf'].Totals.cleanTotalsVarargin[0] + ' ' + data['conf'].Totals.cleanTotalsVarargin[1]
-            gdopthreshold = data['conf'].Totals.cleanTotalsVarargin[2]
+            gdoptestname = data['TUVmetadata'].conf.Totals.cleanTotalsVarargin[0] + ' ' + data['TUVmetadata'].conf.Totals.cleanTotalsVarargin[1]
+            gdopthreshold = data['TUVmetadata'].conf.Totals.cleanTotalsVarargin[2]
             qc_info = 'Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n'
             qc_info += 'QCFlagDefinitions: 1 = pass, 2 = not_evaluated, 3 = suspect, 4 = fail, 9 = missing_data\n'
             qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of qc303, qc305, qc306, qc307\n'
             qc_primary_flag_info += 'This flag will be set to not_evaluated only if ALL tests were not_evaluated.'
             qc_operator_mask_info = qc_info + 'The qc_operator_mask follows QCFlagDefinitions and is set at discretion of the operator or data manager.'
             qc303_info = qc_info + 'qc303 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
-            qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['conf'].Totals.MaskFile + ']'
+            qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['TUVmetadata'].conf.Totals.MaskFile + ']'
             qc302_info = qc_info + 'qc302 GDOP Threshold [' + gdoptestname + ' ' + str(gdopthreshold) + ']'
             qc302 = data['TUVqc'].qc302.astype(np.int)
             qc303 = data['TUVqc'].qc303.astype(np.int)
