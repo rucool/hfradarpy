@@ -132,7 +132,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             qc_info += 'QCFlagDefinitions: 1 = pass, 2 = not_evaluated, 3 = suspect, 4 = fail, 9 = missing_data\n'
             qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of qc303, qc305, qc306, qc307\n'
             qc_primary_flag_info += 'This flag will be set to not_evaluated only if ALL individual tests were not_evaluated.'
-            qc_operator_mask_info = qc_info + 'The qc_operator_mask follows QCFlagDefinitions and is set at discretion of the operator or data manager.'
+            qc_operator_flag_info = qc_info + 'The qc_operator_flag follows QCFlagDefinitions and is set at discretion of the operator or data manager.'
             qc303_info = qc_info + 'qc303 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
             qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['TUVmetadata'].conf.Totals.MaskFile + ']'
             qc306_info = qc_info + 'qc306 OI Uncertainty Threshold [' + uerr_testname + ' ' + str(uerr_threshold) + ']'
@@ -142,7 +142,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             qc306 = data['TUV'].QC306.astype(np.int32)
             qc307 = data['TUV'].QC307.astype(np.int32)
             qc_primary_flag = data['TUV'].PRIM.astype(np.int32)
-            qc_operator_mask = data['TUV'].qc_operator_mask.astype(np.int32)
+            qc_operator_flag = data['TUV'].qc_operator_flag.astype(np.int32)
 
 
         elif method == 'lsq':
@@ -174,7 +174,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             qc_info += 'QCFlagDefinitions: 1 = pass, 2 = not_evaluated, 3 = suspect, 4 = fail, 9 = missing_data\n'
             qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of qc303, qc305, qc306, qc307\n'
             qc_primary_flag_info += 'This flag will be set to not_evaluated only if ALL tests were not_evaluated.'
-            qc_operator_mask_info = qc_info + 'The qc_operator_mask follows QCFlagDefinitions and is set at discretion of the operator or data manager.'
+            qc_operator_flag_info = qc_info + 'The qc_operator_flag follows QCFlagDefinitions and is set at discretion of the operator or data manager.'
             qc303_info = qc_info + 'qc303 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
             qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['TUVmetadata'].conf.Totals.MaskFile + ']'
             qc302_info = qc_info + 'qc302 GDOP Threshold [' + gdoptestname + ' ' + str(gdopthreshold) + ']'
@@ -182,7 +182,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             qc303 = data['TUV'].QC303.astype(np.int)
             qc305 = data['TUV'].QC305.astype(np.int)
             qc_primary_flag = data['TUV'].PRIM.astype(np.int)
-            qc_operator_mask = data['TUV'].qc_operator_mask.astype(np.int)
+            qc_operator_flag = data['TUV'].qc_operator_flag.astype(np.int)
 
     except AttributeError as err:
         logging.error('{} - {}. MAT file missing variable needed to create netCDF4 file'.format(fname, err))
@@ -207,7 +207,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
                          qc306_uerr=qc306,
                          qc307_verr=qc307,
                          qc_primary_flag=qc_primary_flag,
-                         qc_operator_mask=qc_operator_mask,
+                         qc_operator_flag=qc_operator_flag,
                          )
     elif method == 'lsq':
         data_dict = dict(u=u,
@@ -221,7 +221,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
                          qc303_maxspeed=qc303,
                          qc305_validlocation=qc305,
                          qc_primary_flag=qc_primary_flag,
-                         qc_operator_mask=qc_operator_mask,
+                         qc_operator_flag=qc_operator_flag,
                          )
 
     logging.debug('{} - Gridding data to 2d grid'.format(fname))
@@ -260,7 +260,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     elif method == 'lsq':
         ds['qc302_gdop'] = (coords, np.int32(data_dict['qc302_gdop']))
     ds['qc_primary_flag'] = (coords, np.int32(data_dict['qc_primary_flag']))
-    ds['qc_operator_mask'] = (coords, np.int32(data_dict['qc_operator_mask']))
+    ds['qc_operator_flag'] = (coords, np.int32(data_dict['qc_operator_flag']))
 
     ds.coords['lon'] = lon
     ds.coords['lat'] = lat
@@ -332,9 +332,9 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     ds['u'].attrs['coordinates'] = 'lon lat'
     ds['u'].attrs['grid_mapping'] = 'crs'
     if method == 'oi':
-        ds['u'].attrs['ancillary_variables'] = 'qc303_maxspeed qc305_validlocation qc306_uerr qc307_verr qc_primary_flag qc_operator_mask'
+        ds['u'].attrs['ancillary_variables'] = 'qc303_maxspeed qc305_validlocation qc306_uerr qc307_verr qc_primary_flag qc_operator_flag'
     elif method == 'lsq':
-        ds['u'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation qc_primary_flag qc_operator_mask'
+        ds['u'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation qc_primary_flag qc_operator_flag'
 
     # Set v attributes
     ds['v'].attrs['long_name'] = 'Northward Surface Current (cm/s)'
@@ -347,9 +347,9 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     ds['v'].attrs['coordinates'] = 'lon lat'
     ds['v'].attrs['grid_mapping'] = 'crs'
     if method == 'oi':
-        ds['v'].attrs['ancillary_variables'] = 'qc303_maxspeed qc305_validlocation qc306_uerr qc307_verr qc_primary_flag qc_operator_mask'
+        ds['v'].attrs['ancillary_variables'] = 'qc303_maxspeed qc305_validlocation qc306_uerr qc307_verr qc_primary_flag qc_operator_flag'
     elif method == 'lsq':
-        ds['v'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation qc_primary_flag qc_operator_mask'
+        ds['v'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation qc_primary_flag qc_operator_flag'
 
 
     # Set u_err attributes
@@ -471,14 +471,14 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     elif method == 'lsq':
         ds['qc_primary_flag'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation'
 
-    ds['qc_operator_mask'].attrs['units'] = '1'
-    ds['qc_operator_mask'].attrs['valid_min'] = 1
-    ds['qc_operator_mask'].attrs['valid_max'] = 9
-    ds['qc_operator_mask'].attrs['coordinates'] = 'lon lat'
-    ds['qc_operator_mask'].attrs['grid_mapping'] = 'crs'
-    ds['qc_operator_mask'].attrs['flag_values'] = '1 2 3 4 9'
-    ds['qc_operator_mask'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
-    ds['qc_operator_mask'].attrs['comment'] = qc_operator_mask_info
+    ds['qc_operator_flag'].attrs['units'] = '1'
+    ds['qc_operator_flag'].attrs['valid_min'] = 1
+    ds['qc_operator_flag'].attrs['valid_max'] = 9
+    ds['qc_operator_flag'].attrs['coordinates'] = 'lon lat'
+    ds['qc_operator_flag'].attrs['grid_mapping'] = 'crs'
+    ds['qc_operator_flag'].attrs['flag_values'] = '1 2 3 4 9'
+    ds['qc_operator_flag'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
+    ds['qc_operator_flag'].attrs['comment'] = qc_operator_flag_info
 
     logging.debug('{} - Setting variable encoding and fill values for netCDF4 output'.format(fname))
 
