@@ -137,12 +137,12 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['TUVmetadata'].conf.Totals.MaskFile + ']'
             qc306_info = qc_info + 'qc306 OI Uncertainty Threshold [' + uerr_testname + ' ' + str(uerr_threshold) + ']'
             qc307_info = qc_info + 'qc307 OI Uncertainty Threshold [' + verr_testname + ' ' + str(verr_threshold) + ']'
-            qc303 = data['TUVqc'].qc303.astype(np.int32)
-            qc305 = data['TUVqc'].qc305.astype(np.int32)
-            qc306 = data['TUVqc'].qc306.astype(np.int32)
-            qc307 = data['TUVqc'].qc307.astype(np.int32)
-            qc_primary_flag = data['TUVqc'].PRIM.astype(np.int32)
-            qc_operator_mask = data['TUVqc'].qc_operator_mask.astype(np.int32)
+            qc303 = data['TUV'].qc303.astype(np.int32)
+            qc305 = data['TUV'].qc305.astype(np.int32)
+            qc306 = data['TUV'].qc306.astype(np.int32)
+            qc307 = data['TUV'].qc307.astype(np.int32)
+            qc_primary_flag = data['TUV'].PRIM.astype(np.int32)
+            qc_operator_mask = data['TUV'].qc_operator_mask.astype(np.int32)
 
 
         elif method == 'lsq':
@@ -178,11 +178,11 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             qc303_info = qc_info + 'qc303 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
             qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['TUVmetadata'].conf.Totals.MaskFile + ']'
             qc302_info = qc_info + 'qc302 GDOP Threshold [' + gdoptestname + ' ' + str(gdopthreshold) + ']'
-            qc302 = data['TUVqc'].qc302.astype(np.int)
-            qc303 = data['TUVqc'].qc303.astype(np.int)
-            qc305 = data['TUVqc'].qc305.astype(np.int)
-            qc_primary_flag = data['TUVqc'].PRIM.astype(np.int)
-            qc_operator_mask = data['TUVqc'].qc_operator_mask.astype(np.int)
+            qc302 = data['TUV'].qc302.astype(np.int)
+            qc303 = data['TUV'].qc303.astype(np.int)
+            qc305 = data['TUV'].qc305.astype(np.int)
+            qc_primary_flag = data['TUV'].PRIM.astype(np.int)
+            qc_operator_mask = data['TUV'].qc_operator_mask.astype(np.int)
 
     except AttributeError as err:
         logging.error('{} - {}. MAT file missing variable needed to create netCDF4 file'.format(fname, err))
