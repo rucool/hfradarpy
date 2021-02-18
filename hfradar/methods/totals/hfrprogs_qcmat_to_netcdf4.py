@@ -82,7 +82,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
     #file_name = 'RU_{}_{}.nc'.format(domain, time_string)
     #file_name = '{}_hfr_midatl_6km_rtv_oi_maracoos.nc'.format(time_string,domain)
-    file_name = mat_file[:-3] + 'nc'
+    file_name = fname[:-3] + 'nc'
     file_and_path = os.path.join(save_dir, file_name)
 
     try:
@@ -332,7 +332,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     ds['u'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity'
     ds['u'].attrs['short_name'] = 'u'
     ds['u'].attrs['units'] = u_units
-    ds['u'].attrs['scale_factor'] = 0.01
+    ds['u'].attrs['scale_factor'] = np.float32(0.01)
     #ds['u'].attrs['valid_min'] = np.short(-300)
     #ds['u'].attrs['valid_max'] = np.short(300)
     ds['u'].attrs['coordinates'] = 'lon lat'
@@ -347,7 +347,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     ds['v'].attrs['standard_name'] = 'surface_northward_sea_water_velocity'
     ds['v'].attrs['short_name'] = 'v'
     ds['v'].attrs['units'] = v_units
-    ds['v'].attrs['scale_factor'] = 0.01
+    ds['v'].attrs['scale_factor'] = np.float32(0.01)
     #ds['v'].attrs['valid_min'] = np.short(-300)
     #ds['v'].attrs['valid_max'] = np.short(300)
     ds['v'].attrs['coordinates'] = 'lon lat'
@@ -360,7 +360,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
     # Set u_err attributes
     ds['u_err'].attrs['units'] = '1'
-    ds['u_err'].attrs['scale_factor'] = 0.01
+    ds['u_err'].attrs['scale_factor'] = np.float32(0.01)
     #ds['u_err'].attrs['valid_min'] = np.float32(0)
     #ds['u_err'].attrs['valid_max'] = np.float32(1)
     ds['u_err'].attrs['coordinates'] = 'lon lat'
@@ -368,7 +368,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
     # Set v_err attributes
     ds['v_err'].attrs['units'] = '1'
-    ds['v_err'].attrs['scale_factor'] = 0.01
+    ds['v_err'].attrs['scale_factor'] = np.float32(0.01)
     #ds['v_err'].attrs['valid_min'] = np.float32(0)
     #ds['v_err'].attrs['valid_max'] = np.float32(1)
     ds['v_err'].attrs['coordinates'] = 'lon lat'
@@ -394,7 +394,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     # Set uv_covariance attributes
     ds['uv_covariance'].attrs['long_name'] = 'Eastward and Northward covariance directional information of u and v'
     ds['uv_covariance'].attrs['units'] = '1'
-    ds['uv_covariance'].attrs['scale_factor'] = 0.01
+    ds['uv_covariance'].attrs['scale_factor'] = np.float32(0.01)
     ds['uv_covariance'].attrs['comment'] = 'directional information of u and v'
     ds['uv_covariance'].attrs['coordinates'] = 'lon lat'
     ds['uv_covariance'].attrs['grid_mapping'] = 'crs'
