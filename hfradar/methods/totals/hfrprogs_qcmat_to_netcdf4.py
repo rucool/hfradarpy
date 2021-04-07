@@ -94,13 +94,23 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         u_vel = data['TUV'].U.astype(np.float32)
         v_vel = data['TUV'].V.astype(np.float32)
         # rounds to the whole number for velocity
-        u = np.round(u_vel).astype(np.short)
-        v = np.round(v_vel).astype(np.short)
-        u_units = data['TUV'].UUnits
-        v_units = data['TUV'].VUnits
+        u = np.round(u_vel).astype(np.float32)
+        v = np.round(v_vel).astype(np.float32)
+        u_units = 'm/s'
+        v_units = 'm/s'
+
+
+        radial_metadata = ','.join(data['TUVmetadata'].radial_metadata)
+        #radmeta = '\n,'.join(data['TUVmetadata'].radial_metadata)
+        #quote = '"'
+        #radial_metadata = quote + radmeta + quote
+
+        radial_num_sites = data['TUVmetadata'].radial_num_sites
 
         #maxspd = data['TUV'].OtherMetadata.cleanTotals.maxspd
         maxspd = data['TUVmetadata'].conf.Totals.MaxTotSpeed
+
+        flag_values = np.array([1,2,3,4,9],dtype=np.byte)
 
         if method == 'oi':
             # create variables for associated error values
@@ -110,30 +120,29 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             total_errors = data['TUV'].ErrorEstimates.TotalErrors.astype(np.float32)
 
             # Data Processing Information
-            num_rads = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsNumRads.astype(int)
+            num_rads = data['TUV'].OtherMatrixVars.makeTotalsOI_TotalsNumRads.astype(np.short)
             min_rads = data['TUV'].OtherMetadata.makeTotalsOI.parameters.MinNumRads
+            min_rads = np.byte(min_rads)
             min_sites = data['TUV'].OtherMetadata.makeTotalsOI.parameters.MinNumSites
+            min_sites = np.byte(min_sites)
             mdlvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.mdlvar
+            mdlvar = np.short(mdlvar)
             errvar = data['TUV'].OtherMetadata.makeTotalsOI.parameters.errvar
+            errvar = np.short(errvar)
             sx = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sx
+            sx = np.float32(sx)
             sy = data['TUV'].OtherMetadata.makeTotalsOI.parameters.sy
+            sy = np.float32(sy)
             temporal_threshold = data['TUV'].OtherMetadata.makeTotalsOI.parameters.tempthresh
-            #processing_parameters = [maxspd, min_sites, min_rads, temporal_threshold, sx, sy, mdlvar, errvar]
-            processing_parameters = [min_sites, min_rads, temporal_threshold, sx, sy, mdlvar, errvar]
-            #processing_parameters_info = '1) Maximum Total Speed Threshold (cm s-1)\n'
-            processing_parameters_info = '1) Minimum number of radial sites\n'
-            processing_parameters_info += '2) Minimum number of radial vectors\n'
-            processing_parameters_info += '3) Temporal search window for radial solutions (Fraction of a day)\n'
-            processing_parameters_info += '4) Decorrelation scales in the north direction\n'
-            processing_parameters_info += '5) Decorrelation scales in the east direction\n'
-            processing_parameters_info += '6) Signal variance of the surface current fields (cm2 s-2)\n'
-            processing_parameters_info += '7) Data error variance of the input radial velocities (cm2 s-2)\n'
+            temporal_threshold = np.float32(temporal_threshold)
 
             #QC Information
             uerr_testname = data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[0][0] + ' ' + data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[0][1]
             uerr_threshold = data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[0][2]
+            uerr_threshold = np.float32(uerr_threshold)
             verr_testname = data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[1][0] + ' ' + data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[1][1]
             verr_threshold = data['TUVmetadata'].conf.Totals.OI.cleanTotalsVarargin[1][2]
+            verr_threshold = np.float32(verr_threshold)
             qc_info = 'Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n'
             qc_info += 'QCFlagDefinitions: 1 = pass, 2 = not_evaluated, 3 = suspect, 4 = fail, 9 = missing_data\n'
             qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of qc303, qc305, qc306, qc307\n'
@@ -143,12 +152,18 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['TUVmetadata'].conf.Totals.MaskFile + ']'
             qc306_info = qc_info + 'qc306 OI Uncertainty Threshold [' + uerr_testname + ' ' + str(uerr_threshold) + ']'
             qc307_info = qc_info + 'qc307 OI Uncertainty Threshold [' + verr_testname + ' ' + str(verr_threshold) + ']'
-            qc303 = data['TUV'].QC303.astype(np.int32)
-            qc305 = data['TUV'].QC305.astype(np.int32)
-            qc306 = data['TUV'].QC306.astype(np.int32)
-            qc307 = data['TUV'].QC307.astype(np.int32)
-            qc_primary_flag = data['TUV'].PRIM.astype(np.int32)
-            qc_operator_flag = data['TUV'].qc_operator_flag.astype(np.int32)
+            qc303 = data['TUV'].QC303
+            qc305 = data['TUV'].QC305
+            qc306 = data['TUV'].QC306
+            qc307 = data['TUV'].QC307
+            qc_primary_flag = data['TUV'].PRIM
+            qc_operator_flag = data['TUV'].qc_operator_flag
+            qc303 = np.byte(qc303)
+            qc305 = np.byte(qc305)
+            qc306 = np.byte(qc306)
+            qc307 = np.byte(qc307)
+            qc_primary_flag = np.byte(qc_primary_flag)
+            qc_operator_flag = np.byte(qc_operator_flag)
 
 
         elif method == 'lsq':
@@ -159,23 +174,28 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             total_errors = data['TUV'].ErrorEstimates[1].TotalErrors.astype(np.float32)
 
             # Data Processing Information
-            num_rads = data['TUV'].OtherMatrixVars.makeTotals_TotalsNumRads.astype(int)
+            num_rads = data['TUV'].OtherMatrixVars.makeTotals_TotalsNumRads.astype(np.short)
             min_rads = data['TUV'].OtherMetadata.makeTotals.parameters.MinNumRads
+            min_rads = np.byte(min_rads)
             min_sites = data['TUV'].OtherMetadata.makeTotals.parameters.MinNumSites
+            min_sites = np.byte(min_sites)
             spatial_threshold = data['TUV'].OtherMetadata.makeTotals.parameters.spatthresh
+            spatial_threshold = np.float32(spatial_threshold)
             temporal_threshold = data['TUV'].OtherMetadata.makeTotals.parameters.tempthresh
+            temporal_threshold = np.float32(temporal_threshold)
             #processing_parameters = [maxspd, min_sites, min_rads, temporal_threshold, spatial_threshold]
-            processing_parameters = [min_sites, min_rads, temporal_threshold, spatial_threshold]
+            #processing_parameters = [min_sites, min_rads, temporal_threshold, spatial_threshold]
             #processing_parameters_info = '1) Maximum Total Speed Threshold (cm s-1)\n'
-            processing_parameters_info = '1) Minimum number of radial sites.\n'
-            processing_parameters_info += '2) Minimum number of radial vectors.\n'
-            processing_parameters_info += '3) Temporal search window for radial solutions (Fractions of a day)\n'
-            processing_parameters_info += '4) Spatial search radius for radial solutions (km)\n'
+            #processing_parameters_info = '1) Minimum number of radial sites.\n'
+            #processing_parameters_info += '2) Minimum number of radial vectors.\n'
+            #processing_parameters_info += '3) Temporal search window for radial solutions (Fractions of a day)\n'
+            #processing_parameters_info += '4) Spatial search radius for radial solutions (km)\n'
 
 
             #QC Information
             gdoptestname = data['TUVmetadata'].conf.Totals.cleanTotalsVarargin[0] + ' ' + data['TUVmetadata'].conf.Totals.cleanTotalsVarargin[1]
             gdopthreshold = data['TUVmetadata'].conf.Totals.cleanTotalsVarargin[2]
+            gdopthreshold = np.float32(gdopthreshold)
             qc_info = 'Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n'
             qc_info += 'QCFlagDefinitions: 1 = pass, 2 = not_evaluated, 3 = suspect, 4 = fail, 9 = missing_data\n'
             qc_primary_flag_info = 'QCPrimaryFlagDefinition: Highest flag value of qc303, qc305, qc306, qc307\n'
@@ -184,11 +204,16 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
             qc303_info = qc_info + 'qc303 Max Speed Threshold [max_vel = ' + str(maxspd) + ' (cm/s)]'
             qc305_info = qc_info + 'qc305 Valid Location [landmask file = ' + data['TUVmetadata'].conf.Totals.MaskFile + ']'
             qc302_info = qc_info + 'qc302 GDOP Threshold [' + gdoptestname + ' ' + str(gdopthreshold) + ']'
-            qc302 = data['TUV'].QC302.astype(np.int)
-            qc303 = data['TUV'].QC303.astype(np.int)
-            qc305 = data['TUV'].QC305.astype(np.int)
-            qc_primary_flag = data['TUV'].PRIM.astype(np.int)
-            qc_operator_flag = data['TUV'].qc_operator_flag.astype(np.int)
+            qc302 = data['TUV'].QC302
+            qc303 = data['TUV'].QC303
+            qc305 = data['TUV'].QC305
+            qc_primary_flag = data['TUV'].PRIM
+            qc_operator_flag = data['TUV'].qc_operator_flag
+            qc302 = np.byte(qc302)
+            qc303 = np.byte(qc303)
+            qc305 = np.byte(qc305)
+            qc_primary_flag = np.byte(qc_primary_flag)
+            qc_operator_flag = np.byte(qc_operator_flag)
 
     except AttributeError as err:
         logging.error('{} - {}. MAT file missing variable needed to create netCDF4 file'.format(fname, err))
@@ -207,7 +232,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
                          v_err=v_err,
                          uv_covariance=uv_covariance,
                          total_errors=total_errors,
-                         num_radials=num_rads,
+                         number_of_radials=num_rads,
                          qc303_maxspeed=qc303,
                          qc305_validlocation=qc305,
                          qc306_uerr=qc306,
@@ -222,7 +247,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
                          v_err=v_err,
                          uv_covariance=uv_covariance,
                          total_errors = total_errors,
-                         num_radials=num_rads,
+                         number_of_radials=num_rads,
                          qc302_total_errors=qc302,
                          qc303_maxspeed=qc303,
                          qc305_validlocation=qc305,
@@ -251,22 +276,22 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     # initialize xarray dataset. Add variables. Add coordinates
     ds = xr.Dataset()
     coords = ('time', 'z', 'lat', 'lon')
-    ds['u'] = (coords, np.short(data_dict['u']))
-    ds['v'] = (coords, np.short(data_dict['v']))
-    ds['u_err'] = (coords, np.short(data_dict['u_err']))
-    ds['v_err'] = (coords, np.short(data_dict['v_err']))
-    ds['total_errors'] = (coords, np.short(data_dict['total_errors']))
-    ds['uv_covariance'] = (coords, np.short(data_dict['uv_covariance']))
-    ds['num_radials'] = (coords, data_dict['num_radials'])
-    ds['qc303_maxspeed'] = (coords, np.int32(data_dict['qc303_maxspeed']))
-    ds['qc305_validlocation'] = (coords, np.int32(data_dict['qc305_validlocation']))
+    ds['u'] = (coords, np.float32(data_dict['u']))
+    ds['v'] = (coords, np.float32(data_dict['v']))
+    ds['u_err'] = (coords, np.float32(data_dict['u_err']))
+    ds['v_err'] = (coords, np.float32(data_dict['v_err']))
+    ds['total_errors'] = (coords, np.float32(data_dict['total_errors']))
+    ds['uv_covariance'] = (coords, np.float32(data_dict['uv_covariance']))
+    ds['number_of_radials'] = (coords, np.short(data_dict['number_of_radials']))
+    ds['qc303_maxspeed'] = (coords, np.byte(data_dict['qc303_maxspeed']))
+    ds['qc305_validlocation'] = (coords, np.byte(data_dict['qc305_validlocation']))
     if method == 'oi':
-        ds['qc306_uerr'] = (coords, np.int32(data_dict['qc306_uerr']))
-        ds['qc307_verr'] = (coords, np.int32(data_dict['qc307_verr']))
+        ds['qc306_uerr'] = (coords, np.byte(data_dict['qc306_uerr']))
+        ds['qc307_verr'] = (coords, np.byte(data_dict['qc307_verr']))
     elif method == 'lsq':
-        ds['qc302_gdop'] = (coords, np.int32(data_dict['qc302_gdop']))
-    ds['qc_primary_flag'] = (coords, np.int32(data_dict['qc_primary_flag']))
-    ds['qc_operator_flag'] = (coords, np.int32(data_dict['qc_operator_flag']))
+        ds['qc302_gdop'] = (coords, np.byte(data_dict['qc302_gdop']))
+    ds['qc_primary_flag'] = (coords, np.byte(data_dict['qc_primary_flag']))
+    ds['qc_operator_flag'] = (coords, np.byte(data_dict['qc_operator_flag']))
 
     ds.coords['lon'] = lon
     ds.coords['lat'] = lat
@@ -277,7 +302,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         for k, v in flags.items():
             ds = ds.where(ds[k] <= v)
 
-    ds['processing_parameters'] = (('parameters'), processing_parameters)
+    #ds['processing_parameters'] = (('parameters'), processing_parameters)
 
     # Grab min and max time in dataset for entry into global attributes for cf compliance
     time_start = ds['time'].min().data
@@ -328,13 +353,13 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     ds['z'].attrs['positive'] = 'down'
 
     # Set u attributes
-    ds['u'].attrs['long_name'] = 'Eastward Surface Current (cm/s)'
+    ds['u'].attrs['long_name'] = 'Eastward Surface Current (m/s)'
     ds['u'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity'
     ds['u'].attrs['short_name'] = 'u'
     ds['u'].attrs['units'] = u_units
     ds['u'].attrs['scale_factor'] = np.float32(0.01)
-    #ds['u'].attrs['valid_min'] = np.short(-300)
-    #ds['u'].attrs['valid_max'] = np.short(300)
+    ds['u'].attrs['valid_min'] = np.float32(-300)
+    ds['u'].attrs['valid_max'] = np.float32(300)
     ds['u'].attrs['coordinates'] = 'lon lat'
     ds['u'].attrs['grid_mapping'] = 'crs'
     if method == 'oi':
@@ -343,13 +368,13 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         ds['u'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation qc_primary_flag qc_operator_flag'
 
     # Set v attributes
-    ds['v'].attrs['long_name'] = 'Northward Surface Current (cm/s)'
+    ds['v'].attrs['long_name'] = 'Northward Surface Current (m/s)'
     ds['v'].attrs['standard_name'] = 'surface_northward_sea_water_velocity'
     ds['v'].attrs['short_name'] = 'v'
     ds['v'].attrs['units'] = v_units
     ds['v'].attrs['scale_factor'] = np.float32(0.01)
-    #ds['v'].attrs['valid_min'] = np.short(-300)
-    #ds['v'].attrs['valid_max'] = np.short(300)
+    ds['v'].attrs['valid_min'] = np.float32(-300)
+    ds['v'].attrs['valid_max'] = np.float32(300)
     ds['v'].attrs['coordinates'] = 'lon lat'
     ds['v'].attrs['grid_mapping'] = 'crs'
     if method == 'oi':
@@ -359,130 +384,159 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
 
     # Set u_err attributes
+    ds['u_err'].attrs['short_name'] = 'uerr'
     ds['u_err'].attrs['units'] = '1'
     ds['u_err'].attrs['scale_factor'] = np.float32(0.01)
-    #ds['u_err'].attrs['valid_min'] = np.float32(0)
-    #ds['u_err'].attrs['valid_max'] = np.float32(1)
+    ds['u_err'].attrs['valid_min'] = np.float32(0)
+    ds['u_err'].attrs['valid_max'] = np.float32(1)
     ds['u_err'].attrs['coordinates'] = 'lon lat'
     ds['u_err'].attrs['grid_mapping'] = 'crs'
 
     # Set v_err attributes
+    ds['v_err'].attrs['short_name'] = 'verr'
     ds['v_err'].attrs['units'] = '1'
     ds['v_err'].attrs['scale_factor'] = np.float32(0.01)
-    #ds['v_err'].attrs['valid_min'] = np.float32(0)
-    #ds['v_err'].attrs['valid_max'] = np.float32(1)
+    ds['v_err'].attrs['valid_min'] = np.float32(0)
+    ds['v_err'].attrs['valid_max'] = np.float32(1)
     ds['v_err'].attrs['coordinates'] = 'lon lat'
     ds['v_err'].attrs['grid_mapping'] = 'crs'
+
+    # Set total_errors attributes
+    ds['total_errors'].attrs['short_name'] = 'totalerr'
+    ds['total_errors'].attrs['units'] = '1'
+    ds['total_errors'].attrs['scale_factor'] = np.float32(0.01)
+    ds['total_errors'].attrs['valid_min'] = np.float32(-300)
+    ds['total_errors'].attrs['valid_max'] = np.float32(300)
+    ds['total_errors'].attrs['comment'] = 'directional information of u and v'
+    ds['total_errors'].attrs['coordinates'] = 'lon lat'
+    ds['total_errors'].attrs['grid_mapping'] = 'crs'
+
+    # Set uv_covariance attributes    ds['uv_covariance'].attrs['long_name'] = 'Eastward and Northward covariance directional information of u and v'
+    ds['uv_covariance'].attrs['short_name'] = 'uvcov'
+    ds['uv_covariance'].attrs['units'] = '1'
+    ds['uv_covariance'].attrs['scale_factor'] = np.float32(0.01)
+    ds['uv_covariance'].attrs['valid_min'] = np.float32(-300)
+    ds['uv_covariance'].attrs['valid_max'] = np.float32(300)
+    ds['uv_covariance'].attrs['comment'] = 'directional information of u and v'
+    ds['uv_covariance'].attrs['coordinates'] = 'lon lat'
+    ds['uv_covariance'].attrs['grid_mapping'] = 'crs'
+
 
     if method == 'lsq':
         ds['u_err'].attrs['long_name'] = 'Associated GDOP mapping error value associated with eastward velocity component'
         ds['v_err'].attrs['long_name'] = 'Associated GDOP mapping error value associated with northward velocity component'
         ds['total_errors'].attrs['long_name'] = 'Associated GDOP mapping error value, TotalErrors are the square-root of the norm covariance matrix (or the square root of the maximum eigenvalue of the 2x2 UV covariance matrix)'
-        ds['u_err'].attrs['comment'] = 'velocity measurements with error values over 1.25 are of questionable quality'
-        ds['v_err'].attrs['comment'] = 'velocity measurements with error values over 1.25 are of questionable quality'
-        ds['total_errors'].attrs['comment'] = 'velocity measurements with error values over 1.25 are of questionable quality'
+        ds['u_err'].attrs['comment'] = 'velocity measurements with high u_err values are of questionable quality'
+        ds['v_err'].attrs['comment'] = 'velocity measurements with high v_err values are of questionable quality'
+        ds['total_errors'].attrs['comment'] = 'velocity measurements with total_error values over 1.25 are of questionable quality'
 
     elif method == 'oi':
-        ds['u_err'].attrs['long_name'] = 'Normalized uncertainty error associated with eastward velocity component'
-        ds['v_err'].attrs['long_name'] = 'Normalized uncertainty error associated with northward velocity component'
-        ds['total_errors'].attrs['long_name'] = 'Associated mapping error value, TotalErrors are the square-root of the sum of the squares of U_err and Verr'
-        ds['u_err'].attrs['comment'] = 'velocity measurements with error values over 0.6 are of questionable quality'
-        ds['v_err'].attrs['comment'] = 'velocity measurements with error values over 0.6 are of questionable quality'
-        ds['total_errors'].attrs['comment'] = 'velocity measurements with error values over _ are of questionable quality'
+        ds['u_err'].attrs['long_name'] = 'Normalized uncertainty associated with eastward velocity component, <(u_hat - u)^2>/<u^2>'
+        ds['v_err'].attrs['long_name'] = 'Normalized uncertainty associated with northward velocity component, <(v_hat - v)^2>/<v^2>'
+        ds['uv_covariance'].attrs['long_name'] = 'Directional information of u and v, <(u_hat -u)(v_hat- v)>/sqrt(<u^2><v^2>)'
+        ds['total_errors'].attrs['long_name'] = 'Associated mapping error value, sqrt(U_err^2 + Verr^2)'
+        ds['u_err'].attrs['comment'] = 'normalized by constant signal covariance for all gridpoints, velocity measurements with u_err values over 0.6 are of questionable quality'
+        ds['v_err'].attrs['comment'] = 'normalized by constant signal covariance for all gridpoints, velocity measurements with v_err values over 0.6 are of questionable quality'
+        ds['total_errors'].attrs['comment'] = 'velocity measurements with high total_error values are of questionable quality'
 
-
-    # Set uv_covariance attributes
-    ds['uv_covariance'].attrs['long_name'] = 'Eastward and Northward covariance directional information of u and v'
-    ds['uv_covariance'].attrs['units'] = '1'
-    ds['uv_covariance'].attrs['scale_factor'] = np.float32(0.01)
-    ds['uv_covariance'].attrs['comment'] = 'directional information of u and v'
-    ds['uv_covariance'].attrs['coordinates'] = 'lon lat'
-    ds['uv_covariance'].attrs['grid_mapping'] = 'crs'
-
-    # Set num_radials attributes
-    ds['num_radials'].attrs['long_name'] = 'Number of radial measurements used to calculate each totals velocity'
-    ds['num_radials'].attrs['comment'] = 'totals are not calculated with fewer than 3 contributing radial measurements from 2 sites'
-    ds['num_radials'].attrs['coordinates'] = 'lon lat'
-    ds['num_radials'].attrs['grid_mapping'] = 'crs'
+    # Set number_of_radials attributes
+    ds['number_of_radials'].attrs['long_name'] = 'Number of radial measurements used to calculate each totals velocity'
+    ds['number_of_radials'].attrs['short_name'] = 'num_rads'
+    ds['number_of_radials'].attrs['units'] = '1'
+    ds['number_of_radials'].attrs['comment'] = 'totals are not calculated with fewer than 3 contributing radial measurements from 2 sites'
+    ds['number_of_radials'].attrs['coordinates'] = 'lon lat'
+    ds['number_of_radials'].attrs['grid_mapping'] = 'crs'
 
     # Set information attributes
-    ds['processing_parameters'].attrs['long_name'] = 'General and method specific processing parameter information'
-    ds['processing_parameters'].attrs['comment'] = processing_parameters_info
-    # ds['processing_parameters'].attrs['coordinates'] = 'parameters'
 
     # Set qc flag attributes
-    ds['qc303_maxspeed'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
+    ds['qc303_maxspeed'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity status_flag'
+    ds['qc303_maxspeed'].attrs['long_name'] = 'maximum speed test flag'
+    ds['qc303_maxspeed'].attrs['short_name'] = 'qc303'
     ds['qc303_maxspeed'].attrs['units'] = '1'
-    ds['qc303_maxspeed'].attrs['valid_min'] = 1
-    ds['qc303_maxspeed'].attrs['valid_max'] = 9
+    ds['qc303_maxspeed'].attrs['valid_min'] = np.byte(1)
+    ds['qc303_maxspeed'].attrs['valid_max'] = np.byte(9)
     ds['qc303_maxspeed'].attrs['coordinates'] = 'lon lat'
     ds['qc303_maxspeed'].attrs['grid_mapping'] = 'crs'
-    ds['qc303_maxspeed'].attrs['flag_values'] = '1 2 3 4 9'
+    ds['qc303_maxspeed'].attrs['flag_values'] = flag_values
     ds['qc303_maxspeed'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
     ds['qc303_maxspeed'].attrs['comment'] = qc303_info
 
-    ds['qc305_validlocation'].attrs['standard_name'] = 'sea_water_velocity location_test_quality_flag'
+    ds['qc305_validlocation'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity status_flag'
+    ds['qc305_validlocation'].attrs['long_name'] = 'valid location test flag'
+    ds['qc305_validlocation'].attrs['short_name'] = 'qc305'
     ds['qc305_validlocation'].attrs['units'] = '1'
-    ds['qc305_validlocation'].attrs['valid_min'] = 1
-    ds['qc305_validlocation'].attrs['valid_max'] = 9
+    ds['qc305_validlocation'].attrs['valid_min'] = np.byte(1)
+    ds['qc305_validlocation'].attrs['valid_max'] = np.byte(9)
     ds['qc305_validlocation'].attrs['coordinates'] = 'lon lat'
     ds['qc305_validlocation'].attrs['grid_mapping'] = 'crs'
-    ds['qc305_validlocation'].attrs['flag_values'] = '1 2 3 4 9'
+    ds['qc305_validlocation'].attrs['flag_values'] = flag_values
     ds['qc305_validlocation'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
     ds['qc305_validlocation'].attrs['comment'] = qc305_info
 
     if method == 'oi':
-        ds['qc306_uerr'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
+        ds['qc306_uerr'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity status_flag'
+        ds['qc306_uerr'].attrs['long_name'] = 'Uerr flag'
+        ds['qc306_uerr'].attrs['short_name'] = 'qc306'
         ds['qc306_uerr'].attrs['units'] = '1'
-        ds['qc306_uerr'].attrs['valid_min'] = 1
-        ds['qc306_uerr'].attrs['valid_max'] = 9
+        ds['qc306_uerr'].attrs['valid_min'] = np.byte(1)
+        ds['qc306_uerr'].attrs['valid_max'] = np.byte(9)
         ds['qc306_uerr'].attrs['coordinates'] = 'lon lat'
         ds['qc306_uerr'].attrs['grid_mapping'] = 'crs'
-        ds['qc306_uerr'].attrs['flag_values'] = '1 2 3 4 9'
+        ds['qc306_uerr'].attrs['flag_values'] = flag_values
         ds['qc306_uerr'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
         ds['qc306_uerr'].attrs['comment'] = qc306_info
 
-        ds['qc307_verr'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
+        ds['qc307_verr'].attrs['standard_name'] = 'surface_northward_sea_water_velocity status_flag'
+        ds['qc307_verr'].attrs['long_name'] = 'Verr flag'
+        ds['qc307_verr'].attrs['short_name'] = 'qc307'
         ds['qc307_verr'].attrs['units'] = '1'
-        ds['qc307_verr'].attrs['valid_min'] = 1
-        ds['qc307_verr'].attrs['valid_max'] = 9
+        ds['qc307_verr'].attrs['valid_min'] = np.byte(1)
+        ds['qc307_verr'].attrs['valid_max'] = np.byte(9)
         ds['qc307_verr'].attrs['coordinates'] = 'lon lat'
         ds['qc307_verr'].attrs['grid_mapping'] = 'crs'
-        ds['qc307_verr'].attrs['flag_values'] = '1 2 3 4 9'
+        ds['qc307_verr'].attrs['flag_values'] = flag_values
         ds['qc307_verr'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
         ds['qc307_verr'].attrs['comment'] = qc307_info
 
     elif method == 'lsq':
-        ds['qc302_gdop'].attrs['standard_name'] = 'sea_water_velocity quality_flag'
+        ds['qc302_gdop'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity status_flag'
+        ds['qc302_gdop'].attrs['long_name'] = 'GDOP mapping error flag'
+        ds['qc302_gdop'].attrs['short_name'] = 'qc302'
         ds['qc302_gdop'].attrs['units'] = '1'
-        ds['qc302_gdop'].attrs['valid_min'] = 1
-        ds['qc302_gdop'].attrs['valid_max'] = 9
+        ds['qc302_gdop'].attrs['valid_min'] = np.byte(1)
+        ds['qc302_gdop'].attrs['valid_max'] = np.byte(9)
         ds['qc302_gdop'].attrs['coordinates'] = 'lon lat'
         ds['qc302_gdop'].attrs['grid_mapping'] = 'crs'
-        ds['qc302_gdop'].attrs['flag_values'] = '1 2 3 4 9'
+        ds['qc302_gdop'].attrs['flag_values'] = flag_values
         ds['qc302_gdop'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
         ds['qc302_gdop'].attrs['comment'] = qc302_info
 
-    ds['qc_primary_flag'].attrs['standard_name'] = 'sea_water_velocity aggregate_quality_flag'
+    ds['qc_primary_flag'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity status_flag'
+    ds['qc_primary_flag'].attrs['long_name'] = 'Primary Flag'
+    ds['qc_primary_flag'].attrs['short_name'] = 'primaryflag'
     ds['qc_primary_flag'].attrs['units'] = '1'
-    ds['qc_primary_flag'].attrs['valid_min'] = 1
-    ds['qc_primary_flag'].attrs['valid_max'] = 4
+    ds['qc_primary_flag'].attrs['valid_min'] = np.byte(1)
+    ds['qc_primary_flag'].attrs['valid_max'] = np.byte(9)
     ds['qc_primary_flag'].attrs['coordinates'] = 'lon lat'
     ds['qc_primary_flag'].attrs['grid_mapping'] = 'crs'
-    ds['qc_primary_flag'].attrs['flag_values'] = '1 2 3 4'
-    ds['qc_primary_flag'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail'
+    ds['qc_primary_flag'].attrs['flag_values'] = flag_values
+    ds['qc_primary_flag'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
     ds['qc_primary_flag'].attrs['comment'] = qc_primary_flag_info
     if method == 'oi':
         ds['qc_primary_flag'].attrs['ancillary_variables'] = 'qc303_maxspeed qc305_validlocation qc306_uerr qc307_verr'
     elif method == 'lsq':
         ds['qc_primary_flag'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation'
 
+    ds['qc_operator_flag'].attrs['standard_name'] = 'surface_eastward_sea_water_velocity status_flag'
+    ds['qc_operator_flag'].attrs['long_name'] = 'Operator Flag'
+    ds['qc_operator_flag'].attrs['short_name'] = 'opflag'
     ds['qc_operator_flag'].attrs['units'] = '1'
-    ds['qc_operator_flag'].attrs['valid_min'] = 1
-    ds['qc_operator_flag'].attrs['valid_max'] = 9
+    ds['qc_operator_flag'].attrs['valid_min'] = np.byte(1)
+    ds['qc_operator_flag'].attrs['valid_max'] = np.byte(9)
     ds['qc_operator_flag'].attrs['coordinates'] = 'lon lat'
     ds['qc_operator_flag'].attrs['grid_mapping'] = 'crs'
-    ds['qc_operator_flag'].attrs['flag_values'] = '1 2 3 4 9'
+    ds['qc_operator_flag'].attrs['flag_values'] = flag_values
     ds['qc_operator_flag'].attrs['flag_meanings'] = 'pass not_evaluated suspect fail missing_data'
     ds['qc_operator_flag'].attrs['comment'] = qc_operator_flag_info
 
@@ -490,12 +544,15 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
     # encode variables for export to netcdf
     encoding = make_encoding(ds)
-    encoding['lon'] = dict(zlib=False, _FillValue=False)
-    encoding['lat'] = dict(zlib=False, _FillValue=False)
-    encoding['z'] = dict(zlib=False, _FillValue=False)
+    #encoding['lon'] = dict(zlib=False, _FillValue=False)
+    #encoding['lat'] = dict(zlib=False, _FillValue=False)
+    #encoding['z'] = dict(zlib=False, _FillValue=False)
+    encoding['lon'] = dict(zlib=False, _FillValue=999)
+    encoding['lat'] = dict(zlib=False, _FillValue=999)
+    encoding['z'] = dict(zlib=False, _FillValue=999)
 
     # add container variables that contain no data
-    kwargs = dict(crs=None, instrument=None)
+    kwargs = dict(crs=np.byte([]), instrument=np.byte([]), radial_metadata=np.byte([]), processing_parameters=np.byte([]))
     ds = ds.assign(**kwargs)
 
     # Set crs attributes
@@ -507,9 +564,41 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     ds['crs'].attrs['comment'] = 'http://www.opengis.net/def/crs/EPSG/0/4326'
 
     ds['instrument'].attrs['long_name'] = 'CODAR SeaSonde High Frequency Radar'
+    ds['processing_parameters'].attrs['units'] = '1'
     ds['instrument'].attrs['sensor_type'] = 'Direction-finding high frequency radar antenna'
     ds['instrument'].attrs['make_model'] = 'CODAR SeaSonde'
     ds['instrument'].attrs['serial_number'] = 1
+
+    ds['radial_metadata'].attrs['long_name'] = 'Metadata on radial velocities used to compute total solutions'
+    ds['radial_metadata'].attrs['short_name'] = 'radmeta'
+    ds['processing_parameters'].attrs['units'] = '1'
+    ds['radial_metadata'].attrs['number_files_loaded'] = str(radial_num_sites)
+    ds['radial_metadata'].attrs['number_files_loaded_description'] = 'Number of radial files loaded'
+    ds['radial_metadata'].attrs['files_loaded'] = radial_metadata
+    ds['radial_metadata'].attrs['files_loaded_description'] = 'Radial file names loaded'
+
+    ds['processing_parameters'].attrs['long_name'] = 'General and method specific processing parameter information'
+    ds['processing_parameters'].attrs['short_name'] = 'params'
+    ds['processing_parameters'].attrs['units'] = '1'
+    ds['processing_parameters'].attrs['parameter1'] = min_sites
+    ds['processing_parameters'].attrs['parameter1_description'] = 'Minimum number of radial sites'
+    ds['processing_parameters'].attrs['parameter2'] = min_rads
+    ds['processing_parameters'].attrs['parameter2_description'] = 'Minimum number of radial vectors'
+    ds['processing_parameters'].attrs['parameter3'] = temporal_threshold
+    ds['processing_parameters'].attrs['parameter3_description'] = 'Temporal search window for radial solutions (Fraction of a day)'
+
+    if method == 'oi':
+        ds['processing_parameters'].attrs['parameter4'] = sx
+        ds['processing_parameters'].attrs['parameter4_description'] = 'Decorrelation scales in the east direction'
+        ds['processing_parameters'].attrs['parameter5'] = sy
+        ds['processing_parameters'].attrs['parameter5_description'] = 'Decorrelation scales in the north direction'
+        ds['processing_parameters'].attrs['parameter6'] = mdlvar
+        ds['processing_parameters'].attrs['parameter6_description'] = 'Signal variance of the surface current fields (cm2 s-2)'
+        ds['processing_parameters'].attrs['parameter7'] = errvar
+        ds['processing_parameters'].attrs['parameter7_description'] = 'Data error variance of the input radial velocities (cm2 s-2)'
+    elif method == 'lsq':
+        ds['processing_parameters'].attrs['parameter4'] = spatial_threshold
+        ds['processing_parameters'].attrs['parameter4_description'] = 'Spatial search radius for radial solutions (km)'
 
     # Create save directory if it doesn't exist.
     create_dir(save_dir)
