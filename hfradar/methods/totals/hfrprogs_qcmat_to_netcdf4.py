@@ -94,10 +94,17 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         u_vel = data['TUV'].U.astype(np.float32)
         v_vel = data['TUV'].V.astype(np.float32)
         # rounds to the whole number for velocity
+        # similar to HFRNet we will not report fractions of a cm/s and the scale factors of 0.01 assigned for velocity variables
+        # in the code below will indicate to data users that the units are m/s when the values in the array
+        # are multiplied by the scale factor
+        # HFRNet did this in part so they would be able to assign a variable type of short
         u = np.round(u_vel).astype(np.float32)
         v = np.round(v_vel).astype(np.float32)
         u_units = 'm/s'
         v_units = 'm/s'
+
+
+
 
 
         radial_metadata = ','.join(data['TUVmetadata'].radial_metadata)
@@ -167,11 +174,33 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
 
         elif method == 'lsq':
+
             # create variables for associated error values
-            u_err = data['TUV'].ErrorEstimates[1].Uerr.astype(np.float32)
-            v_err = data['TUV'].ErrorEstimates[1].Verr.astype(np.float32)
-            uv_covariance = data['TUV'].ErrorEstimates[1].UVCovariance.astype(np.float32)
-            total_errors = data['TUV'].ErrorEstimates[1].TotalErrors.astype(np.float32)
+            uerr_data = data['TUV'].ErrorEstimates[1].Uerr
+            verr_data = data['TUV'].ErrorEstimates[1].Verr
+            uvcov_data = data['TUV'].ErrorEstimates[1].UVCovariance
+            totalerrors_data = data['TUV'].ErrorEstimates[1].TotalErrors
+            # rounds errors to the whole number (cm^2/s^2 for u_err, v_err, uv_covariance and cm/s for total_errors)
+            # when scale factor is applied the units will be m^2/s^2 and m/s
+            u_err = np.round(uerr_data).astype(np.float32)
+            v_err = np.round(verr_data).astype(np.float32)
+            uv_covariance = np.round(uvcov_data).astype(np.float32)
+            total_errors = np.round(totalerrors_data).astype(np.float32)
+
+            # create variables for associated error values
+            #u_err = data['TUV'].ErrorEstimates[1].Uerr.astype(np.float32)
+            #v_err = data['TUV'].ErrorEstimates[1].Verr.astype(np.float32)
+            #uv_covariance = data['TUV'].ErrorEstimates[1].UVCovariance.astype(np.float32)
+            #total_errors = data['TUV'].ErrorEstimates[1].TotalErrors.astype(np.float32)
+
+            # create variables for eastward and northward velocities
+            u_vel = data['TUV'].U.astype(np.float32)
+            v_vel = data['TUV'].V.astype(np.float32)
+            # rounds to the whole number for velocity
+            u = np.round(u_vel).astype(np.float32)
+            v = np.round(v_vel).astype(np.float32)
+            u_units = 'm/s'
+            v_units = 'm/s'
 
             # Data Processing Information
             num_rads = data['TUV'].OtherMatrixVars.makeTotals_TotalsNumRads.astype(np.short)
@@ -382,11 +411,14 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     elif method == 'lsq':
         ds['v'].attrs['ancillary_variables'] = 'qc302_gdop qc303_maxspeed qc305_validlocation qc_primary_flag qc_operator_flag'
 
-
     # Set u_err attributes
     ds['u_err'].attrs['short_name'] = 'uerr'
     ds['u_err'].attrs['units'] = '1'
-    ds['u_err'].attrs['scale_factor'] = np.float32(0.01)
+    if method == 'lsq':
+        ds['u_err'].attrs['units'] = 'm^2/s^2'
+        ds['u_err'].attrs['scale_factor'] = np.float32(0.0001)
+    elif method == 'oi':
+        ds['u_err'].attrs['units'] = '1'
     ds['u_err'].attrs['valid_min'] = np.float32(0)
     ds['u_err'].attrs['valid_max'] = np.float32(1)
     ds['u_err'].attrs['coordinates'] = 'lon lat'
@@ -394,8 +426,11 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
     # Set v_err attributes
     ds['v_err'].attrs['short_name'] = 'verr'
-    ds['v_err'].attrs['units'] = '1'
-    ds['v_err'].attrs['scale_factor'] = np.float32(0.01)
+    if method == 'lsq':
+        ds['v_err'].attrs['units'] = 'm^2/s^2'
+        ds['v_err'].attrs['scale_factor'] = np.float32(0.0001)
+    elif method == 'oi':
+        ds['v_err'].attrs['units'] = '1'
     ds['v_err'].attrs['valid_min'] = np.float32(0)
     ds['v_err'].attrs['valid_max'] = np.float32(1)
     ds['v_err'].attrs['coordinates'] = 'lon lat'
@@ -403,8 +438,11 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
     # Set total_errors attributes
     ds['total_errors'].attrs['short_name'] = 'totalerr'
-    ds['total_errors'].attrs['units'] = '1'
-    ds['total_errors'].attrs['scale_factor'] = np.float32(0.01)
+    if method == 'lsq':
+        ds['total_errors'].attrs['units'] = 'm/s'
+        ds['total_errors'].attrs['scale_factor'] = np.float32(0.01)
+    elif method == 'oi':
+        ds['total_errors'].attrs['units'] = '1'
     ds['total_errors'].attrs['valid_min'] = np.float32(-300)
     ds['total_errors'].attrs['valid_max'] = np.float32(300)
     ds['total_errors'].attrs['comment'] = 'directional information of u and v'
@@ -413,8 +451,11 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
 
     # Set uv_covariance attributes    ds['uv_covariance'].attrs['long_name'] = 'Eastward and Northward covariance directional information of u and v'
     ds['uv_covariance'].attrs['short_name'] = 'uvcov'
-    ds['uv_covariance'].attrs['units'] = '1'
-    ds['uv_covariance'].attrs['scale_factor'] = np.float32(0.01)
+    if method == 'lsq':
+        ds['uv_covariance'].attrs['units'] = 'm^2/s^2'
+        ds['uv_covariance'].attrs['scale_factor'] = np.float32(0.0001)
+    elif method == 'oi':
+        ds['uv_covariance'].attrs['units'] = '1'
     ds['uv_covariance'].attrs['valid_min'] = np.float32(-300)
     ds['uv_covariance'].attrs['valid_max'] = np.float32(300)
     ds['uv_covariance'].attrs['comment'] = 'directional information of u and v'
