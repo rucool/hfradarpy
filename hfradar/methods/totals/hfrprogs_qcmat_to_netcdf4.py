@@ -593,7 +593,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
     encoding['z'] = dict(zlib=False, _FillValue=999)
 
     # add container variables that contain no data
-    kwargs = dict(crs=np.byte([]), instrument=np.byte([]), radial_metadata=np.byte([]), processing_parameters=np.byte([]))
+    kwargs = dict(crs=np.byte(0), instrument=np.byte(0), radial_metadata=np.byte(0), processing_parameters=np.byte(0))
     ds = ds.assign(**kwargs)
 
     # Set crs attributes
