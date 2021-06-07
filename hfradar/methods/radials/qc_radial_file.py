@@ -34,7 +34,7 @@ def main(radial_file, save_path, qc_values, export_type='radial'):
 
     if r.is_valid():
         t0 = r.time - dt.timedelta(hours=1)
-        previous_radial = '{}_{}'.format('_'.join(r.file_name.split('_')[:2]), t0.strftime('%Y_%m_%d_%H00.ruv'))
+        previous_radial = '{}_{}{}'.format('_'.join(r.file_name.split('_')[:2]), t0.strftime('%Y_%m_%d_%H00'), os.path.splitext(r.file_name)[1])
         previous_full_file = os.path.join(os.path.dirname(r.full_file), previous_radial)
         qc_keys = qc_values.keys()
 
