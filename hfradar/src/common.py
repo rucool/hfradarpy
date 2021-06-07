@@ -199,8 +199,8 @@ class CTFParser(object):
                             else:
                                 self.metadata[key] = value
                     elif table:
-                        if line.startswith('%'):
-                            if line.startswith('%%'):  # table header information
+                        if line.startswith(('%', ' %')):
+                            if line.startswith(('%%', ' %%')):  # table header information
                                 rep = {' comp': '_comp', ' Distance': '_Distance'}
                                 rep = dict((re.escape(k), v) for k, v in rep.items())
                                 pattern = re.compile('|'.join(rep.keys()))
