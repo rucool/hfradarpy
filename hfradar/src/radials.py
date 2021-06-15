@@ -51,9 +51,6 @@ class Radial(CTFParser):
         logging.info('Loading radial file: {}'.format(fname))
         super().__init__(fname)
 
-        # Initialize QC tests to empty
-        self.metadata['QCTest'] = []
-
         if self._iscorrupt:
             return
 
