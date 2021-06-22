@@ -704,6 +704,16 @@ class Radial(CTFParser):
                     # Fill NaN with 999.000 which is the standard fill value for codar lluv filesself._tables[table]['TableColumnTypes']
                     self.data = self.data.fillna(999.000)
 
+                    try:
+                        self.data['LOND'] = self.data['LOND'].apply(lambda x: "{:.7f}".format(x))
+                        self.data['LATD'] = self.data['LATD'].apply(lambda x: "{:.7f}".format(x))
+                        self.data['ESPC'] = self.data['ESPC'].apply(lambda x: "{:.3f}".format(x))
+                        self.data['ETMP'] = self.data['ETMP'].apply(lambda x: "{:.3f}".format(x))
+                        self.data['BEAR'] = self.data['BEAR'].apply(lambda x: "{:.1f}".format(x))
+                        self.data['HEAD'] = self.data['HEAD'].apply(lambda x: "{:.1f}".format(x))
+                    except:
+                        print("Unexpected error")
+
                     # Convert _TableHeader to a new dataframe and concatenate to dataframe containing radial data
                     # This allows for the output format to follow CODARS CTF specifications
                     row_df = pd.DataFrame([self._tables['1']['_TableHeader'][1]], columns=self._tables['1']['_TableHeader'][0])
@@ -713,7 +723,9 @@ class Radial(CTFParser):
                     self.data.iloc[0, self.data.columns.get_loc('%%')] = '%%'  # make the first row in the first column a '%%'
 
                     # Output data table to string
-                    self.data.to_string(f, index=False, justify='center', header=True, na_rep=' ')
+                    #self.data.to_string(f, index=False, justify='center', header=True, na_rep=' ')
+                    self.data.temp = re.sub(' %%', '%%', self.data.to_string(index=False, justify='right', header=True, na_rep=' '))
+                    f.write(self.data.temp)
                 else:
                     self._tables[table]['data'].insert(0, '%%', '%')
                     self._tables[table]['data'] = self._tables[table]['data'].fillna(999.000)
