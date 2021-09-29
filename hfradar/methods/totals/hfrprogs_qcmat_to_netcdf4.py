@@ -347,7 +347,7 @@ def main(grid, mat_file, save_dir, user_attributes, flags=None, domain=[], metho
         global_attributes['method'] = 'Optimal Interpolation'
     elif method == 'lsq':
         global_attributes['method'] = 'Unweighted Least Squares'
-
+    global_attributes['MARACOOS_processing_version'] = str(data['TUV'].MARACOOS_processing_version)
     logging.debug('{} - Assigning global attributes to dataset'.format(fname))
     ds = ds.assign_attrs(global_attributes)
 
