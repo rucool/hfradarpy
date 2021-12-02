@@ -92,7 +92,7 @@ class Radial(CTFParser):
             ]
         )
         # Join the geodataframe containing radial points with geodataframe containing leasing areas
-        geodata = gpd.tools.sjoin(geodata, land, how='left', op='intersects')
+        geodata = gpd.tools.sjoin(geodata, land, how='left', predicate='intersects')
 
         # All data in the continent column that lies over water should be nan.
         water_index = geodata['continent'].isna()
@@ -1036,7 +1036,7 @@ class Radial(CTFParser):
         i = 0
 
         # check for timestamp in filename
-        result = re.search('\d{4}_\d{2}_\d{2}_\d{4}', self.file_name)
+        result = re.search(r'\d{4}_\d{2}_\d{2}_\d{4}', self.file_name)
         if result:
             timestr = dt.datetime.strptime(result.group(), '%Y_%m_%d_%H%M')
             i = i + 1

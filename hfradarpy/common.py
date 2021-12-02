@@ -60,7 +60,7 @@ def list_to_dataframe(file_list):
 
 
 def timestamp_from_lluv_filename(filename):
-    timestamp_regex = re.compile('\d{4}_\d{2}_\d{2}_\d{4}')
+    timestamp_regex = re.compile(r'\d{4}_\d{2}_\d{2}_\d{4}')
     mat_time = timestamp_regex.search(filename).group()
     timestamp = dt.datetime.strptime(mat_time, '%Y_%m_%d_%H%M')
     return timestamp
