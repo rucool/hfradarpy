@@ -20,3 +20,5 @@ output/
 .idea/.name
 hfradar/data/totals/oi/nc/aggregated/20190101T000000Z-20190101T230000Z_aggregated.nc
 hfradar/data/logs/rsync/rsync_log.txt
+.vscode/launch.json
+.gitattributes
