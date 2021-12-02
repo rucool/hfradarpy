@@ -4,6 +4,7 @@ import numpy as np
 import os
 import pandas as pd
 import re
+import copy
 from shapely.geometry import Point
 import xarray as xr
 from hfradarpy.ctf import CTFParser
@@ -112,7 +113,7 @@ class Radial(CTFParser):
     This class should be used when loading a CODAR radial (.ruv) file. This class utilizes the generic LLUV class from
     ~/hfradarpy/ctf.py in order to load CODAR Radial files
     """
-    def __init__(self, fname, replace_invalid=True, mask_over_land=False):
+    def __init__(self, fname, replace_invalid=True, mask_over_land=False, empty_radial = False):
         logging.info('Loading radial file: {}'.format(fname))
         super().__init__(fname)
 
@@ -131,6 +132,11 @@ class Radial(CTFParser):
             elif 'rcvr' in table['TableType']:
                 self.diagnostics_hardware = table['data']
                 self.diagnostics_hardware['datetime'] = self.diagnostics_hardware[['TYRS', 'TMON', 'TDAY', 'THRS', 'TMIN', 'TSEC']].apply(lambda s: dt.datetime(*s), axis=1)
+            elif 'RINF' in table['TableType']:
+                self.range_information = table['data']
+            elif 'MRGS' in table['TableType']:
+                self.merge_information = table['data']
+
 
         if not self.data.empty:
 
@@ -140,8 +146,37 @@ class Radial(CTFParser):
             if mask_over_land:
                 self.mask_over_land()
 
+            if empty_radial:
+                self.empty_radial()
+
     def __repr__(self):
         return "<Radial: {}>".format(self.file_name)
+
+    def empty_radial(self):
+
+        self.file_path = ''
+        self.file_name = ''
+        self.full_file = ''
+        self.metadata = ''
+        self.is_wera = False
+        self._iscorrupt = False
+        self.time = []
+
+        for key in self._tables.keys():
+            table = self._tables[key]
+            self._tables[key]['TableRows'] = '0'
+            if 'LLUV' in table['TableType']:
+                self.data.drop(self.data.index[:], inplace=True)
+                self._tables[key]['data'] = self.data
+            elif 'rads' in table['TableType']:
+                self.diagnostics_radial.drop(self.diagnostics_radial.index[:], inplace=True)
+                self._tables[key]['data'] = self.diagnostics_radial
+            elif 'rcvr' in table['TableType']:
+                self.diagnostics_hardware.drop(self.diagnostics_hardware.index[:], inplace=True)
+                self._tables[key]['data'] = self.diagnostics_hardware
+            elif 'RINF' in table['TableType']:
+                self.range_information.drop(self.range_information.index[:], inplace=True)
+                self._tables[key]['data'] = self.range_information
 
     def mask_over_land(self, subset=True):
         logging.info('Masking radials over land')
@@ -732,7 +767,7 @@ class Radial(CTFParser):
         :return:
         """
         create_dir(os.path.dirname(filename))
-
+        rcopy = copy.deepcopy(self)
         with open(filename, 'w') as f:
             # Write header
             for metadata_key, metadata_value in self.metadata.items():
@@ -773,6 +808,18 @@ class Radial(CTFParser):
                     # Fill NaN with 999.000 which is the standard fill value for codar lluv filesself._tables[table]['TableColumnTypes']
                     self.data = self.data.fillna(999.000)
 
+                    try:
+                        self.data['LOND'] = self.data['LOND'].apply(lambda x: "{:.7f}".format(x))
+                        self.data['LATD'] = self.data['LATD'].apply(lambda x: "{:.7f}".format(x))
+                        self.data['ESPC'] = self.data['ESPC'].apply(lambda x: "{:.3f}".format(x))
+                        if 'ETMP' in self.data.columns:
+                            self.data['ETMP'] = self.data['ETMP'].apply(lambda x: "{:.3f}".format(x))
+                        self.data['BEAR'] = self.data['BEAR'].apply(lambda x: "{:.1f}".format(x))
+                        self.data['HEAD'] = self.data['HEAD'].apply(lambda x: "{:.1f}".format(x))
+                    except:
+                        self = rcopy
+                        print("Unexpected error in formatting one of these columns: LOND LATD ESPC ETMP BEAR HEAD")
+
                     # Convert _TableHeader to a new dataframe and concatenate to dataframe containing radial data
                     # This allows for the output format to follow CODARS CTF specifications
                     row_df = pd.DataFrame([self._tables['1']['_TableHeader'][1]], columns=self._tables['1']['_TableHeader'][0])
@@ -782,7 +829,9 @@ class Radial(CTFParser):
                     self.data.iloc[0, self.data.columns.get_loc('%%')] = '%%'  # make the first row in the first column a '%%'
 
                     # Output data table to string
-                    self.data.to_string(f, index=False, justify='center', header=True, na_rep=' ')
+                    #self.data.to_string(f, index=False, justify='center', header=True, na_rep=' ')
+                    self.data.temp = re.sub(' %%', '%%', self.data.to_string(index=False, justify='right', header=True, na_rep=' '))
+                    f.write(self.data.temp)
                 else:
                     self._tables[table]['data'].insert(0, '%%', '%')
                     self._tables[table]['data'] = self._tables[table]['data'].fillna(999.000)

@@ -74,7 +74,7 @@ class CTFParser(object):
                     elif table:
                         if line.startswith(('%', ' %')):
                             if line.startswith(('%%', ' %%')):  # table header information
-                                rep = {' comp': '_comp', ' Distance': '_Distance'}
+                                rep = {' comp': '_comp', ' Distance': '_Distance',' Ratio': '_Ratio',' (dB)': '_(dB)',' Width': '_Width', ' Resp': '_Resp', 'Value ': 'Value_','FOL ':'FOL_' }
                                 rep = dict((re.escape(k), v) for k, v in rep.items())
                                 pattern = re.compile('|'.join(rep.keys()))
                                 temp = pattern.sub(lambda m: rep[re.escape(m.group(0))], line).strip('% \n')
