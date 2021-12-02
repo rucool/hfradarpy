@@ -9,10 +9,75 @@ import xarray as xr
 from hfradarpy.ctf import CTFParser
 from hfradarpy.common import create_dir
 from hfradarpy.calc import reckon
-from hfradarpy.io.nc import make_encoding, required_global_attributes
+from hfradarpy.io.nc import make_encoding
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None):
+    """
+    Main function to parse and qc radial files
+    :param radial_file: Path to radial file
+    :param save_path: Path to save quality controlled radial file
+    :param qc_values: Dictionary containing thresholds for each QC test
+    :param export: <str> None or 'radial' or 'netcdf-tabular' or 'netcdf-multidimensional'
+    """
+    qc_values = qc_values or dict(
+        qc_qartod_avg_radial_bearing=dict(reference_bearing=151, warning_threshold=15, failure_threshold=30),
+        qc_qartod_radial_count=dict(radial_min_count=75.0, radial_low_count=225.0),
+        qc_qartod_maximum_velocity=dict(radial_max_speed=300.0, radial_high_speed=100.0),
+        qc_qartod_spatial_median=dict(radial_smed_range_cell_limit=2.1, radial_smed_angular_limit=10, radial_smed_current_difference=30),
+        qc_qartod_temporal_gradient=dict(gradient_temp_fail=32, gradient_temp_warn=25),
+        qc_qartod_primary_flag=dict(include=['qc_qartod_syntax', 'qc_qartod_valid_location', 'qc_qartod_radial_count',
+                                             'qc_qartod_maximum_velocity', 'qc_qartod_spatial_median'])
+    )
+
+    try:
+        r = Radial(radial_file, mask_over_land=False)
+    except Exception as err:
+        logging.error('{} - {}'.format(radial_file, err))
+        return
+
+    if r.is_valid():
+        t0 = r.time - dt.timedelta(hours=1)
+        previous_radial = '{}_{}{}'.format('_'.join(r.file_name.split('_')[:2]), t0.strftime('%Y_%m_%d_%H00'), os.path.splitext(r.file_name)[1])
+        previous_full_file = os.path.join(os.path.dirname(r.full_file), previous_radial)
+        qc_keys = qc_values.keys()
+
+        # run high frequency radar qartod tests on open radial file
+        r.initialize_qc()
+        r.qc_qartod_syntax()
+
+        if 'qc_qartod_maximum_velocity' in qc_keys:
+            r.qc_qartod_maximum_velocity(**qc_values['qc_qartod_maximum_velocity'])
+
+        r.qc_qartod_valid_location()
+
+        if 'qc_qartod_radial_count' in qc_keys:
+            r.qc_qartod_radial_count(**qc_values['qc_qartod_radial_count'])
+
+        if 'qc_qartod_spatial_median' in qc_keys:
+            r.qc_qartod_spatial_median(**qc_values['qc_qartod_spatial_median'])
+
+        if 'qc_qartod_temporal_gradient' in qc_keys:
+            r.qc_qartod_temporal_gradient(previous_full_file)
+
+        if 'qc_qartod_avg_radial_bearing' in qc_keys:
+            r.qc_qartod_avg_radial_bearing(**qc_values['qc_qartod_avg_radial_bearing'])
+
+        if 'qc_qartod_primary_flag' in qc_keys:
+            r.qc_qartod_primary_flag(**qc_values['qc_qartod_primary_flag'])
+
+        # Export radial file to either a radial or netcdf
+        if export:
+            try:
+                r.export(os.path.join(save_path, r.file_name), export)
+            except ValueError as err:
+                logging.error('{} - {}'.format(radial_file, err))
+                pass
+        else:
+            return r
 
 
 def concat(radial_list, type=None, enhance=False):
