@@ -9,7 +9,6 @@ jupyter
 numba
 pytest
 cmocean
-pymongo
 dask
 python-dateutil
 pip
