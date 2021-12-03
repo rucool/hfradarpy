@@ -11,4 +11,5 @@ pytest
 cmocean
 pymongo
 dask
-python-dateutilpip
+python-dateutil
+pip
