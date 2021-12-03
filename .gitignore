@@ -22,3 +22,4 @@ hfradar/data/totals/oi/nc/aggregated/20190101T000000Z-20190101T230000Z_aggregate
 hfradar/data/logs/rsync/rsync_log.txt
 .vscode/launch.json
 .gitattributes
+.vscode/settings.json
