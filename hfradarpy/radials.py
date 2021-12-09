@@ -16,7 +16,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None):
+def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, clean = False, clean_path=None):
     """
     Main function to parse and qc radial files
     :param radial_file: Path to radial file
@@ -41,6 +41,8 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None):
         return
 
     if r.is_valid():
+        if clean:
+            rclean = copy.deepcopy(r)
         t0 = r.time - dt.timedelta(hours=1)
         previous_radial = '{}_{}{}'.format('_'.join(r.file_name.split('_')[:2]), t0.strftime('%Y_%m_%d_%H00'), os.path.splitext(r.file_name)[1])
         previous_full_file = os.path.join(os.path.dirname(r.full_file), previous_radial)
@@ -75,10 +77,34 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None):
             try:
                 r.export(os.path.join(save_path, r.file_name), export)
             except ValueError as err:
-                logging.error('{} - {}'.format(radial_file, err))
+                logging.error('{} - QC export error - {}'.format(radial_file, err))
                 pass
         else:
             return r
+
+        if clean:
+            d = rclean.data
+            dqc = r.data
+            if 'PRIM' in r.data:
+                rt = d[dqc['PRIM'] != 4]
+                rclean.data = rt
+
+                for key in rclean._tables.keys():
+                    table = rclean._tables[key]
+                    if 'LLUV' in table['TableType']:
+                        rclean._tables['1']['TableRows'] = rt.shape[0]
+                # else:
+                #   warning that it didn't update number of table rows
+            # else:
+            # warning of failure to update file, the original will be exported
+            if export:
+                try:
+                    rclean.export(os.path.join(clean_path, rclean.file_name), export)
+                except ValueError as err:
+                    logging.error('{} - Clean export error - {}'.format(radial_file, err))
+                    pass
+            else:
+                return r
 
 
 def concat(radial_list, type=None, enhance=False):
