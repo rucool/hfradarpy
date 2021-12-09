@@ -1,3 +1,4 @@
+
 import datetime as dt
 import geopandas as gpd
 import numpy as np
@@ -113,7 +114,7 @@ class Radial(CTFParser):
     This class should be used when loading a CODAR radial (.ruv) file. This class utilizes the generic LLUV class from
     ~/hfradarpy/ctf.py in order to load CODAR Radial files
     """
-    def __init__(self, fname, replace_invalid=True, mask_over_land=False, empty_radial = False):
+    def __init__(self, fname, replace_invalid=True, mask_over_land=False, empty_radial=False):
         logging.info('Loading radial file: {}'.format(fname))
         super().__init__(fname)
 
@@ -139,7 +140,6 @@ class Radial(CTFParser):
 
 
         if not self.data.empty:
-
             if replace_invalid:
                 self.replace_invalid_values()
 
