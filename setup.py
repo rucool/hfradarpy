@@ -18,7 +18,7 @@ requirements = [
     'numpy==1.20',
     'pyparsing==2.4.7',
     'scipy',
-    'geopandas',
+    'geopandas=0.10.2',
     'oceans',
     'jupyter',
     'numba',
