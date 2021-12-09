@@ -4,9 +4,10 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from codar_processing.src.radials import Radial, concatenate_multidimensional_radials
+from hfradarpy.radials import Radial
+from hfradarpy.radials import concat as concatenate_radials
 
-data_path = (Path(__file__).parent.with_name('codar_processing') / 'data').resolve()
+data_path = (Path(__file__).parent.with_name('hfradarpy') / 'data').resolve()
 output_path = (Path(__file__).parent.with_name('output')).resolve()
 
 
@@ -139,6 +140,7 @@ def test_wera_mask():
 def test_wera_qc():
     radial_file = data_path / 'radials' / 'ruv' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    rad1.initialize_qc()
     assert len(rad1.data) == 6327
     rad1.mask_over_land()
     rad1.qc_qartod_radial_count()
@@ -161,6 +163,7 @@ def test_wera_raw_to_quality_multidimensional_nc():
     radial_file = data_path / 'radials' / 'ruv' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
     nc_file = output_path / 'radials' / 'qc' / 'nc' / 'multidimensional' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    rad1.initialize_qc()
     rad1.mask_over_land()
     rad1.qc_qartod_radial_count()
     rad1.qc_qartod_valid_location()
@@ -180,6 +183,7 @@ def test_wera_raw_to_quality_tabular_nc():
     radial_file = data_path / 'radials' / 'ruv' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
     nc_file = output_path / 'radials' / 'qc' / 'nc' / 'tabular' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    rad1.initialize_qc()
     rad1.mask_over_land()
     rad1.qc_qartod_radial_count()
     rad1.qc_qartod_valid_location()
@@ -273,7 +277,7 @@ class TestCombineRadials(unittest.TestCase):
         self.radial_mixed = self.radial_files[::2] + self.radial_objects[1:][::2]
 
     def test_concat_radial_objects(self):
-        combined = concatenate_multidimensional_radials(self.radial_objects)
+        combined = concatenate_radials(self.radial_objects)
         assert combined.time.size == len(self.file_paths)
         # Make sure the dataset was sorted by time
         assert np.array_equal(
@@ -282,7 +286,7 @@ class TestCombineRadials(unittest.TestCase):
         )
 
     def test_concat_radial_files(self):
-        combined = concatenate_multidimensional_radials(self.radial_files)
+        combined = concatenate_radials(self.radial_files)
         assert combined.time.size == len(self.file_paths)
         # Make sure the dataset was sorted by time
         assert np.array_equal(
@@ -291,7 +295,7 @@ class TestCombineRadials(unittest.TestCase):
         )
 
     def test_concat_mixed_radials(self):
-        combined = concatenate_multidimensional_radials(self.radial_mixed)
+        combined = concatenate_radials(self.radial_mixed)
         assert combined.time.size == len(self.file_paths)
         # Make sure the dataset was sorted by time
         assert np.array_equal(
@@ -302,10 +306,11 @@ class TestCombineRadials(unittest.TestCase):
     def test_concat_mixed_radials_enhance(self):
         # Select even indexed file_paths and odd indexed radial objects
         # into one array of mixed content types for concating
-        combined = concatenate_multidimensional_radials(self.radial_mixed, enhance=True)
+        combined = concatenate_radials(self.radial_mixed, enhance=True)
         assert combined.time.size == len(self.file_paths)
         # Make sure the dataset was sorted by time
         assert np.array_equal(
             combined.time.values,
             np.sort(combined.time.values)
         )
+ 
