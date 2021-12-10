@@ -72,16 +72,6 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
         if 'qc_qartod_primary_flag' in qc_keys:
             r.qc_qartod_primary_flag(**qc_values['qc_qartod_primary_flag'])
 
-        # Export radial file to either a radial or netcdf
-        if export:
-            try:
-                r.export(os.path.join(save_path, r.file_name), export)
-            except ValueError as err:
-                logging.error('{} - QC export error - {}'.format(radial_file, err))
-                pass
-        else:
-            return r
-
         if clean:
             d = rclean.data
             dqc = r.data
@@ -97,14 +87,27 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
                 #   warning that it didn't update number of table rows
             # else:
             # warning of failure to update file, the original will be exported
+
+            # Export radial file to either a radial or netcdf
+            if export:
+                try:
+                    r.export(os.path.join(save_path, r.file_name), export)
+                except ValueError as err:
+                    logging.error('{} - QC export error - {}'.format(radial_file, err))
+                    pass
+            else:
+                return r
+
             if export:
                 try:
                     rclean.export(os.path.join(clean_path, rclean.file_name), export)
                 except ValueError as err:
-                    logging.error('{} - Clean export error - {}'.format(radial_file, err))
+                    logging.error('{} - Cleaning export error - {}'.format(radial_file, err))
                     pass
             else:
                 return r
+
+
 
 
 def concat(radial_list, type=None, enhance=False):

@@ -24,6 +24,7 @@ requirements = [
     'numba',
     'pytest',
     'cmocean',
+    'pymongo',
     'dask',
     'python-dateutil',
     'rtree'
