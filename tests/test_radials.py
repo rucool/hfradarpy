@@ -7,8 +7,8 @@ import xarray as xr
 from hfradarpy.radials import Radial
 from hfradarpy.radials import concat as concatenate_radials
 
-data_path = (Path(__file__).parent.with_name('hfradarpy') / 'data').resolve()
-output_path = (Path(__file__).parent.with_name('output')).resolve()
+data_path = (Path(__file__).parent.with_name('examples') / 'data').resolve()
+output_path = (Path(__file__).parent.with_name('examples') / 'output').resolve()
 
 
 def test_codar_radial_to_tabular_netcdf():
