@@ -12,6 +12,7 @@ from hfradarpy.ctf import CTFParser
 from hfradarpy.common import create_dir
 from hfradarpy.calc import reckon
 from hfradarpy.io.nc import make_encoding
+from pathlib import Path
 
 import logging
 logger = logging.getLogger(__name__)
@@ -741,18 +742,36 @@ class Radial(CTFParser):
             if key not in present_keys:
                 self.metadata[key] = None
 
-    def create_netcdf(self, filename, file_type='netcdf-tabular', enhance=True):
+    def create_netcdf(self, filename, file_type='netcdf-tabular', prepend_ext=False, enhance=True):
         """
         Create a compressed netCDF4 (.nc) file from the radial instance
         :param filename: User defined filename of radial file you want to save
         :return:
         """
+        # If the filename does not have a .nc extension, we will add one.
+        if not '.nc' in str(filename):
+            filename = filename.with_suffix('.nc')
+
+        # If the outputted file exists already, delete the existing file  
+        if os.path.isfile(filename):
+            os.remove(filename)
+
         create_dir(os.path.dirname(filename))
 
         if 'tabular' in file_type:
             xds = self.to_xarray_tabular(enhance=enhance)
         elif 'multidimensional' in file_type:
             xds = self.to_xarray_multidimensional(enhance=enhance)
+        
+        # Check if dataset has distance_from_origin in coordinates. We will prepend the .nc extension 
+        # with the appropriate name depending on whether the wave file is averaged or arranged by distance with manufacturer software
+        if prepend_ext:
+            if 'bearing' in xds.coords:
+                pre_ext = 'gridded'
+            else:
+                pre_ext = 'tabular'
+            # Change the extension to reflect the type of wave file
+            filename = filename.with_suffix(f'.{pre_ext}.nc')
 
         encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
 
@@ -795,6 +814,15 @@ class Radial(CTFParser):
         :param filename: User defined filename of radial file you want to save
         :return:
         """
+        # Ensure that the filename passed into the export function is not the same as the filename that we read in.
+        # # We do not want to overwrite the original wave file by accident.
+        if self.full_file == str(filename):
+            suffix = f'.mod{filename.suffix}'
+            filename = filename.with_suffix(suffix)
+
+        if os.path.isfile(filename):
+            os.remove(filename)
+
         create_dir(os.path.dirname(filename))
         rcopy = copy.deepcopy(self)
         with open(filename, 'w') as f:
@@ -879,27 +907,23 @@ class Radial(CTFParser):
                 # f.write('%{}: {}\n'.format(footer_key, footer_value))
             f.write('%End:')
 
-    def export(self, filename, file_type='radial'):
+    def export(self, filename, file_type='radial', prepend_ext=False):
         """
         Export radial file as either a codar .ruv file or a netcdf .nc file
         :param filename: User defined filename of radial file you want to save
         :param file_type: Type of file to export radial: radial (default) or netcdf
         :return:
         """
+        # Make sure filename is converted into a Path object 
+        filename = Path(filename)
+
         if not self.is_valid():
             raise ValueError("Could not export ASCII data, the input file was invalid.")
-
-        if os.path.isfile(filename):
-            os.remove(filename)
 
         if file_type == 'radial':
             self.create_ruv(filename)
         elif 'netcdf' in file_type:
-            if '.nc' in filename:
-                save_file = filename
-            else:
-                save_file = filename + '.nc'
-            self.create_netcdf(save_file, file_type=file_type)
+            self.create_netcdf(filename, file_type=file_type, prepend_ext=prepend_ext)
 
     def initialize_qc(self):
         # Initialize QC tests to empty
