@@ -835,6 +835,10 @@ class Radial(CTFParser):
 
             # Write data tables. Anything beyond the first table is commented out.
             for table in self._tables.keys():
+
+                if 'datetime' in self._tables[table]['data'].keys():
+                    self._tables[table]['data'] = self._tables[table]['data'].drop(['datetime'], axis=1)
+
                 for table_key, table_value in self._tables[table].items():
                     if table_key != 'data':
                         if (table_key == 'TableType') & (table == '1'):
@@ -857,9 +861,6 @@ class Radial(CTFParser):
                             pass
                         else:
                             f.write('%{}: {}\n'.format(table_key, table_value))
-
-                if 'datetime' in self._tables[table]['data'].keys():
-                    self._tables[table]['data'] = self._tables[table]['data'].drop(['datetime'], axis=1)
 
                 if table == '1':
                     # Fill NaN with 999.000 which is the standard fill value for codar lluv filesself._tables[table]['TableColumnTypes']
@@ -892,7 +893,17 @@ class Radial(CTFParser):
                 else:
                     self._tables[table]['data'].insert(0, '%%', '%')
                     self._tables[table]['data'] = self._tables[table]['data'].fillna(999.000)
-                    self._tables[table]['data'].to_string(f, index=False, justify='center', header=True)
+                    if self._tables[table]['TableType'] == 'rads rad1':
+                        f.write('%%   Time       Calculated      Calculated     Corrected        Noise Floor     SignalToNoise   Diag  Valid  Dual  Radial RadsV Rads   Max   Vel    Vel    Bearing  Radial Spectra Time\n')
+                        f.write('%% FromStart   Amp1    Amp2   Phase13 Phase23 Phase1 Phase2   NF1   NF2   NF3   SN1  SN2  SN3   Range Dopplr Angle Vector  per  Range Range  Max    Aver   Average   Type   Type   Year Mo Dy  Hr Mn  S\n')
+                        f.write('%%  Seconds  (1/v^2) (1/v^2)   (deg)   (deg)   (deg)  (deg)  (dBm) (dBm) (dBm)  (dB) (dB) (dB)  Cell  Cells  Prcnt Count  Range Cells  (km) (cm/s) (cm/s) (deg CWN)\n')
+                        self._tables[table]['data'].to_string(f, index=False, justify='center', header=False)
+                    elif self._tables[table]['TableType'] == 'rcvr rcv4':
+                        f.write('%%   Minutes  Rcvr  Awg XmitTrip  AwgRun   Supply  +5VDC  -5VDC +12VDC XInt XAmp XForw XRefl  Xmit  X+Ampl  X+5V  X2Int X2Amp X2Forw X2Refl  Xmit2 X2+Amp  X2+5V  GpsRcv GpsDsp GpsSat GpsSat   PLL   HiRcvr  Humid Supply Extern Extern CompRunTime    Date                \n')
+                        f.write('%%  FromStart degC degC  HexCode  Seconds   Volts  Volts  Volts  Volts degC degC Watts Watts  VSWR   Volts  Volts  degC  degC  Watts  Watts  VSWR   Volts  Volts   Mode   Mode   Lock  Unlock Unlock   degC     %    Amps  InputA InputB   Minutes      Year Mo Dy Hr Mn Sec\n')
+                        self._tables[table]['data'].to_string(f, index=False, justify='center', header=False)
+                    else:
+                        self._tables[table]['data'].to_string(f, index=False, justify='center', header=True)
 
                 if int(table) > 1:
                     f.write('\n%TableEnd: {}\n'.format(table))
