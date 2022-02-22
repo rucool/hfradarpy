@@ -14,6 +14,9 @@ dependencies:
   - pytest
   - cmocean
   - dask
+  - jupyterlab
+  - nb_conda_kernels
+  - ipykernel
   - bump2version=0.5.11
   - wheel=0.33.6
   - flake8=3.7.8
