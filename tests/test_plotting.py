@@ -8,16 +8,16 @@ types = ['velocity', 'motion']
 
 
 def test_codar_radials_nc_tabular_plot():
-    ncfile = data_path / 'radials' / 'nc' / 'tabular' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.nc'
+    ncfile = data_path / 'radials' / 'nc' / 'tabular' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0200.nc'
     for t in types:
-        output_file = output_path / 'plots' / 'tabular' / 'RDLi_SEAB_2019_01_01_0000-{}.png'.format(t)
+        output_file = output_path / 'plots' / 'tabular' / 'RDLi_SEAB_2019_01_01_0200-{}.png'.format(t)
         ncradialsplot(ncfile, output_file=output_file, sub=1, plot_type=t)
 
 
 def test_codar_radials_nc_multidimensional_plot():
-    ncfile = data_path / 'radials' / 'nc' / 'multidimensional' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.nc'
+    ncfile = data_path / 'radials' / 'nc' / 'multidimensional' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0200.nc'
     for t in types:
-        output_file = output_path / 'plots' / 'multidimensional' / 'RDLi_SEAB_2019_01_01_0000-{}.png'.format(t)
+        output_file = output_path / 'plots' / 'multidimensional' / 'RDLi_SEAB_2019_01_01_0200-{}.png'.format(t)
         ncradialsplot(ncfile, output_file=output_file, sub=1, plot_type=t)
 
 
