@@ -21,7 +21,7 @@ class CTFParser(object):
 
     def __init__(self, fname):
         """
-        Return an LLUVParser object whose
+        Return an LLUVParser object
         """
         split_path = os.path.split(fname)
         self.file_path = split_path[0]
