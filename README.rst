@@ -51,6 +51,45 @@ you through the process.
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
 
+We also recommend using miniconda to manage your Python environments. Download and follow the `Miniconda installation guide`_ for the appropriate
+Miniconda installer for your operating system. 
+.. _Miniconda installation guide: http://conda.pydata.org/miniconda.html
+
+Make sure to add the channel, `conda-forge`_, to your .condarc. You can
+find out more about conda-forge from their website:
+
+.. _conda-forge: https://conda-forge.org/
+
+You can do this with the following command:
+
+.. code-block:: console
+
+        conda config --add channels conda-forge
+
+
+Create environment
+------------------
+
+Change your current working directory to the location that you
+downloaded codar_processing to.
+
+.. code-block:: console
+
+        cd /Users/mikesmith/Documents/git/hfradarpy/
+
+Create conda environment from the included environment.yml file:
+
+.. code-block:: console
+        
+        conda env create -f environment.yml
+
+Once the environment is done building, you can activate the environment
+by typing:
+
+.. code-block:: console
+
+   conda activate hfradar # OSX/Unix
+
 From sources
 ------------
 
