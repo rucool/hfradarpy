@@ -902,6 +902,14 @@ class Radial(CTFParser):
                         f.write('%%   Minutes  Rcvr  Awg XmitTrip  AwgRun   Supply  +5VDC  -5VDC +12VDC XInt XAmp XForw XRefl  Xmit  X+Ampl  X+5V  X2Int X2Amp X2Forw X2Refl  Xmit2 X2+Amp  X2+5V  GpsRcv GpsDsp GpsSat GpsSat   PLL   HiRcvr  Humid Supply Extern Extern CompRunTime    Date                \n')
                         f.write('%%  FromStart degC degC  HexCode  Seconds   Volts  Volts  Volts  Volts degC degC Watts Watts  VSWR   Volts  Volts  degC  degC  Watts  Watts  VSWR   Volts  Volts   Mode   Mode   Lock  Unlock Unlock   degC     %    Amps  InputA InputB   Minutes      Year Mo Dy Hr Mn Sec\n')
                         self._tables[table]['data'].to_string(f, index=False, justify='center', header=False)
+                    elif self._tables[table]['TableType'] == 'rcvr rcv3':
+                        f.write('%%   Minutes  Rcvr  Awg XmitTrip  AwgRun   Supply  +5VDC  -5VDC +12VDC XInt XAmp XForw XRefl  Xmit  X+Ampl  X+5V   GpsRcv GpsDsp GpsSat GpsSat   PLL   HiRcvr  Humid Supply Extern Extern CompRunTime    Date\n')
+                        f.write('%%  FromStart degC degC  HexCode  Seconds   Volts  Volts  Volts  Volts degC degC Watts Watts  VSWR   Volts  Volts   Mode   Mode   Lock  Unlock Unlock   degC     %    Amps  InputA InputB   Minutes      Year Mo Dy Hr Mn Sec\n')
+                        self._tables[table]['data'].to_string(f, index=False, justify='center', header=False)
+                    elif self._tables[table]['TableType'] == 'rcvr rcv2':
+                        f.write('%%   LogTime Rcvr Awg3 XmtTrip Awg3Run Supply +5VDC -5VDC +12VDC XInt XAmp XForw XRefl X+Ampl X+5VDC GpsRcv GpsDsp  PLL   HiRcvr Humid Supply Extern Extern  CompRunTime   Year Mo Dy Hr Mn  S\n')
+                        f.write('%%   Minutes   °C   °C HexCode Seconds Volts  Volts Volts  Volts   °C   °C Watts Watts  Volts  Volts  Mode   Mode  Unlock    °C     %   Amps  InputA InputB    Minutes                        \n')
+                        self._tables[table]['data'].to_string(f, index=False, justify='center', header=False)
                     else:
                         self._tables[table]['data'].to_string(f, index=False, justify='center', header=True)
 
