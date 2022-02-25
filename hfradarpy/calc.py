@@ -1,168 +1,160 @@
-import numba
 import numpy as np
-import xarray as xr
-from scipy import spatial
+from pyproj import Geod
 
+import logging
+logger = logging.getLogger(__name__)
 
-@numba.jit
-def bool2int(x):
+geodesic = Geod(ellps='WGS84') #define the coordinate system. WGS84 is the standard used by GPS.
+
+def reckon(origin_lon, origin_lat, forward_azimuth, range):
+    """ Calculate lon, lat of a point from a specified azimuth, range on sphere or ellipsoid
+    Helper function for pyproj.Geod forward transformation
+
+    Args:
+        origin_lon (array, numpy.ndarray, list, tuple, or scalar): Longitude(s) of initial point(s)
+        origin_lat (array, numpy.ndarray, list, tuple, or scalar): Latitude(s) of initial point(s)
+        forward_azimuth (array, numpy.ndarray, list, tuple, or scalar): Azimuth/bearing(s) of the terminus point relative to the initial point(s)
+        range (array, numpy.ndarray, list, tuple, or scalar): Distance(s) between initial and terminus point(s) in kilometers
+
+    Returns:
+        array, numpy.ndarray, list, tuple, or scalar: Longitude(s) of terminus point(s)
+        array, numpy.ndarray, list, tuple, or scalar: Latitude(s) of terminus point(s)
+        array, numpy.ndarray, list, tuple, or scalar: Backwards azimuth(s) of terminus point(s)
     """
+    terminus_lon, terminus_lat, _ = geodesic.fwd(origin_lon, origin_lat, forward_azimuth, range*1000)
+    logging.info(f'Calculating longitude and latitude of terminus points from origin based off of a bearing of {forward_azimuth} (degrees) and range {range} (km).') 
+    logging.info(f'Origin - Lon (degrees): {origin_lon} degrees, Lat (degrees): {origin_lat}') 
+    logging.info(f'Terminus - Lon(s) (degrees): {terminus_lon} degrees, Lat(s) (degrees): {terminus_lat}') 
+    return terminus_lon, terminus_lat
 
-    :param x:
-    :return:
+def inverse_transformation(lons1, lats1, lons2, lats2):
+    """Inverse computation of bearing and distance given the latitudes and longitudes of an initial and terminus point.
+
+    Args:
+        lons1 (array, numpy.ndarray, list, tuple, or scalar): Longitude(s) of initial point(s)
+        lats1 (array, numpy.ndarray, list, tuple, or scalar): Latitude(s) of initial point(s)
+        lons2 (array, numpy.ndarray, list, tuple, or scalar): Longitude(s) of terminus point(s)
+        lats2 (array, numpy.ndarray, list, tuple, or scalar): Latitude(s) of terminus point(s)
+
+    Returns:
+       array, numpy.ndarray, list, tuple, or scalar: Forward azimuth(s)
+       array, numpy.ndarray, list, tuple, or scalar: Back azimuth(s)
+       array, numpy.ndarray, list, tuple, or scalar: Distance(s) between initial and terminus point(s) in kilometersmeters
     """
-    y = 0
-    for i,j in enumerate(x):
-        y += j << i
-    return y
+    # Inverse transformation using pyproj
+    # Determine forward and back azimuths, plus distances between initial points and terminus points.
+    forward_azimuth, back_azimuth, distance = geodesic.inv(lons1, lats1, lons2, lats2)
 
+    distance = distance/1000 # Lets stick with kilometers as the output since RUV ranges are in kilometers
+        
+    logging.info(f'Inversely calculating azimuth and range of initial point(s) to terminus point(s)')
+    logging.info(f'Origin - Lon (degrees): {lons1} degrees, Lat (degrees): {lats1}') 
+    logging.info(f'Terminus - Lon(s) (degrees): {lons2} degrees, Lat(s) (degrees): {lats2}') 
+    logging.info(f'Forward azimuth (CWN): {forward_azimuth} degrees, Back bearing (CWN): {back_azimuth} degrees, Range: {distance} kilometers') 
+    return forward_azimuth, back_azimuth, distance
 
-@numba.jit(nopython=True)
-def calc_index(x_ind, y_ind, X, Y, x, y):
-    for i, line in enumerate(x):
-        x_ind[i] = np.argmin(np.abs(X[1, :] - x[i]))
-        y_ind[i] = np.argmin(np.abs(Y[:, 1] - y[i]))
-    return x_ind, y_ind
-
-
-def gridded_index(X, Y, x, y, flag=np.nan):
+def spdir2uv(speed, direction, degrees=False):
+    """Calculate u and v velocities from speed and direction
+    
+    Args:
+        speed (numpy.ndarray): Speed (meters/second)
+        direction (nump.ndarray): Direction (degrees)
+        degrees (bool, optional): True if data is in degrees. Defaults to False.
+        
+    Returns:
+        (numpy.ndarray): u - Eastward Seawater Velocity (meters/second)
+        (numpy.ndarray): v - Northward Seawater Velocity (meters/second)
     """
-    This function gets the multidimensional index of 1d grid onto a 2d grid without interpolation. It calculates the
-    index based on the difference between two points.
-    :param X: x grid of values (M x N). Must be a numpy.ndarray
-    :param Y: y grid of values (M x N). Must be a numpy.ndarray
-    :param x: n vector of x values. Must be a numpy.ndarray
-    :param y: n vector of y values. Must be a numpy.ndarray
-    :param flag: value to use for missing data values of grid. Default is np.nan
-    :return:
+    if degrees:
+        # Calculating u and v requires the data to be in radians
+        direction = np.deg2rad(direction)
+
+    u = speed * np.sin(direction) # Calculate east-west component
+    v = speed * np.cos(direction) # Calculate north-south component
+    return u, v
+
+def uv2spdir(u, v, mag=0, rot=0):
+    """Calculate speed (m/s) and direction (degrees) from u (eastward) and v (northward) velocity (meters/second) components
+    Converts rectangular to polar coordinate, geographic convention
+    Allows for rotation and magnetic declination correction.
+
+    Args:
+        u (numpy.ndarray): u - Eastward Seawater Velocity (meters/second)
+        v (numpy.ndarray): v - Northward Seawater Velocity (meters/second)
+        mag (int, optional): Magnetic Correction (degrees). Defaults to 0.
+        rot (int, optional): Angle for rotation (degrees). Defaults to 0.
+
+    Returns:
+        numpy.ndarray: Speed (meters/second)
+        numpy.ndarray: Direction (degrees) is traveling towards
     """
-    # get mapping index
-    x_ind = np.tile(flag, x.size).astype(np.int)
-    y_ind = np.tile(flag, y.size).astype(np.int)
+    u, v, mag, rot = list(map(np.asarray, (u, v, mag, rot)))
 
-    # Roll index calculation into other function so we can use numba for speedups
-    x_ind, y_ind = calc_index(x_ind, y_ind, X, Y, x, y)
-    return x_ind, y_ind
+    vector = u + 1j * v
+    speed = np.abs(vector) #np.hypot(u, v) also works
+    direction = np.angle(vector, deg=True)
+    direction = direction - mag + rot
+    direction = np.mod(90.0 - direction, 360.0)  # Zero is North.
 
+    return speed, direction
 
-@numba.jit
-def lond_jit(lon, lat, dist, bearing, EARTH_RADIUS):
-    next_longitude = lon + (np.arctan2(np.sin(bearing) * np.sin(dist/EARTH_RADIUS) * np.cos(lat),
-                                             np.cos(dist/EARTH_RADIUS) - np.sin(lat) * np.sin(lat)))
-    return next_longitude
+# @numba.jit
+# def bool2int(x):
+#     """
+#     Convert a boolean to an integer
+    
+#     Keyword arguments:
+#     argument -- description
+#     Return: return_description
+#     """
+#     y = 0
+#     for i,j in enumerate(x):
+#         y += j << i
+#     return y
 
+# @numba.jit(nopython=True)
+# def calc_index(x_ind, y_ind, X, Y, x, y):
+#     """
+#     Calculate index
 
-def reckon(lat, lon, bearing, distance):
-    """
-    Point at specified azimuth, range on sphere or ellipsoid
-    :param lat: origin latitude (decimal degrees)
-    :param lon: origin longitude (decimal degrees)
-    :param bearing: np.array of bearings
-    :param distance: np.array of ranges
-    :return: latitude, longitude of calculated coordinates from o
-    """
-    EARTH_RADIUS = 6371.00
+#     Args:
+#         x_ind (_type_): x index 
+#         y_ind (_type_): y index
+#         X (numpy.ndarray): x grid of values (M x N)
+#         Y (numpy.ndarray): y grid of values (M x N)
+#         x (numpy.ndarray): x grid of values (M x N)
+#         y (numpy.ndarray): y grid of values (M x N)
 
-    # convert origin lat/lons into radians
-    latitude = np.radians(lat)
-    longitute = np.radians(lon)
-    bearing = np.radians(bearing)
+#     Returns:
+#         _type_: _description_
+#         _type_: _description_
+#     """
+#     for i, line in enumerate(x):
+#         x_ind[i] = np.argmin(np.abs(X[1, :] - x[i]))
+#         y_ind[i] = np.argmin(np.abs(Y[:, 1] - y[i]))
+#     return x_ind, y_ind
 
-    # calculate distance latitude
-    next_latitude = np.arcsin(np.sin(latitude) *
-                    np.cos(distance/EARTH_RADIUS) +
-                    np.cos(latitude) *
-                    np.sin(distance/EARTH_RADIUS) *
-                    np.cos(bearing))
+# def gridded_index(X, Y, x, y, flag=np.nan):
+#     """
+#     This function gets the multidimensional index of 1d grid onto a 2d grid without interpolation. It calculates the
+#     index based on the difference between two points.
 
-    # calculate distance longitude. For some reason, lon is faster when calculated with numba function compared to lat. So we split it out into a new function.....
-    next_longitude = lond_jit(longitute, latitude, distance, bearing, EARTH_RADIUS)
+#     Args:
+#         X (numpy.ndarray): x grid of values (M x N)
+#         Y (numpy.ndarray): y grid of values (M x N)
+#         x (numpy.ndarray): x grid of values (M x N)
+#         y (numpy.ndarray): y grid of values (M x N)
+#         flag (_type_, optional): value to use for missing data values of grid.. Defaults to np.nan.
 
-    # convert points into decimal degrees
-    new_lat = np.degrees(next_latitude)
-    new_lon = np.degrees(next_longitude)
+#     Returns:
+#         _type_: _description_
+#         _type_: _description_
 
-    return new_lat, new_lon
+#     """
+#     # get mapping index
+#     x_ind = np.tile(flag, x.size).astype(np.int)
+#     y_ind = np.tile(flag, y.size).astype(np.int)
 
-
-class KDTreeIndex():
-    """ A KD-tree implementation for fast point lookup on a 2D grid
-
-    Keyword arguments:
-    dataset -- a xarray DataArray containing lat/lon coordinates
-               (named 'lat' and 'lon' respectively)
-
-    from: https://notes.stefanomattia.net/2017/12/12/The-quest-to-find-the-closest-ground-pixel/
-    """
-
-    def transform_coordinates(self, coords):
-        """ Transform coordinates from geodetic to cartesian
-
-        Keyword arguments:
-        coords - a set of lan/lon coordinates (e.g. a tuple or
-                 an array of tuples)
-        """
-        # WGS 84 reference coordinate system parameters
-        A = 6378.137  # major axis [km]
-        E2 = 6.69437999014e-3  # eccentricity squared
-
-        coords = np.asarray(coords).astype(np.float)
-
-        # is coords a tuple? Convert it to an one-element array of tuples
-        if coords.ndim == 1:
-            coords = np.array([coords])
-
-        # convert to radiants
-        lat_rad = np.radians(coords[:, 0])
-        lon_rad = np.radians(coords[:, 1])
-
-        # convert to cartesian coordinates
-        r_n = A / (np.sqrt(1 - E2 * (np.sin(lat_rad) ** 2)))
-        x = r_n * np.cos(lat_rad) * np.cos(lon_rad)
-        y = r_n * np.cos(lat_rad) * np.sin(lon_rad)
-        z = r_n * (1 - E2) * np.sin(lat_rad)
-
-        return np.column_stack((x, y, z))
-
-    def __init__(self, dataset):
-        # store original dataset shape
-        self.shape = dataset.shape
-
-        # reshape and stack coordinates
-        coords = np.column_stack((dataset.lat.values.ravel(),
-                                  dataset.lon.values.ravel()))
-
-        # construct KD-tree
-        self.tree = spatial.cKDTree(self.transform_coordinates(coords))
-
-    def query(self, point):
-        """ Query the kd-tree for nearest neighbour.
-
-        Keyword arguments:
-        point -- a (lat, lon) tuple or array of tuples
-        """
-        _, index = self.tree.query(self.transform_coordinates(point))
-
-        # regrid to 2D grid
-        index = np.unravel_index(index, self.shape)
-
-        # return DataArray indexers
-        return xr.DataArray(index[0], dims='location'), xr.DataArray(index[1], dims='location')
-
-    def query_ball_point(self, point, radius):
-        """ Query the kd-tree for all point within distance
-        radius of point(s) x
-
-        Keyword arguments:
-        point -- a (lat, lon) tuple or array of tuples
-        radius -- the search radius (km)
-        """
-
-        index = self.tree.query_ball_point(self.transform_coordinates(point),
-                                           radius)
-
-        # regrid to 2D grid
-        index = np.unravel_index(index[0], self.shape)
-
-        # return DataArray indexers
-        return xr.DataArray(index[0], dims='location'), xr.DataArray(index[1], dims='location')
+#     # Roll index calculation into other function so we can use numba for speedups
+#     x_ind, y_ind = calc_index(x_ind, y_ind, X, Y, x, y)
+#     return x_ind, y_ind

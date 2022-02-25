@@ -20,16 +20,16 @@ def test_codar_radial_to_tabular_netcdf():
     # This automatically 'enhances' the netCDF file
     # with better variable names and attributes.
     rad1 = Radial(radial_file)
-    rad1.export(str(nc_file), file_type='netcdf-tabular')
+    rad1.to_netcdf(str(nc_file), model='tabular')
 
     # Convert it to an xarray Dataset with no variable
     # or attribte enhancements
-    xds2 = rad1.to_xarray_tabular(enhance=False)
+    xds2 = rad1.to_xarray('tabular', enhance=False)
 
     # Convert it to xarray Dataset with increased usability
     # by changing variables names, adding attributes,
     # and decoding the CF standards like scale_factor
-    xds3 = rad1.to_xarray_tabular(enhance=True)
+    xds3 = rad1.to_xarray('tabular', enhance=True)
 
     with xr.open_dataset(nc_file) as xds1:
         # The two enhanced files should be identical
@@ -40,25 +40,25 @@ def test_codar_radial_to_tabular_netcdf():
         assert not xds1.identical(xds2)
 
 
-def test_codar_radial_to_multidimensional_netcdf():
+def test_codar_radial_to_gridded_netcdf():
     radial_file = data_path / 'radials' / 'ruv' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.ruv'
-    nc_file = output_path / 'radials' / 'nc' / 'multidimensional' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.nc'
+    nc_file = output_path / 'radials' / 'nc' / 'gridded' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.nc'
 
     # Converts the underlying .data (natively a pandas DataFrame)
     # to an xarray object when `create_netcdf` is called.
     # This automatically 'enhances' the netCDF file
     # with better variable names and attributes.
     rad1 = Radial(radial_file)
-    rad1.export(str(nc_file), file_type='netcdf-multidimensional')
+    rad1.to_netcdf(str(nc_file), model='gridded')
 
     # Convert it to an xarray Dataset with no variable
     # or attribte enhancements
-    xds2 = rad1.to_xarray_multidimensional(enhance=False)
+    xds2 = rad1.to_xarray('gridded', enhance=False)
 
     # Convert it to xarray Dataset with increased usability
     # by changing variables names, adding attributes,
     # and decoding the CF standards like scale_factor
-    xds3 = rad1.to_xarray_multidimensional(enhance=True)
+    xds3 = rad1.to_xarray('gridded', enhance=True)
 
     with xr.open_dataset(nc_file) as xds1:
         # The two enhanced files should be identical
@@ -67,6 +67,40 @@ def test_codar_radial_to_multidimensional_netcdf():
         # Enhanced and non-enhanced files should not
         # be equal
         assert not xds1.identical(xds2)
+
+
+def test_codar_mask():
+    radial_file = data_path / 'radials' / 'ruv' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.ruv'
+    rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    # Total points before masking
+    assert len(rad1.data) == 745
+    rad1.mask_over_land()
+    # Make sure we subset the land points
+    assert len(rad1.data) == 592
+
+
+def test_codar_qc():
+    radial_file = data_path / 'radials' / 'ruv' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0100.ruv'
+    radial_file_previous = data_path / 'radials' / 'ruv' / 'SEAB' / 'RDLi_SEAB_2019_01_01_0000.ruv'
+    rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    rad1.initialize_qc()
+    assert len(rad1.data) == 733
+    rad1.mask_over_land()
+    rad1.qc_qartod_radial_count()
+    rad1.qc_qartod_valid_location()
+    rad1.qc_qartod_maximum_velocity()
+    rad1.qc_qartod_spatial_median()
+    rad1.qc_qartod_temporal_gradient(radial_file_previous)
+    rad1.qc_qartod_avg_radial_bearing(reference_bearing=180)
+    rad1.qc_qartod_primary_flag()
+    assert len(rad1.data) == 587
+    assert 'QC07' in rad1.data
+    assert 'QC08' in rad1.data  
+    assert 'QC09' in rad1.data
+    assert 'QC10' in rad1.data
+    assert 'QC11' in rad1.data  # temporal gradient test
+    assert 'QC12' in rad1.data
+    assert 'PRIM' in rad1.data
 
 
 def test_wera_radial_to_tabular_netcdf():
@@ -78,16 +112,16 @@ def test_wera_radial_to_tabular_netcdf():
     # This automatically 'enhances' the netCDF file
     # with better variable names and attributes.
     rad1 = Radial(radial_file)
-    rad1.export(str(nc_file), file_type='netcdf-tabular')
+    rad1.to_netcdf(str(nc_file), model='tabular')
 
     # Convert it to an xarray Dataset with no variable
     # or attribte enhancements
-    xds2 = rad1.to_xarray_tabular(enhance=False)
+    xds2 = rad1.to_xarray('tabular', enhance=False)
 
     # Convert it to xarray Dataset with increased usability
     # by changing variables names, adding attributes,
     # and decoding the CF standards like scale_factor
-    xds3 = rad1.to_xarray_tabular(enhance=True)
+    xds3 = rad1.to_xarray('tabular', enhance=True)
 
     with xr.open_dataset(nc_file) as xds1:
         # The two enhanced files should be identical
@@ -98,25 +132,25 @@ def test_wera_radial_to_tabular_netcdf():
         assert not xds1.identical(xds2)
 
 
-def test_wera_radial_to_multidimensional_netcdf():
+def test_wera_radial_to_gridded_netcdf():
     radial_file = data_path / 'radials' / 'ruv' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
-    nc_file = output_path / 'radials' / 'nc' / 'multidimensional' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
+    nc_file = output_path / 'radials' / 'nc' / 'gridded' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
 
     # Converts the underlying .data (natively a pandas DataFrame)
     # to an xarray object when `create_netcdf` is called.
     # This automatically 'enhances' the netCDF file
     # with better variable names and attributes.
     rad1 = Radial(radial_file)
-    rad1.export(str(nc_file), file_type='netcdf-multidimensional')
+    rad1.to_netcdf(str(nc_file), model='gridded')
 
     # Convert it to an xarray Dataset with no variable
     # or attribte enhancements
-    xds2 = rad1.to_xarray_multidimensional(enhance=False)
+    xds2 = rad1.to_xarray('gridded', enhance=False)
 
     # Convert it to xarray Dataset with increased usability
     # by changing variables names, adding attributes,
     # and decoding the CF standards like scale_factor
-    xds3 = rad1.to_xarray_multidimensional(enhance=True)
+    xds3 = rad1.to_xarray('gridded', enhance=True)
 
     with xr.open_dataset(nc_file) as xds1:
         # The two enhanced files should be identical
@@ -159,9 +193,9 @@ def test_wera_qc():
     assert 'PRIM' in rad1.data
 
 
-def test_wera_raw_to_quality_multidimensional_nc():
+def test_wera_raw_to_quality_gridded_nc():
     radial_file = data_path / 'radials' / 'ruv' / 'WERA' / 'RDL_csw_2019_10_24_162300.ruv'
-    nc_file = output_path / 'radials' / 'qc' / 'nc' / 'multidimensional' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
+    nc_file = output_path / 'radials' / 'qc' / 'nc' / 'gridded' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
     rad1.initialize_qc()
     rad1.mask_over_land()
@@ -169,9 +203,9 @@ def test_wera_raw_to_quality_multidimensional_nc():
     rad1.qc_qartod_valid_location()
     rad1.qc_qartod_maximum_velocity()
     rad1.qc_qartod_spatial_median()
-    rad1.export(str(nc_file), file_type='netcdf-multidimensional')
+    rad1.to_netcdf(str(nc_file), model='gridded')
 
-    xds2 = rad1.to_xarray_multidimensional(enhance=True)
+    xds2 = rad1.to_xarray('gridded', enhance=True)
 
     with xr.open_dataset(nc_file) as xds1:
         assert len(xds1.QCTest) == 3  # no VFLG column so one test not run
@@ -189,9 +223,10 @@ def test_wera_raw_to_quality_tabular_nc():
     rad1.qc_qartod_valid_location()
     rad1.qc_qartod_maximum_velocity()
     rad1.qc_qartod_spatial_median()
-    rad1.export(str(nc_file), file_type='netcdf-tabular')
+    rad1.to_netcdf(str(nc_file), model='tabular')
 
-    xds2 = rad1.to_xarray_tabular(enhance=True)
+    xds2 = rad1.to_xarray('tabular', enhance=True)
+    
 
     with xr.open_dataset(nc_file) as xds1:
         assert len(xds1.QCTest) == 3  # no VFLG column so one test not run
@@ -199,25 +234,25 @@ def test_wera_raw_to_quality_tabular_nc():
         assert xds1.identical(xds2)
 
 
-def test_miami_radial_multidimensional_nc():
+def test_miami_radial_gridded_nc():
     radial_file = data_path / 'radials' / 'ruv' / 'WERA' / 'RDL_UMiami_STF_2019_06_01_0000.hfrweralluv1.0'
-    nc_file = output_path / 'radials' / 'nc' / 'multidimensional' / 'WERA' / 'RDL_UMiami_STF_2019_06_01_0000.nc'
+    nc_file = output_path / 'radials' / 'nc' / 'gridded' / 'WERA' / 'RDL_UMiami_STF_2019_06_01_0000.nc'
 
     # Converts the underlying .data (natively a pandas DataFrame)
     # to an xarray object when `create_netcdf` is called.
     # This automatically 'enhances' the netCDF file
     # with better variable names and attributes.
     rad1 = Radial(radial_file)
-    rad1.export(str(nc_file), file_type='netcdf-multidimensional')
+    rad1.to_netcdf(str(nc_file), model='gridded')
 
     # Convert it to an xarray Dataset with no variable
     # or attribte enhancements
-    xds2 = rad1.to_xarray_multidimensional(enhance=False)
+    xds2 = rad1.to_xarray('gridded', enhance=False)
 
     # Convert it to xarray Dataset with increased usability
     # by changing variables names, adding attributes,
     # and decoding the CF standards like scale_factor
-    xds3 = rad1.to_xarray_multidimensional(enhance=True)
+    xds3 = rad1.to_xarray('gridded', enhance=True)
 
     with xr.open_dataset(nc_file) as xds1:
         # The two enhanced files should be identical
@@ -237,16 +272,19 @@ def test_miami_radial_tabular_nc():
     # This automatically 'enhances' the netCDF file
     # with better variable names and attributes.
     rad1 = Radial(radial_file)
-    rad1.export(str(nc_file), file_type='netcdf-tabular')
+    rad1.to_netcdf(str(nc_file), model='tabular')
+    # rad1.export(str(nc_file), file_type='netcdf', model='tabular')
 
     # Convert it to an xarray Dataset with no variable
     # or attribte enhancements
-    xds2 = rad1.to_xarray_tabular(enhance=False)
+    xds2 = rad1.to_xarray('tabular', enhance=False)
+    # xds2 = rad1.to_xarray_tabular(enhance=False)
 
     # Convert it to xarray Dataset with increased usability
     # by changing variables names, adding attributes,
     # and decoding the CF standards like scale_factor
-    xds3 = rad1.to_xarray_tabular(enhance=True)
+    xds3 = rad1.to_xarray('tabular', enhance=True)
+    # xds3 = rad1.to_xarray_tabular(enhance=True)
 
     with xr.open_dataset(nc_file) as xds1:
         # The two enhanced files should be identical

@@ -18,8 +18,13 @@ def concat(wave_list, enhance=False):
     This function takes a list of Wave objects or wave file paths and
     combines them along the time dimension using xarrays built-in concatenation
     routines.
-    :param wave_list: list of wave files or Wave objects that you want to concatenate
-    :return: waves concatenated into an xarray dataset by (time) or (time, dist)
+
+    Args:
+        wave_list (list): list of wave files or Wave objects that you want to concatenate
+        enhance (bool, optional): Changes variable names to something meaningful and adds attributes. Defaults to False.
+
+    Returns:
+        xarray.Dataset: waves concatenated into an xarray dataset by (time) or (time, dist)
     """
     wave_dict = {}
     for wave in wave_list:
@@ -40,6 +45,12 @@ class Waves(CTFParser):
     """
 
     def __init__(self, fname, replace_invalid=True):
+        """__init__
+
+        Args:
+            fname (str or path.Path): Filename to be loaded
+            replace_invalid (bool, optional): _description_. Defaults to True.
+        """
         logging.info('Loading wave file: {}'.format(fname))
         super().__init__(fname)
 
@@ -66,6 +77,11 @@ class Waves(CTFParser):
                 self.replace_invalid_values()
 
     def __repr__(self):
+        """String representation of Wave object
+
+        Returns:
+            str: string representation of Wave object
+        """
         return "<Wave: {}>".format(self.file_name)
 
     def file_type(self):
@@ -114,10 +130,11 @@ class Waves(CTFParser):
         """
         Flag bad wave heights in Wave instance. This method labels wave heights between wave_min and wave_max as good,
         while labeling anything else bad
-        :param wave_min: Minimum Wave Height - Waves above this will be considered good
-        :param wave_max: Maximum Wave Height - Waves less than this will be considered good
-        :param remove: Remove bad wave heights. Defaults to False
-        :return:
+
+        Args:
+            min (float, optional): Minimum Wave Height - Waves above this will be considered good. Defaults to 0.2.
+            max (int, optional): Maximum Wave Height - Waves less than this will be considered good. Defaults to 5.
+            remove (bool, optional): Remove bad wave heights. Defaults to False.
         """
         boolean = self.data['MWHT'].between(min, max, inclusive='both')
         
@@ -129,6 +146,11 @@ class Waves(CTFParser):
 
 
     def is_valid(self):
+        """Check if wave file has data
+
+        Returns:
+            bool: True if it has data, False if there is no data.
+        """
         if self.data.empty:
             return False
         else:
@@ -136,10 +158,13 @@ class Waves(CTFParser):
     
 
     def to_xarray(self, enhance=False):
-        """
-        :param range_min:
-        :param range_max:
-        :return:
+        """Convert Wave data from a Pandas DataFrame to an xarray Dataset.
+
+        Args:
+            enhance (bool, optional): Rename variables to something meaningful and add useful attributes. Defaults to False.
+
+        Returns:
+            xarray.Dataset: xarray dataset containing converted wave data.
         """
         logging.info('Converting wave data to xarray dataset')
 
@@ -160,6 +185,14 @@ class Waves(CTFParser):
         return ds
     
     def enhance_xarray(self, xds):
+        """Rename variables to meaningful names. Add attributes to help the dataset be self-describing.
+
+        Args:
+            xds (xarray.Dataset): xarray.Dataset containing wave CTF files
+
+        Returns:
+            xarray.Dataset: enhanced wave file xarray.Dataset 
+        """
         rename = dict()
         rename['MWHT'] = 'wave_height'
         rename['MWPD'] = 'wave_period'
@@ -280,8 +313,11 @@ class Waves(CTFParser):
     def create_netcdf(self, filename, prepend_ext=False, enhance=True):
         """
         Create a compressed netCDF4 (.nc) file from the radial instance
-        :param filename: User defined filename of radial file you want to save
-        :return:
+
+        Args:
+            filename (str or path.Path):  User defined filename of radial file you want to save
+            prepend_ext (bool, optional): Prepend a descriptive term (ranged or averaged, depending on the type of wave netcdf file produced) to the .nc extension. Defaults to False.
+            enhance (bool, optional): Rename variable names to meaningful names and add attributes. Defaults to True.
         """
 
         # If the filename does not have a .nc extension, we will add one.
@@ -421,13 +457,14 @@ class Waves(CTFParser):
     #         f.write('%End:')
 
     def export(self, filename, file_type='netcdf', prepend_ext=False):
+        """Export wave file as either a codar .wls file or a netcdf .nc file
+
+        Args:
+            filename (_type_): User defined filename of wave file you want to save
+            file_type (str, optional): Type of file to export: 'wave' or 'netcdf'. Defaults to 'netcdf'.
+            prepend_ext (bool, optional): Prepend a descriptive term (ranged or averaged, depending on the type of wave netcdf file produced) to the .nc extension. Defaults to False.
         """
-        Export wave file as either a codar .wls file or a netcdf .nc file
-        :param filename: User defined filename of wave file you want to save
-        :param file_type: Type of file to export wave: wave (default) or netcdf
-        :param prepend_ext: <False>. Detect the distance method of wave file, and add 'ranged' or 'averaged' distance before .nc file extension (for NetCDF only)
-        :return:
-        """
+
         # Make sure filename is converted into a Path object 
         filename = Path(filename)
 

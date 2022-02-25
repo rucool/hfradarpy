@@ -1,7 +1,7 @@
 import xarray as xr
 import numpy as np
 import numpy.ma as ma
-from oceans.ocfis import uv2spdir, spdir2uv
+from hfradarpy.calc import uv2spdir, spdir2uv
 from hfradarpy.plot.common import plot_common
 import logging
 from matplotlib import colors
@@ -58,7 +58,7 @@ def plot_radials(dataset, *,
         u, v = spdir2uv(  # convert angle and speed back to u/v, normalizing the arrow sizes
             np.ones_like(speed),
             angle,
-            deg=True
+            degrees=True
         )
 
     velocity_min = velocity_min or -40
@@ -151,7 +151,7 @@ def plot_totals(dataset, *,
         u, v = spdir2uv(  # convert angle and speed back to u/v, normalizing the arrow sizes
             np.ones_like(speed),
             angle,
-            deg=True
+            degrees=True
         )
 
     velocity_min = velocity_min or np.int32(np.nanmin(speed)) or 0
