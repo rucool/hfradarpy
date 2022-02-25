@@ -18,13 +18,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, clean = False, clean_path=None):
-    """
-    Main function to parse and qc radial files
-    :param radial_file: Path to radial file
-    :param save_path: Path to save quality controlled radial file
-    :param qc_values: Dictionary containing thresholds for each QC test
-    :param export: <str> None or 'radial' or 'netcdf-tabular' or 'netcdf-multidimensional'
+def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, clean=False, clean_path=None):
+    """Main function to parse and qc radial files.
+
+    Setting clean to True will create two separate quality controlled radial files. Must set clean_path.
+    The first radial file with containing flag metadata will be saved to save_path. This file contains data along with metadata flags.
+    The second radial file with data that failed qc removed will be saved to clean_path. This file does not contain any metadata flags.
+
+
+    Args:
+        radial_file (str or Path): Path to radial file
+        qc_values (dict, optional): Dictionary containing thresholds for each QC test. Defaults to None.
+        export (str, optional): <str> None or 'radial' or 'netcdf-tabular' or 'netcdf-multidimensional'. Defaults to None.
+        save_path (str or Path, optional):  Path to save quality controlled radial file. Defaults to None.
+        clean (bool, optional): Remove any row of data where the primary flag equals 4 (Failure flag). Defaults to False.
+        clean_path (str or Path, optional): Path to save quality controlled radial file with data that fails qc removed. Defaults to None.
+
+    Returns:
+        Radial object: A quality controlled radial file.
     """
     qc_values = qc_values or dict(
         qc_qartod_avg_radial_bearing=dict(reference_bearing=151, warning_threshold=15, failure_threshold=30),
@@ -109,29 +120,30 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
             else:
                 return r
 
-
-
-
-def concat(radial_list, type=None, enhance=False):
+def concat(radial_list, type='gridded', enhance=False):
     """
     This function takes a list of Radial objects or radial file paths and
     combines them along the time dimension using xarrays built-in concatenation
     routines.
-    :param radial_list: list of radial files or Radial objects that you want to concatenate
-    :return: radials concatenated into an xarray dataset by range, bearing, and time
-    """
-    type = type or 'multidimensional'
 
+    Args:
+        radial_list (list): list of radial files or Radial objects that you want to concatenate
+        type (str, optional): 'gridded' or 'tabular'. Defaults to 'gridded'
+        enhance (bool, optional): Change manufacturer variables to cf compliant variable names. Add CF attributes and metadata. Defaults to False.
+
+    Returns:
+        xarray dataset: radials concatenated into an xarray dataset
+    """
     radial_dict = {}
     for radial in radial_list:
 
         if not isinstance(radial, Radial):
             radial = Radial(radial)
 
-        if type == 'multidimensional':
-            radial_dict[radial.file_name] = radial.to_xarray_multidimensional(enhance=enhance)
+        if type == 'gridded':
+            radial_dict[radial.file_name] = radial.to_xarray('gridded', enhance=enhance)
         elif type == 'tabular':
-            radial_dict[radial.file_name] = radial.to_xarray_tabular(enhance=enhance)
+            radial_dict[radial.file_name] = radial.to_xarray('tabular', enhance=enhance)
 
     ds = xr.concat(radial_dict.values(), 'time')
     return ds.sortby('time')
@@ -145,6 +157,14 @@ class Radial(CTFParser):
     ~/hfradarpy/ctf.py in order to load CODAR Radial files
     """
     def __init__(self, fname, replace_invalid=True, mask_over_land=False, empty_radial=False):
+        """Initialize the radial object
+
+        Args:
+            fname (str or Path): Full file path to the radial .ruv to be loaded
+            replace_invalid (bool, optional): Replace invalid/dummy manufacturer fill values with NaN. Defaults to True.
+            mask_over_land (bool, optional): Mask radials that over land with NaN. Defaults to False.
+            empty_radial (bool, optional): Returns an empty Radial object. Defaults to False.
+        """
         logging.info('Loading radial file: {}'.format(fname))
         super().__init__(fname)
 
@@ -180,9 +200,15 @@ class Radial(CTFParser):
                 self.empty_radial()
 
     def __repr__(self):
+        """
+        Represent class's object as a string
+        """
         return "<Radial: {}>".format(self.file_name)
 
     def empty_radial(self):
+        """
+        Defines an empty radial
+        """
 
         self.file_path = ''
         self.file_name = ''
@@ -209,6 +235,16 @@ class Radial(CTFParser):
                 self._tables[key]['data'] = self.range_information
 
     def mask_over_land(self, subset=True):
+        """Mask out of any radial data that lies over the land.
+
+        Args:
+            subset (bool, optional): If True, removes any points not over water from the dataset. If False, return an index of data that lies over water. Defaults to True.
+
+        Returns:
+            self.data (pd.DataFrame): If subset = True, a pandas dataframe is returned with data that is over water.
+            or
+            water_index (pd.Series): If subset = False, a pandas series containing the index of points of water is returned
+        """
         logging.info('Masking radials over land')
 
         land = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
@@ -233,34 +269,42 @@ class Radial(CTFParser):
         else:
             return water_index
 
-    # def to_xarray(self, range_min=None, range_max=None, enhance=False, dim='tabular'):
-    #     """
-    #     Adapted from MATLAB code from Mark Otero
-    #     http://cordc.ucsd.edu/projects/mapping/documents/HFRNet_Radial_NetCDF.pdf
-    #     :param range_min:
-    #     :param range_max:
-    #     :return:
-    #     """
-    #     if dim == 'tabular':
-    #         self.to_xarray_tabular(enhance)
-    #     elif dim == 'multidimensional':
-    #         self.to_xarray_multidimensional(range_min, range_max, enhance)
-    #     # Clean radial header
-    #     # self.clean_header()
-    #
-    #     # return ds
+    def to_xarray(self, model='tabular', enhance=False, range_minmax=None, bearing=None):
+        """Helper function 
 
-    def to_xarray_multidimensional(self, range_min=None, range_max=None, enhance=None):
+        Args:
+            model (str, optional): Create an xarray dataset with a 'tabular' (time) or 'gridded' (time, range, bearing) data model. Defaults to 'tabular'.
+            enhance (bool, optional): Change manufacturer variables to meaningful variable names. Add attributes and other metadata. Defaults to True.
+            range_minmax (list or tuple, optional): For gridded dataset only, Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data. 
+            bearing (list or tuple, optional): For gridded dataset only, Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data. 
         """
-        Adapted from MATLAB code from Mark Otero
+
+        if model == 'tabular':
+            ds = self._to_xarray_tabular(enhance)
+        elif model == 'gridded':
+            ds = self._to_xarray_gridded(range_minmax=range_minmax, bearing=bearing, enhance=enhance)
+        else:
+            raise ValueError("Please enter a valid data model type. Must be a string 'tabular' or 'gridded'")
+        return ds
+
+
+    def _to_xarray_gridded(self, range_minmax=None, bearing=None, enhance=True):
+        """Convert radial file to an xarray dataset on a radial grid.
+        This dataset has dimensions of time,range, and bearing.
+        Add list range_min and range_max if you want to make the file only include range cells between the two.
+
+        Adapted from MATLAB code by Mark Otero
         http://cordc.ucsd.edu/projects/mapping/documents/HFRNet_Radial_NetCDF.pdf
-        :param range_min:
-        :param range_max:
-        :return:
+
+        Args:
+            range_minmax (list or tuple, optional): Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data. 
+            bearing (list or tuple, optional): Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data. 
+            enhance (bool, optional): Change manufacturer variables to cf compliant variable names. Add CF attributes and metadata. Defaults to True.
+
+        Returns:
+            xarray.Dataset: radial file converted to an xarray dataset with dimensions of time, range, and bearing.
         """
         logging.info('Converting radial matrix to multidimensional dataset')
-        # Clean radial header
-        # self.clean_header()
 
         # CF Standard: T, Z, Y, X
         coords = ('time', 'range', 'bearing')
@@ -268,28 +312,72 @@ class Radial(CTFParser):
         # Intitialize empty xarray dataset
         ds = xr.Dataset()
 
-        if range_min is None:
+        if range_minmax:
+            # range_include = True, because it is not a NoneType
+            if isinstance(range_minmax, (list, tuple)):
+                # range_include must be a tuple or a list that has data inside
+                range_min = np.float32(range_minmax[0])
+                range_max = np.float32(range_minmax[1])
+            else:
+                # range_minmax is not a tuple or a list, so error out and return to the original function
+                raise TypeError('range_minmax must be a list/tuple including min/max ranges or set to None to infer min/max range based off of included data')
+        else:
+            # range_minmax = False, because range_minmax is a NoneType.
+            logging.info('Inferring min/max ranges based off of radial data')
             range_min = self.data.RNGE.min()
-        if range_max is None:
             range_max = self.data.RNGE.max()
 
-        range_step = float(self.metadata['RangeResolutionKMeters'].split()[0])
+        # Get the range resolution of the radar site from the metadata
+        range_step = np.double(self.metadata['RangeResolutionKMeters'].split()[0])
+
+        # Create an array from range_min to range_max with range_step between each range
         range_dim = np.arange(
             range_min,
             np.round(range_max + range_step, 4),
-            range_step
+            range_step,
+            dtype=np.float32
         )
-        bearing_dim = np.arange(1, 361, 1).astype(float)  # Complete 360 degree bearing coordinate allows for better aggregation
+
+        #round floats to 4 decimal places due to inaccuracy of np.arange
+        range_dim = [round(x, 4) for x in range_dim] 
+
+        # If bearing has user input and
+        if bearing:
+            # bearing = True, because it is not a NoneType
+            if isinstance(bearing, (list, tuple)):
+                # bearing must be a tuple or a list contains data
+                antenna_bearing = np.float32(bearing[0])
+                angular_resolution = np.float32(bearing[1])
+            else:
+                # bearing is not a tuple or a list, so error out and return to the original function
+                raise TypeError('bearing must be a list/tuple including min/max ranges or set to None to infer min/max range based off of included data')
+        else:
+            # bearing is a NoneType
+            try:
+                # Infer it from the radial metadata
+                angular_resolution = np.double(self.metadata['AngularResolution'].split()[0])
+                antenna_bearing = np.double(self.metadata['AntennaBearing'].split()[0])
+            except KeyError:
+                logging.info('AngularResolution and/or AntennaBearing not find in radial file metadata. Creating a generic 360 degree grid with 1 degree bin resolution.')
+                # If AngularResolution and/or AntennaBearing aren't in the radial file, let's create a generic 360 degree grid with 1 degree resolution.
+                angular_resolution = 1
+                antenna_bearing = 0
+
+        # Calculate bearings with the AntennaBearing as the min and AntennaBearing+360 as the max with angular_resolution as the spacing between each bearing.
+        #  We use np.mod(bearings, 360) to convert back to 0 to 360
+        bearing_dim = sorted(np.mod(np.arange(antenna_bearing, antenna_bearing+360, angular_resolution, dtype=np.short), 360))
 
         # create radial grid from bearing and range
-        [bearing, ranges] = np.meshgrid(bearing_dim, range_dim)
+        [bearings, ranges] = np.meshgrid(bearing_dim, range_dim)
 
         # calculate lat/lons from origin, bearing, and ranges
         latlon = [float(x) for x in re.findall(r"[-+]?\d*\.\d+|\d+", self.metadata['Origin'])]
-        latd, lond = reckon(latlon[0], latlon[1], bearing, ranges)
+        lons = np.full_like(bearings, latlon[1])
+        lats = np.full_like(bearings, latlon[0])
+        lond, latd = reckon(lons, lats, bearings, ranges)
 
         # create dictionary containing variables from dataframe in the shape of radial grid
-        d = {key: np.tile(np.nan, bearing.shape) for key in self.data.keys()}
+        d = {key: np.tile(np.nan, bearings.shape) for key in self.data.keys()}
 
         # find grid indices from radial grid (bearing, ranges)
         range_map_idx = np.tile(np.nan, self.data['RNGE'].shape)
@@ -336,15 +424,17 @@ class Radial(CTFParser):
         if enhance is True:
             ds = self.enhance_xarray(ds)
             ds = xr.decode_cf(ds)
-
-
         return ds
 
-    def to_xarray_tabular(self, range_min=None, range_max=None, enhance=False):
-        """
-        :param range_min:
-        :param range_max:
-        :return:
+    def _to_xarray_tabular(self, enhance=False):
+        """Convert radial file to an xarray dataset on a radial grid.
+        This dataset has one dimension, time.
+
+        Args:
+            enhance (bool, optional): Rename variables to something meaningful and add cf attributes. Defaults to False.
+
+        Returns:
+            xarray.Dataset: Enhanced dataset with renamed variables and useful attributes.
         """
         logging.info('Converting radial matrix to tabular dataset')
 
@@ -382,6 +472,15 @@ class Radial(CTFParser):
         return ds
 
     def enhance_xarray(self, xds):
+        """Change manufacturer variables to meaningful variable names. 
+        Add attributes and other metadata.
+
+        Args:
+            xds (xarray.Dataset): radial xarray Dataset to enhance
+
+        Returns:
+            xds (xarray.Dataset): enhanced xarray dataset
+        """
         rename = dict(
             VELU='u',
             VELV='v',
@@ -665,9 +764,10 @@ class Radial(CTFParser):
         return 'radial'
 
     def clean_header(self, split_origin=False):
-        """
-        Clean up the radial header dictionary so that you can upload it to the HFR MySQL Database.
-        :return:
+        """Clean up the radial header dictionary so that you can upload it to the HFR MySQL Database.
+
+        Args:
+            split_origin (bool, optional): Split the 'Origin' string for the receiver location into a list of floats [lon, lat]. Defaults to False.
         """
         keep = ['CTF', 'FileType', 'LLUVSpec', 'UUID', 'Manufacturer', 'Site', 'TimeStamp', 'TimeZone', 'TimeCoverage',
                 'Origin', 'GreatCircle', 'GeodVersion', 'LLUVTrustData', 'RangeStart', 'RangeEnd', 'RangeResolutionKMeters',
@@ -742,12 +842,23 @@ class Radial(CTFParser):
             if key not in present_keys:
                 self.metadata[key] = None
 
-    def create_netcdf(self, filename, file_type='netcdf-tabular', prepend_ext=False, enhance=True):
+    def to_netcdf(self, filename, model='tabular', prepend_extension=False, range_minmax=None, bearing=None, enhance=True):
+        """Create a compressed netCDF4 (.nc) file from the Radial object
+
+        Args:
+            filename (str or Path): User defined filename of radial file you want to save
+            model (str, optional): Create a 'tabular' (time) or 'gridded' (time, range, bearing) NetCDF. Defaults to 'tabular'.
+            prepend_extension (bool, optional): Prepend a descriptive term (bearing or gridded, depending on the type of netcdf file produced) to the .nc extension. Defaults to False.
+            range_minmax (list or tuple, optional): For gridded NetCDF only, Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data. 
+            bearing (list or tuple, optional): For gridded NetCDF only, Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data. 
+            enhance (bool, optional): Change manufacturer variables to meaningful variable names. Add attributes and other metadata. Defaults to True.
         """
-        Create a compressed netCDF4 (.nc) file from the radial instance
-        :param filename: User defined filename of radial file you want to save
-        :return:
-        """
+        # Make sure filename is converted into a Path object 
+        filename = Path(filename)
+
+        if not self.is_valid():
+            raise ValueError("Could not export ASCII data, the input file was invalid.")
+
         # If the filename does not have a .nc extension, we will add one.
         if not '.nc' in str(filename):
             filename = filename.with_suffix('.nc')
@@ -758,14 +869,16 @@ class Radial(CTFParser):
 
         create_dir(os.path.dirname(filename))
 
-        if 'tabular' in file_type:
-            xds = self.to_xarray_tabular(enhance=enhance)
-        elif 'multidimensional' in file_type:
-            xds = self.to_xarray_multidimensional(enhance=enhance)
+        xds = self.to_xarray(model, range_minmax=range_minmax, bearing=bearing, enhance=enhance)
+
+        # if 'tabular' in netcdf_type:
+        #     xds = self.to_xarray_tabular(enhance=enhance)
+        # elif 'gridded' in netcdf_type:
+        #     xds = self.to_xarray_gridded(range_minmax=range_minmax, bearing=bearing, enhance=enhance)
         
         # Check if dataset has distance_from_origin in coordinates. We will prepend the .nc extension 
-        # with the appropriate name depending on whether the wave file is averaged or arranged by distance with manufacturer software
-        if prepend_ext:
+        # with the appropriate name depending on whether the radial file is tabular or gridded.
+        if prepend_extension:
             if 'bearing' in xds.coords:
                 pre_ext = 'gridded'
             else:
@@ -775,7 +888,7 @@ class Radial(CTFParser):
 
         encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
 
-        if 'multidimensional' in file_type:
+        if 'gridded' in model:
             encoding['bearing'] = dict(zlib=False, _FillValue=None)
             encoding['range'] = dict(zlib=False, _FillValue=None)
         encoding['time'] = dict(zlib=False, _FillValue=None)
@@ -808,12 +921,18 @@ class Radial(CTFParser):
             unlimited_dims=['time']
         )
 
-    def create_ruv(self, filename):
+    def to_ruv(self, filename):
+        """Create a CODAR Radial (.ruv) file from radial instance
+
+        Args:
+            filename (str or Path): User defined filename of radial file you want to save
         """
-        Create a CODAR Radial (.ruv) file from radial instance
-        :param filename: User defined filename of radial file you want to save
-        :return:
-        """
+        # Make sure filename is converted into a Path object 
+        filename = Path(filename)
+
+        if not self.is_valid():
+            raise ValueError("Could not export ASCII data, the input file was invalid.")
+            
         # Ensure that the filename passed into the export function is not the same as the filename that we read in.
         # # We do not want to overwrite the original wave file by accident.
         if self.full_file == str(filename):
@@ -917,27 +1036,11 @@ class Radial(CTFParser):
                 f.write('%ProcessingTool: {}\n'.format(tool))
                 # f.write('%{}: {}\n'.format(footer_key, footer_value))
             f.write('%End:')
-
-    def export(self, filename, file_type='radial', prepend_ext=False):
-        """
-        Export radial file as either a codar .ruv file or a netcdf .nc file
-        :param filename: User defined filename of radial file you want to save
-        :param file_type: Type of file to export radial: radial (default) or netcdf
-        :return:
-        """
-        # Make sure filename is converted into a Path object 
-        filename = Path(filename)
-
-        if not self.is_valid():
-            raise ValueError("Could not export ASCII data, the input file was invalid.")
-
-        if file_type == 'radial':
-            self.create_ruv(filename)
-        elif 'netcdf' in file_type:
-            self.create_netcdf(filename, file_type=file_type, prepend_ext=prepend_ext)
+            
 
     def initialize_qc(self):
-        # Initialize QC tests to empty
+        """Initialize an empty list of QC tests
+        """
         self.metadata['QCTest'] = []
 
     # QARTOD QC Tests
@@ -950,7 +1053,11 @@ class Radial(CTFParser):
         It is expected that the average of all radial velocity bearings AVG_RAD_BEAR obtained during a sample
         interval (e.g., 1 hour) should be close to a reference bearing REF_RAD_BEAR and not vary beyond warning
         or failure thresholds.
-        :return:
+
+        Args:
+            reference_bearing (int or float): Reference bearing
+            warning_threshold (int, optional): Warning Threshold. Defaults to 15.
+            failure_threshold (int, optional): Failure Threshold. Defaults to 30.
         """
         test_str = 'QC12'
         # Absolute value of the difference between the bearing mean and reference bearing
@@ -975,7 +1082,7 @@ class Radial(CTFParser):
         self.append_to_tableheader(test_str, '(flag)')
 
     def qc_qartod_valid_location(self):
-        """
+        '''
         Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Valid Location (Test 8)
         Removes radial vectors placed over land or in other unmeasureable areas
@@ -986,8 +1093,7 @@ class Radial(CTFParser):
         in total vector calculations.
 
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-        :return:
-        """
+        '''
         test_str = 'QC08'
         flag_column = 'VFLG'
 
@@ -1016,9 +1122,10 @@ class Radial(CTFParser):
         radials used for total vector processing.
 
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-        :param min_radials: Minimum radial count threshold below which the file should be rejected. min_radials < low_radials
-        :param low_radials: Low radial count threshold below which the file should be considered suspect. low_radials > min_radials
-        :return:
+
+        Args:
+            radial_min_count (int, optional): Minimum radial count threshold (failure) below which the file should be rejected. min_radials < low_radials. Defaults to 150.
+            radial_low_count (int, optional): Low radial count threshold (warning) below which the file should be considered suspect. low_radials > min_radials. Defaults to 300.
         """
         test_str = 'QC09'
         column_flag = 'VFLG'
@@ -1057,8 +1164,10 @@ class Radial(CTFParser):
         for the given domain.
 
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-        :param threshold: Maximum Radial Speed (cm/s)
-        :return:
+
+        Args:
+            radial_max_speed (int, optional): Maximum Radial Speed (cm/s). Anything at or beyond this speed will be flagged as a failure. Defaults to 250.
+            radial_high_speed (int, optional): High Radial Speed (cm/s). Anything at or between radial_high_speed and radial_max_speed will be flagged as a warning. Defaults to 150.
         """
         test_str = 'QC07'
 
@@ -1093,10 +1202,11 @@ class Radial(CTFParser):
         and whose vector bearing (angle of arrival at site) is also within 'radial_smed_angular_limit' degrees of the source vector's bearing)
         Required to pass the test: |RV - median(NV)| <= radial_smed_current_difference
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-        :param RCLim: multiple of range step which depends on the radar type
-        :param AngLim: limit for number of degrees from source radial's bearing (degrees)
-        :param CurLim: Current difference radial_smed_current_difference (cm/s)
-        :return:
+
+        Args:
+            radial_smed_range_cell_limit (float, optional): Multiple of range step which depends on the radar type. Defaults to 2.1.
+            radial_smed_angular_limit (int, optional): Limit for number of degrees from source radial's bearing (degrees). Defaults to 10.
+            radial_smed_current_difference (int, optional): Current difference (cm/s). Defaults to 30.
         """
         test_str = 'QC10'
 
@@ -1207,7 +1317,6 @@ class Radial(CTFParser):
         ----------------------------------------------------------------------------------------------------------------------
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
         :param threshold: Maximum Radial Speed (cm/s)
-        :return:
         """
         test_str = 'QC06'
 
@@ -1276,10 +1385,11 @@ class Radial(CTFParser):
         flag = 1
 
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-        :param r0: Full path to the filename of the previous hourly radial.
-        :param gradient_temp_fail: Maximum Radial Speed (cm/s)
-        :param gradient_temp_warn: Warning Radial Speed (cm/s)
-        :return:
+
+        Args:
+            r0 (str or Path): Full path to the filename of the previous hourly radial.
+            gradient_temp_fail (int, optional): Maximum Radial Speed (cm/s). Defaults to 54.
+            gradient_temp_warn (int, optional): Warning Radial Speed (cm/s). Defaults to 36.
         """
         test_str = 'QC11'
         # self.data[test_str] = data
@@ -1317,9 +1427,10 @@ class Radial(CTFParser):
 
     def qc_qartod_primary_flag(self, include=None):
         """
-         A primary flag is a single flag set to the worst case of all QC flags within the data record.
-        :param include: list of quality control tests which should be included in the primary flag
-        :return:
+        A primary flag is a single flag set to the worst case of all QC flags within the data record.
+
+        Args:
+            include (list, optional): list of quality control tests which should be included in the primary flag.  Defaults to None, which will include all tests. 
         """
         test_str = 'PRIM'
 
@@ -1350,10 +1461,27 @@ class Radial(CTFParser):
         # %QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data
 
     def append_to_tableheader(self, test_string, test_unit):
+        """
+        Append key, value of metadata in the radial header and footer to the _TableHeader
+
+        Args:
+            test_string (str): key
+            test_unit (str): value
+        """
         self._tables['1']['_TableHeader'][0].append(test_string)
         self._tables['1']['_TableHeader'][1].append(test_unit)
 
     def reset(self):
+        """
+        Reset data variable of object, r.data, back to original dataset
+        """
         logging.info('Resetting instance data variable to original dataset')
         self._tables['1']
         self.data = self._data_backup
+
+
+if __name__ == '__main__':
+    f = 'hfradarpy/data/radials/ruv/SEAB/RDLi_SEAB_2019_01_01_0200.ruv'
+    r = Radial(f, replace_invalid=True, mask_over_land=True)
+    r.to_xarray_gridded()
+    print(r)

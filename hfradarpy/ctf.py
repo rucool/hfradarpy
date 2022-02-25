@@ -20,8 +20,11 @@ class CTFParser(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, fname):
-        """
+        """     
         Return an LLUVParser object
+
+        Args:
+            fname (str or Path): path to Codar Tabular Format file
         """
         split_path = os.path.split(fname)
         self.file_path = split_path[0]
@@ -129,8 +132,12 @@ class CTFParser(object):
     def is_valid(self, table='1'):
         """
         Check if the data table for the file contains data
-        :param table: string containing the table number to validate. Defaults to the primary data table '1'
-        :return: True or False
+
+        Args:
+            table (str, optional): string containing the table number to validate.. Defaults to '1'.
+
+        Returns:
+            bool: True or False if data is present
         """
         try:
             return not self._tables[table]['data'].empty
@@ -141,10 +148,12 @@ class CTFParser(object):
     def _parse_header_line(line):
         """
         Parse a line into a key, value
-        :param line: a line from a text file
-        :type line: string
-        :return: a tuple containing the key, value for the line
-        :rtype: tuple
+
+        Args:
+            line (str): a line from a text file
+
+        Returns:
+            tuple: contains the key, value for the line
         """
 
         line = line.replace('%', '')  # Strip the % sign from the line
@@ -161,10 +170,10 @@ class CTFParser(object):
 
     def replace_invalid_values(self, values=[999.00, 1080.0]):
         """
-        Convert invalid CODAR values to NaN
-        :param df: dataframe
-        :param values: list of CODAR fill values that reflect non calculable values
-        :return: dataframe with invalid values set to NaN
+        Replace invalid CODAR values with NaN
+
+        Args:
+            values (list, optional): List of CODAR fill values that reflect non calculable values. Defaults to [999.00, 1080.0].
         """
         logging.info('Replacing invalid values {} with NaN'.format(values))
         self.data.replace(values, np.nan, inplace=True)

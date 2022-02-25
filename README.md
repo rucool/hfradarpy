@@ -10,7 +10,7 @@ You can do this with the following command:
 
 `conda config --add channels conda-forge`
 
-## Clone codar_processing repository
+## Clone hfradarpy repository
 Either use git to clone:
 
 `git clone https://github.com/rucool/hfradarpy.git`
@@ -33,7 +33,7 @@ Once the environment is done building, you can activate the environment by typin
     
 ## Install toolbox to environment
 
-Now we need to install the toolbox to the conda environment. We can do this as follows from the root directory of the codar_processing toolbox:
+Now we need to install the toolbox to the conda environment. We can do this as follows from the root directory of the hfradarpy toolbox:
 
 `pip install .`
 

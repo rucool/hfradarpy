@@ -14,8 +14,12 @@ def divide_chunks(l, n):
     """
     Yield successive n-sized chunks from a list
 
-    :param l: list to be broken down
-    :param n: integer of the size chunks you want from the list
+    Args:
+        l (list): list to be broken down
+        n (int): integer of the size chunks you want from the list
+
+    Yields:
+        list: a list containing lists of size, n
     """
     # looping till length l
     for i in range(0, len(l), n):
@@ -31,11 +35,16 @@ def create_dir(new_dir):
 
 def list_files(types, main_dir, sub_directories=()):
     """
+    Return a list of files given the directory of the files and extension type.
+    You may also provide a list of sub_directories for the function to avoid.
 
-    :param types: file extension that you want to find
-    :param main_dir: main directory that you want to recursively search for files
-    :param sub_directories: Tuple containing strings of subdirectories you want to avoid
-    :return:  file list
+    Args:
+        types (str): file extension that you want to find
+        main_dir (_type_): main directory that you want to recursively search for files
+        sub_directories (tuple, optional):  Tuple containing strings of subdirectories you want to avoid. Defaults to ().
+
+    Returns:
+        list: list of files
     """
     file_list = []  # create empty list for finding files
 
@@ -49,6 +58,15 @@ def list_files(types, main_dir, sub_directories=()):
 
 
 def list_to_dataframe(file_list):
+    """
+    Convert a list of ctf files, that are named in the the standard format 'year_month_day_hours' to a pandas dataframe
+
+    Args:
+        file_list (list): a list of files
+
+    Returns:
+        pd.DataFrame: Pandas DataFrame containing a list of files
+    """
     df = pd.DataFrame(sorted(file_list), columns=['file'])
     try:
         df['time'] = df['file'].str.extract(r'(\d{4}_\d{2}_\d{2}_\d{4})')
@@ -60,6 +78,15 @@ def list_to_dataframe(file_list):
 
 
 def timestamp_from_lluv_filename(filename):
+    """
+    Convert the string timestamp represented in CTF file names into a dt.datetime.
+
+    Args:
+        filename (str): filename
+
+    Returns:
+        dt.datetime: a datetime representation of the time included in the ctf filename
+    """
     timestamp_regex = re.compile(r'\d{4}_\d{2}_\d{2}_\d{4}')
     mat_time = timestamp_regex.search(filename).group()
     timestamp = dt.datetime.strptime(mat_time, '%Y_%m_%d_%H%M')
