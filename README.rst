@@ -6,8 +6,8 @@ HFRadarPy
 .. image:: https://img.shields.io/pypi/v/hfradarpy.svg
         :target: https://pypi.python.org/pypi/hfradarpy
 
-.. image:: https://img.shields.io/travis/rucool/hfradarpy.svg
-        :target: https://travis-ci.com/rucool/hfradarpy
+.. .. image:: https://img.shields.io/travis/rucool/hfradarpy.svg
+..         :target: https://travis-ci.com/rucool/hfradarpy
 
 .. image:: https://readthedocs.org/projects/hfradarpy/badge/?version=latest
         :target: https://hfradarpy.readthedocs.io/en/latest/?version=latest
@@ -75,20 +75,20 @@ downloaded codar_processing to.
 
 .. code-block:: console
 
-        cd /Users/mikesmith/Documents/git/hfradarpy/
+        $ cd /Users/mikesmith/Documents/git/hfradarpy/
 
 Create conda environment from the included environment.yml file:
 
 .. code-block:: console
-        
-        conda env create -f environment.yml
+
+        $ conda env create -f environment.yml
 
 Once the environment is done building, you can activate the environment
 by typing:
 
 .. code-block:: console
 
-   conda activate hfradar # OSX/Unix
+        $ conda activate hfradar # OSX/Unix
 
 From sources
 ------------
