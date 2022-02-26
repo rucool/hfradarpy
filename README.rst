@@ -53,6 +53,7 @@ you through the process.
 
 We also recommend using miniconda to manage your Python environments. Download and follow the `Miniconda installation guide`_ for the appropriate
 Miniconda installer for your operating system. 
+
 .. _Miniconda installation guide: http://conda.pydata.org/miniconda.html
 
 Make sure to add the channel, `conda-forge`_, to your .condarc. You can
@@ -127,7 +128,7 @@ Or if you are developing new code in the toolbox, you should install this librar
 
 
 Running tests
-------------
+-------------
 After setting up your environment, you can run all of the tests, provided you install 'pytest':
 
 .. code-block:: console
