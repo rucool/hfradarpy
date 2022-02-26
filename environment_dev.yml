@@ -5,10 +5,10 @@ channels:
 dependencies:
   - python=3.10
   - xarray
-  - dask
   - netcdf4
-  - bottleneck
   - geopandas
-  # - pytest [--no-deps]
-  # - cartopy [--no-deps]
-  # - cmocean [--no-deps]
+  - bottleneck [--no-deps]
+  - dask [--no-deps]
+  - pytest [--no-deps]
+  - cartopy [--no-deps]
+  - cmocean [--no-deps]
