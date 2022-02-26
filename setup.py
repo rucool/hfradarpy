@@ -12,22 +12,10 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'Click>=7.0', 
-    'xarray==0.16.1',
-    'netcdf4==1.5.4',
-    'numpy==1.20',
-    'pyparsing==2.4.7',
-    'scipy',
     'geopandas==0.10.2',
-    'oceans',
-    'jupyter',
-    'numba',
-    'pytest',
-    'cmocean',
-    'pymongo',
-    'dask',
-    'python-dateutil',
-    'rtree'
+    'xarray==0.21.1',
+    'netcdf4==1.5.8',
+    'pygeos==0.12.0'
     ]
 
 test_requirements = ['pytest>=3', ]
@@ -45,6 +33,8 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
     description="Toolbox to read in High Frequency Radar (HFR) files written in CODAR Tabular Format (CTF).",
     entry_points={
@@ -58,7 +48,7 @@ setup(
     include_package_data=True,
     keywords='hfradarpy',
     name='hfradarpy',
-    packages=find_packages(include=['hfradarpy', 'hfradarpy.*'], exclude="tests"),
+    packages=find_packages(include=['hfradarpy', 'hfradarpy.*']),
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/rucool/hfradarpy',
@@ -66,6 +56,5 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     zip_safe=False,
     extras_require={
-        "plot": ['cartopy']
     }
 )
