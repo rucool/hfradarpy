@@ -39,7 +39,7 @@ def inverse_transformation(lons1, lats1, lons2, lats2):
     Returns:
        array, numpy.ndarray, list, tuple, or scalar: Forward azimuth(s)
        array, numpy.ndarray, list, tuple, or scalar: Back azimuth(s)
-       array, numpy.ndarray, list, tuple, or scalar: Distance(s) between initial and terminus point(s) in kilometersmeters
+       array, numpy.ndarray, list, tuple, or scalar: Distance(s) between initial and terminus point(s) in kilometers
     """
     # Inverse transformation using pyproj
     # Determine forward and back azimuths, plus distances between initial points and terminus points.
