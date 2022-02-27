@@ -372,8 +372,8 @@ class Radial(CTFParser):
 
         # calculate lat/lons from origin, bearing, and ranges
         latlon = [float(x) for x in re.findall(r"[-+]?\d*\.\d+|\d+", self.metadata['Origin'])]
-        lons = np.full_like(bearings, latlon[1])
-        lats = np.full_like(bearings, latlon[0])
+        lons = np.full_like(bearings, latlon[1], dtype=np.float)
+        lats = np.full_like(bearings, latlon[0], dtype=np.float)
         lond, latd = reckon(lons, lats, bearings, ranges)
 
         # create dictionary containing variables from dataframe in the shape of radial grid
