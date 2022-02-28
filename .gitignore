@@ -1,36 +1,110 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
-*.iml
+# C extensions
+*.so
 
-*.xml
-
-*.xml
-
-*.pyc
-
-*.swp
-notebooks/.ipynb_checkpoints/wave_class_exploration-checkpoint.ipynb
-notebooks/.ipynb_checkpoints/radial_class_exploration-checkpoint.ipynb
-hfradar/configs/configs.py
-hfradar/data/radials/.DS_Store
-.DS_Store
-output/
-.pytest_cache
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
 *.egg-info/
-.idea/.name
-.idea/.name
-hfradar/data/totals/oi/nc/aggregated/20190101T000000Z-20190101T230000Z_aggregated.nc
-hfradar/data/logs/rsync/rsync_log.txt
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# pyenv python configuration file
+.python-version
+.DS_Store
+*.iml
 .vscode/launch.json
-.gitattributes
 .vscode/settings.json
-examples/notebooks/.ipynb_checkpoints/radial_class_exploration-checkpoint.ipynb
-examples/notebooks/.ipynb_checkpoints/plot_timeseries_from_radials-checkpoint.ipynb
-examples/notebooks/.ipynb_checkpoints/plot_radial_files_and_objects-checkpoint.ipynb
-examples/notebooks/.ipynb_checkpoints/plot_quiver_curly-checkpoint.ipynb
-examples/notebooks/.ipynb_checkpoints/plot_quiver-Copy1-checkpoint.ipynb
-examples/.ipynb_checkpoints/wave_to_netcdf-checkpoint.py
-.ipynb_checkpoints/Untitled-checkpoint.ipynb
-examples/notebooks/.ipynb_checkpoints/radial_class_exploration-checkpoint.ipynb
 examples/.ipynb_checkpoints/radials_to_netcdf-checkpoint.py
-examples/notebooks/.ipynb_checkpoints/radial_class_exploration-checkpoint.ipynb
-examples/notebooks/.ipynb_checkpoints/radial_class_exploration-checkpoint.ipynb
+examples/notebooks/.ipynb_checkpoints/plot_quiver-Copy1-checkpoint.ipynb
+examples/notebooks/.ipynb_checkpoints/plot_radial_files_and_objects-checkpoint.ipynb
+examples/.ipynb_checkpoints/wave_to_netcdf-checkpoint.py
+examples/notebooks/.ipynb_checkpoints/plot_timeseries_from_radials-checkpoint.ipynb
+examples/notebooks/.ipynb_checkpoints/plot_quiver_curly-checkpoint.ipynb
+examples/output/radials/nc/gridded/SEAB/RDLi_SEAB_2019_01_01_0000.nc
+examples/output/radials/nc/gridded/WERA/RDL_csw_2019_10_24_162300.nc
+examples/output/radials/nc/gridded/WERA/RDL_UMiami_STF_2019_06_01_0000.nc
+examples/output/radials/nc/multidimensional/SEAB/RDLi_SEAB_2019_01_01_0000.nc
+examples/output/radials/nc/multidimensional/WERA/RDL_csw_2019_10_24_162300.nc
+examples/output/radials/nc/multidimensional/WERA/RDL_UMiami_STF_2019_06_01_0000.nc
+examples/output/radials/nc/SEAB/RDLi_SEAB_2019_01_01_0000.gridded.nc
+examples/output/radials/nc/SEAB/RDLi_SEAB_2019_01_01_0000.tabular.nc
+examples/output/radials/nc/SEAB/RDLi_SEAB_2019_01_01_0100.gridded.nc
+examples/output/radials/nc/SEAB/RDLi_SEAB_2019_01_01_0100.tabular.nc
+examples/output/radials/nc/tabular/SEAB/RDLi_SEAB_2019_01_01_0000.nc
+examples/output/radials/nc/tabular/WERA/RDL_csw_2019_10_24_162300.nc
+examples/output/radials/nc/tabular/WERA/RDL_UMiami_STF_2019_06_01_0000.nc
+examples/output/radials/qc/nc/gridded/WERA/RDL_csw_2019_10_24_162300.nc
+examples/output/radials/qc/nc/multidimensional/WERA/RDL_csw_2019_10_24_162300.nc
+examples/output/radials/qc/nc/tabular/WERA/RDL_csw_2019_10_24_162300.nc
+examples/output/waves/nc/SEAB/WVLM_SEAB_2019_01_01_0000.averaged.nc
+examples/output/waves/nc/SEAB/WVLM_SEAB_2019_01_01_0000.nc
+examples/output/waves/nc/SEAB/WVLM_SEAB_2019_02_01_0000.averaged.nc
+examples/output/waves/nc/SEAB/WVLM_SEAB_2019_03_01_0000.averaged.nc
+examples/output/waves/nc/SEAB/WVLM_SEAB_2019_04_01_0000.averaged.nc
+examples/output/waves/nc/SEAB/WVLM_SEAB_2019_05_01_0000.averaged.nc
+examples/output/waves/nc/SEAB/WVLM_SEAB_2019_06_01_0000.averaged.nc
+examples/output/waves/nc/SEAB/WVLR_SEAB_2019_01_01_0000.nc
+examples/output/waves/nc/SEAB/WVLR_SEAB_2019_01_01_0000.ranged.nc
+examples/output/waves/nc/SEAB/WVLR_SEAB_2019_02_01_0000.ranged.nc
+examples/output/waves/nc/SEAB/WVLR_SEAB_2019_03_01_0000.ranged.nc
+examples/output/waves/nc/SEAB/WVLR_SEAB_2019_04_01_0000.ranged.nc
+examples/output/waves/nc/SEAB/WVLR_SEAB_2019_05_01_0000.ranged.nc
+examples/output/waves/nc/SEAB/WVLR_SEAB_2019_06_01_0000.ranged.nc
+output/plots/multidimensional/RDLi_SEAB_2019_01_01_0200-motion.png
+output/plots/multidimensional/RDLi_SEAB_2019_01_01_0200-velocity.png
+output/plots/tabular/RDLi_SEAB_2019_01_01_0200-motion.png
+output/plots/tabular/RDLi_SEAB_2019_01_01_0200-velocity.png
+output/plots/totals/RU_MARA_20190101T000000Z.png
+output/plots/wera/RDL_csw_2019_10_24_162300-motion.png
+output/plots/wera/RDL_csw_2019_10_24_162300-velocity.png
+.ipynb_checkpoints/Untitled-checkpoint.ipynb

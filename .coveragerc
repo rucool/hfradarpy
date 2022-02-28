@@ -1,0 +1,7 @@
+[report]
+omit =
+    setup.py
+    hfradarpy/__main__.py
+    hfradarpy/_version.py
+    versioneer.py
+    tests/*
