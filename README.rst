@@ -107,7 +107,7 @@ by typing:
 
 .. code-block:: console
 
-        $ conda activate hfradar # OSX/Unix
+        $ conda activate hfradarpy # OSX/Unix
 
 Once the environment is your active environment. You can install the toolbox to that environment.
 
