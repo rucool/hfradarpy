@@ -1,4 +1,4 @@
-name: hfradar
+name: hfradarpy
 channels:
   - conda-forge
   - defaults
@@ -12,5 +12,5 @@ dependencies:
   - pytest [--no-deps]
   - cartopy [--no-deps]
   - cmocean [--no-deps]
-  - jupyter-lab [--no-deps]
+  - jupyterlab [--no-deps]
   - nb_conda_kernels [--no-deps]
