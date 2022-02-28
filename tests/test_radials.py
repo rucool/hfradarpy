@@ -74,7 +74,7 @@ def test_codar_mask():
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
     # Total points before masking
     assert len(rad1.data) == 745
-    rad1.mask_over_land()
+    rad1.mask_over_land(subset=True)
     # Make sure we subset the land points
     assert len(rad1.data) == 592
 
@@ -85,7 +85,7 @@ def test_codar_qc():
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
     rad1.initialize_qc()
     assert len(rad1.data) == 733
-    rad1.mask_over_land()
+    rad1.mask_over_land(subset=True)
     rad1.qc_qartod_radial_count()
     rad1.qc_qartod_valid_location()
     rad1.qc_qartod_maximum_velocity()
@@ -166,7 +166,7 @@ def test_wera_mask():
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
     # Total points before masking
     assert len(rad1.data) == 6327
-    rad1.mask_over_land()
+    rad1.mask_over_land(subset=True)
     # Make sure we subset the land points
     assert len(rad1.data) == 5745
 
@@ -176,7 +176,7 @@ def test_wera_qc():
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
     rad1.initialize_qc()
     assert len(rad1.data) == 6327
-    rad1.mask_over_land()
+    rad1.mask_over_land(subset=True)
     rad1.qc_qartod_radial_count()
     rad1.qc_qartod_valid_location()
     rad1.qc_qartod_maximum_velocity()
@@ -198,7 +198,7 @@ def test_wera_raw_to_quality_gridded_nc():
     nc_file = output_path / 'radials' / 'qc' / 'nc' / 'gridded' / 'WERA' / 'RDL_csw_2019_10_24_162300.nc'
     rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
     rad1.initialize_qc()
-    rad1.mask_over_land()
+    rad1.mask_over_land(subset=True)
     rad1.qc_qartod_radial_count()
     rad1.qc_qartod_valid_location()
     rad1.qc_qartod_maximum_velocity()
