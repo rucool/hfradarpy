@@ -258,7 +258,7 @@ class Radial(CTFParser):
             ]
         )
         # Join the geodataframe containing radial points with geodataframe containing leasing areas
-        geodata = gpd.tools.sjoin(geodata, land, how='left', predicate='intersects')
+        geodata = gpd.tools.sjoin(geodata.to_crs(4326), land.to_crs(4326), how='left', predicate='intersects')
 
         # All data in the continent column that lies over water should be nan.
         water_index = geodata['continent'].isna()
@@ -373,8 +373,8 @@ class Radial(CTFParser):
 
         # calculate lat/lons from origin, bearing, and ranges
         latlon = [float(x) for x in re.findall(r"[-+]?\d*\.\d+|\d+", self.metadata['Origin'])]
-        lons = np.full_like(bearings, latlon[1], dtype=np.float)
-        lats = np.full_like(bearings, latlon[0], dtype=np.float)
+        lons = np.full_like(bearings, latlon[1], dtype=float)
+        lats = np.full_like(bearings, latlon[0], dtype=float)
         lond, latd = reckon(lons, lats, bearings, ranges)
 
         # create dictionary containing variables from dataframe in the shape of radial grid
