@@ -67,30 +67,6 @@ You can do this with the following command:
 
         conda config --add channels conda-forge
 
-
-Create environment
-------------------
-
-Change your current working directory to the location that you
-downloaded codar_processing to.
-
-.. code-block:: console
-
-        $ cd /Users/mikesmith/Documents/git/hfradarpy/
-
-Create conda environment from the included environment.yml file:
-
-.. code-block:: console
-
-        $ conda env create -f environment.yml
-
-Once the environment is done building, you can activate the environment
-by typing:
-
-.. code-block:: console
-
-        $ conda activate hfradar # OSX/Unix
-
 From sources
 ------------
 
@@ -108,7 +84,32 @@ Or download the `tarball`_:
 
     $ curl -OJL https://github.com/rucool/hfradarpy/tarball/master
 
-Once you have a copy of the source, you can install it with:
+Once you have a copy of the source, you can should create a new conda/virtual environment:
+
+Create environment
+------------------
+
+Change your current working directory to the location that you
+downloaded codar_processing to.
+
+.. code-block:: console
+
+        $ cd ~/Downloads/hfradarpy/
+
+Create conda environment from the included environment.yml file:
+
+.. code-block:: console
+
+        $ conda env create -f environment.yml
+
+Once the environment is done building, you can activate the environment
+by typing:
+
+.. code-block:: console
+
+        $ conda activate hfradar # OSX/Unix
+
+Once the environment is your active environment. You can install the toolbox to that environment.
 
 .. code-block:: console
 
