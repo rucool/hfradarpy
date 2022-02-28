@@ -27,7 +27,7 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
 
 
     Args:
-        radial_file (str or Path): Path to radial file
+        radial_file (str or Path): Path to radial file or a Radial object
         qc_values (dict, optional): Dictionary containing thresholds for each QC test. Defaults to None.
         export (str, optional): <str> None or 'radial' or 'netcdf-tabular' or 'netcdf-multidimensional'. Defaults to None.
         save_path (str or Path, optional):  Path to save quality controlled radial file. Defaults to None.
@@ -46,12 +46,12 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
         qc_qartod_primary_flag=dict(include=['qc_qartod_syntax', 'qc_qartod_valid_location', 'qc_qartod_radial_count',
                                              'qc_qartod_maximum_velocity', 'qc_qartod_spatial_median'])
     )
-
-    try:
+    
+    if not isinstance(radial_file, Radial):
         r = Radial(radial_file, mask_over_land=False)
-    except Exception as err:
-        logging.error('{} - {}'.format(radial_file, err))
-        return
+    else:
+        r = radial_file
+
 
     if r.is_valid():
         if clean:
@@ -101,24 +101,24 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
             # else:
             # warning of failure to update file, the original will be exported
 
-            # Export radial file to either a radial or netcdf
-            if export:
-                try:
-                    r.export(os.path.join(save_path, r.file_name), export)
-                except ValueError as err:
-                    logging.error('{} - QC export error - {}'.format(radial_file, err))
-                    pass
-            else:
-                return r
-
-            if export:
-                try:
-                    rclean.export(os.path.join(clean_path, rclean.file_name), export)
-                except ValueError as err:
-                    logging.error('{} - Cleaning export error - {}'.format(radial_file, err))
-                    pass
-            else:
-                return r
+        # Export radial file to either a radial or netcdf
+        if export:
+            if export == 'radial':
+                r.to_ruv(os.path.join(save_path, r.file_name))
+            elif export == 'netcdf-tabular':
+                r.to_netcdf(os.path.join(save_path, r.file_name), 'tabular')
+            elif export == 'netcdf-gridded':
+                r.to_netcdf(os.path.join(save_path, r.file_name), 'gridded')
+            
+            if clean:
+                if export == 'radial':
+                    rclean.to_ruv(os.path.join(clean_path, rclean.file_name))
+                elif export == 'netcdf-tabular':
+                    rclean.to_netcdf(os.path.join(save_path, rclean.file_name), 'tabular', prepend_extension=True)
+                elif export == 'netcdf-gridded':
+                    rclean.to_netcdf(os.path.join(save_path, rclean.file_name), 'gridded', prepend_extension=True)
+        else:
+            return r
 
 def concat(radial_list, type='gridded', enhance=False):
     """
@@ -234,7 +234,7 @@ class Radial(CTFParser):
                 self.range_information.drop(self.range_information.index[:], inplace=True)
                 self._tables[key]['data'] = self.range_information
 
-    def mask_over_land(self, subset=True):
+    def mask_over_land(self, subset=False):
         """Mask out of any radial data that lies over the land.
 
         Args:
@@ -265,9 +265,10 @@ class Radial(CTFParser):
 
         if subset:
             # Subset the data to water only
-            self.data = self.data.loc[water_index].reset_index()
+            self.data = self.data.loc[water_index].reset_index(drop=True)
         else:
             return water_index
+
 
     def to_xarray(self, model='tabular', enhance=False, range_minmax=None, bearing=None):
         """Helper function 
@@ -1484,12 +1485,11 @@ class Radial(CTFParser):
         Reset data variable of object, r.data, back to original dataset
         """
         logging.info('Resetting instance data variable to original dataset')
-        self._tables['1']
-        self.data = self._data_backup
+        self.data = self._tables['1']['data']
 
 
 if __name__ == '__main__':
     f = 'hfradarpy/data/radials/ruv/SEAB/RDLi_SEAB_2019_01_01_0200.ruv'
     r = Radial(f, replace_invalid=True, mask_over_land=True)
-    r.to_xarray_gridded()
-    print(r)
+    ds = r.to_xarray('gridded')
+    print(ds)
