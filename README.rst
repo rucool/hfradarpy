@@ -13,6 +13,12 @@ HFRadarPy
         :target: https://hfradarpy.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
 
+.. image:: https://circleci.com/gh/rucool/hfradarpy.svg?style=svg
+    :target: https://circleci.com/gh/rucool/hfradarpy
+
+.. image:: https://codecov.io/gh/rucool/hfradarpy/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/rucool/hfradarpy
+
 
 
 
