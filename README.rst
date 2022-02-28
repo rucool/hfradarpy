@@ -96,11 +96,11 @@ downloaded codar_processing to.
 
         $ cd ~/Downloads/hfradarpy/
 
-Create conda environment from the included environment.yml file:
+Create conda environment from the included environment_dev.yml file:
 
 .. code-block:: console
 
-        $ conda env create -f environment.yml
+        $ conda env create -f environment_dev.yml
 
 Once the environment is done building, you can activate the environment
 by typing:
