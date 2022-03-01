@@ -4,14 +4,20 @@ HFRadarPy
 
 
 .. image:: https://img.shields.io/pypi/v/hfradarpy.svg
-        :target: https://pypi.python.org/pypi/hfradarpy
+    :target: https://pypi.python.org/pypi/hfradarpy
 
-.. .. image:: https://img.shields.io/travis/rucool/hfradarpy.svg
-..         :target: https://travis-ci.com/rucool/hfradarpy
+.. image:: https://img.shields.io/travis/rucool/hfradarpy.svg
+        :target: https://travis-ci.com/rucool/hfradarpy
 
 .. image:: https://readthedocs.org/projects/hfradarpy/badge/?version=latest
         :target: https://hfradarpy.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
+
+.. image:: https://circleci.com/gh/rucool/hfradarpy.svg?style=svg
+    :target: https://circleci.com/gh/rucool/hfradarpy
+
+.. image:: https://codecov.io/gh/rucool/hfradarpy/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/rucool/hfradarpy
 
 
 

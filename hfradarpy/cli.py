@@ -1,16 +1,28 @@
-"""Console script for hfradarpy."""
-import sys
-import click
+from argparse import ArgumentParser
+from hfradarpy import __version__
+
+def cli(args=None):
+    p = ArgumentParser(
+        description="Toolbox to read in High Frequency Radar (HFR) files written in CODAR Tabular Format (CTF).",
+        conflict_handler='resolve'
+    )
+    p.add_argument(
+        '-V', '--version',
+        action='version',
+        help='Show the conda-prefix-replacement version number and exit.',
+        version="hfradarpy %s" % __version__,
+    )
+
+    args, unknown = p.parse_known_args(args)
+
+    # do something with the args
+    print("CLI template - fix me up!")
+
+    # No return value means no error.
+    # Return a value of 1 or higher to signify an error.
+    # See https://docs.python.org/3/library/sys.html#sys.exit
 
 
-@click.command()
-def main(args=None):
-    """Console script for hfradarpy."""
-    click.echo("Replace this message by putting your code into "
-               "hfradarpy.cli.main")
-    click.echo("See click documentation at https://click.palletsprojects.com/")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())  # pragma: no cover
+if __name__ == '__main__':
+    import sys
+    cli(sys.argv[1:])

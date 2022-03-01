@@ -23,7 +23,7 @@ test_requirements = ['pytest>=3', ]
 setup(
     author="Michael Smith",
     author_email='michaesm@marine.rutgers.edu',
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
