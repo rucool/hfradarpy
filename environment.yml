@@ -7,6 +7,7 @@ dependencies:
   - xarray
   - netcdf4
   - geopandas
+  - fiona=1.8.21
   - bottleneck [--no-deps]
   - dask [--no-deps]
   - pytest [--no-deps]
