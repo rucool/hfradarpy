@@ -6,9 +6,10 @@ dependencies:
   - python=3.10.2
   - xarray
   - netcdf4
+  - pyproj
   # - bottleneck [--no-deps]
   # - dask [--no-deps]
-  - geopandas
+  # - geopandas [--no-deps]
   - cartopy [--no-deps]
   - cmocean [--no-deps]
   # - jupyterlab [--no-deps]

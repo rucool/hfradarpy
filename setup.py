@@ -12,10 +12,9 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'geopandas>=0.10.0',
     'xarray',
     'netcdf4',
-    'rtree'
+    'pyproj'
     ]
 
 test_requirements = ['pytest>=3', ]
