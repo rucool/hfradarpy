@@ -3,16 +3,13 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
+  - python=3.10.2
   - xarray
   - netcdf4
+  # - bottleneck [--no-deps]
+  # - dask [--no-deps]
   - geopandas
-  - fiona=1.8.21
-  - bottleneck [--no-deps]
-  - dask [--no-deps]
-  - pytest [--no-deps]
-  - pytest-cov [--no-deps]
   - cartopy [--no-deps]
   - cmocean [--no-deps]
-  - jupyterlab [--no-deps]
-  - nb_conda_kernels [--no-deps]
+  # - jupyterlab [--no-deps]
+  # - nb_conda_kernels [--no-deps]
