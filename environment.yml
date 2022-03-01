@@ -10,6 +10,7 @@ dependencies:
   - bottleneck [--no-deps]
   - dask [--no-deps]
   - pytest [--no-deps]
+  - pytest-cov [--no-deps]
   - cartopy [--no-deps]
   - cmocean [--no-deps]
   - jupyterlab [--no-deps]
