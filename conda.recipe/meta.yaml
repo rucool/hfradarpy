@@ -14,6 +14,7 @@ build:
   # "skip: True  # [not win]" to limit to Windows.
   script: {{ PYTHON }} -m pip install --no-deps --ignore-installed -vv .
   noarch: python
+  skip: True  # [py<37]
   
   entry_points:
     {% for entry in data['entry_points']['console_scripts'] %}

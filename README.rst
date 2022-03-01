@@ -4,7 +4,7 @@ HFRadarPy
 
 
 .. image:: https://img.shields.io/pypi/v/hfradarpy.svg
-        :target: https://pypi.python.org/pypi/hfradarpy
+    :target: https://pypi.python.org/pypi/hfradarpy
 
 .. .. image:: https://img.shields.io/travis/rucool/hfradarpy.svg
 ..         :target: https://travis-ci.com/rucool/hfradarpy
