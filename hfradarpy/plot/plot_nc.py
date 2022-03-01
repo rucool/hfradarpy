@@ -73,9 +73,7 @@ def plot_radials(dataset, *,
                   scale=120, headwidth=2.5, headlength=4, headaxislength=4)
 
     if 'velocity' in plot_type:
-        """
-        Velocity displays the direction and magnitude of the radials
-        """
+        #Velocity displays the direction and magnitude of the radials
         kwargs['colorbar'] = True
         kwargs['cmap'] = cmocean.cm.balance
 
@@ -88,9 +86,7 @@ def plot_radials(dataset, *,
         kwargs['offset'] = Normalize(vmin=velocity_min, vmax=velocity_max, clip=True)
         kwargs['ticks'] = np.append(np.arange(velocity_min, velocity_max, cbar_step), velocity_max)
     elif 'motion' in plot_type:
-        """
-        Motion displays the direction (towards or away) from radar
-        """
+        # Motion displays the direction (towards or away) from radar
         kwargs['colorbar'] = False
         kwargs['cmap'] = 'bwr'
 
@@ -99,6 +95,7 @@ def plot_radials(dataset, *,
         kwargs['color_clipped'] = velocity_temp.where(velocity < 0, other=1).data  # Going towards radar
         kwargs['offset'] = TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)
     elif 'qc_pass_fail' in plot_type:
+        # Quality control pass or fail flags are plotted
         kwargs['colorbar'] = False
         kwargs['cmap'] = colors.ListedColormap(['limegreen', 'red'])
 

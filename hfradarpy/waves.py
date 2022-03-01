@@ -45,11 +45,12 @@ class Waves(CTFParser):
     """
 
     def __init__(self, fname, replace_invalid=True):
-        """__init__
+        """
+        Initalize a Wave object from a CTF wave file.
 
         Args:
             fname (str or path.Path): Filename to be loaded
-            replace_invalid (bool, optional): _description_. Defaults to True.
+            replace_invalid (bool, optional): Replace invalid values to np.nan. Defaults to True.
         """
         logging.info('Loading wave file: {}'.format(fname))
         super().__init__(fname)
@@ -77,7 +78,8 @@ class Waves(CTFParser):
                 self.replace_invalid_values()
 
     def __repr__(self):
-        """String representation of Wave object
+        """
+        String representation of Wave object
 
         Returns:
             str: string representation of Wave object
@@ -126,18 +128,18 @@ class Waves(CTFParser):
                 continue
 
 
-    def flag_wave_heights(self, min=0.2, max=5, remove=False):
+    def flag_wave_heights(self, minimum=0.2, maximum=5, remove=False):
         """
         Flag bad wave heights in Wave instance. This method labels wave heights between wave_min and wave_max as good,
         while labeling anything else bad
 
         Args:
-            min (float, optional): Minimum Wave Height - Waves above this will be considered good. Defaults to 0.2.
-            max (int, optional): Maximum Wave Height - Waves less than this will be considered good. Defaults to 5.
+            minimum (float, optional): Minimum Wave Height - Waves above this will be considered good. Defaults to 0.2.
+            maximum (int, optional): Maximum Wave Height - Waves less than this will be considered good. Defaults to 5.
             remove (bool, optional): Remove bad wave heights. Defaults to False.
         """
-        boolean = self.data['MWHT'].between(min, max, inclusive='both')
-        
+        boolean = self.data['MWHT'].between(minimum, maximum, inclusive='both')
+
         if not remove:
             self.data['mwht_flag'] = 1
             self.data['mwht_flag'] = self.data['mwht_flag'].where(boolean, other=4)
@@ -145,20 +147,9 @@ class Waves(CTFParser):
             self.data = self.data[boolean]
 
 
-    def is_valid(self):
-        """Check if wave file has data
-
-        Returns:
-            bool: True if it has data, False if there is no data.
-        """
-        if self.data.empty:
-            return False
-        else:
-            return True
-    
-
     def to_xarray(self, enhance=False):
-        """Convert Wave data from a Pandas DataFrame to an xarray Dataset.
+        """
+        Convert Wave data from a Pandas DataFrame to an xarray Dataset.
 
         Args:
             enhance (bool, optional): Rename variables to something meaningful and add useful attributes. Defaults to False.
@@ -176,22 +167,24 @@ class Waves(CTFParser):
 
         # Assign header data to global attributes
         ds = ds.assign_attrs(self.metadata)
-        
+
         if enhance is True:
             # global_attr = required_global_attributes(required_attributes, time_start, time_end)
             ds = self.enhance_xarray(ds)
             ds = xr.decode_cf(ds)
 
         return ds
-    
+
     def enhance_xarray(self, xds):
-        """Rename variables to meaningful names. Add attributes to help the dataset be self-describing.
+        """
+        Rename variables to meaningful names. 
+        Add attributes to help the dataset be self-describing.
 
         Args:
             xds (xarray.Dataset): xarray.Dataset containing wave CTF files
 
         Returns:
-            xarray.Dataset: enhanced wave file xarray.Dataset 
+            xarray.Dataset: enhanced wave file xarray.Dataset
         """
         rename = dict()
         rename['MWHT'] = 'wave_height'
@@ -294,7 +287,7 @@ class Waves(CTFParser):
 
         # # add container variables that contain no data
         # xds = xds.assign(**dict(crs=False, instrument=False))
-        
+
         # # Set crs attributes
         # xds['crs'].attrs['grid_mapping_name'] = 'latitude_longitude'
         # xds['crs'].attrs['inverse_flattening'] = 298.257223563
@@ -302,14 +295,14 @@ class Waves(CTFParser):
         # xds['crs'].attrs['semi_major_axis'] = '6378137.0'
         # xds['crs'].attrs['epsg_code'] = 'EPSG:4326'
         # xds['crs'].attrs['comment'] = 'http://www.opengis.net/def/crs/EPSG/0/4326'
-        
+
         # xds['instrument'].attrs['long_name'] = 'Direction-finding high frequency radar antenna'
         # xds['instrument'].attrs['sensor_type'] = 'Direction-finding high frequency radar antenna'
         # xds['instrument'].attrs['make_model'] = self.metadata['Manufacturer']
         # xds['instrument'].attrs['serial_number'] = 1
 
         return xds
-    
+
     def create_netcdf(self, filename, prepend_ext=False, enhance=True):
         """
         Create a compressed netCDF4 (.nc) file from the radial instance
@@ -324,7 +317,7 @@ class Waves(CTFParser):
         if not '.nc' in str(filename):
             filename = filename.with_suffix('.nc')
 
-        # If the outputted file exists already, delete the existing file  
+        # If the outputted file exists already, delete the existing file
         if os.path.isfile(filename):
             os.remove(filename)
 
@@ -333,7 +326,7 @@ class Waves(CTFParser):
         # Convert pandas dataframe to xarray dataset using built-in pandas to_xarray function
         xds = self.to_xarray(enhance=enhance)
 
-        # Check if dataset has distance_from_origin in coordinates. We will prepend the .nc extension 
+        # Check if dataset has distance_from_origin in coordinates. We will prepend the .nc extension
         # with the appropriate name depending on whether the wave file is averaged or arranged by distance with manufacturer software
         if prepend_ext:
             if 'distance_from_origin' in xds.coords:
@@ -343,7 +336,7 @@ class Waves(CTFParser):
             # Change the extension to reflect the type of wave file
             filename = filename.with_suffix(f'.{pre_ext}.nc')
 
-        # Pass through make_encoding function fo automatically 
+        # Pass through make_encoding function fo automatically
         encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
         encoding['time'] = dict(zlib=False, _FillValue=None)
 
@@ -457,7 +450,8 @@ class Waves(CTFParser):
     #         f.write('%End:')
 
     def export(self, filename, file_type='netcdf', prepend_ext=False):
-        """Export wave file as either a codar .wls file or a netcdf .nc file
+        """
+        Export wave file as either a codar .wls file or a netcdf .nc file
 
         Args:
             filename (_type_): User defined filename of wave file you want to save
@@ -465,14 +459,14 @@ class Waves(CTFParser):
             prepend_ext (bool, optional): Prepend a descriptive term (ranged or averaged, depending on the type of wave netcdf file produced) to the .nc extension. Defaults to False.
         """
 
-        # Make sure filename is converted into a Path object 
+        # Make sure filename is converted into a Path object
         filename = Path(filename)
 
         if not self.is_valid():
             raise ValueError("Could not export ASCII data, the input file was invalid.")
-        
+
         if file_type == 'wave':
             logging.info('Cannot create .wls file. Writing of.wls CTF files not implemented yet.')
             # self.create_wave(filename)
-        elif file_type == 'netcdf':         
+        elif file_type == 'netcdf':
             self.create_netcdf(filename, prepend_ext)

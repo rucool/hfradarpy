@@ -98,7 +98,7 @@ def test_codar_qc():
     rad1.qc_qartod_primary_flag()
     # assert len(rad1.data) == 587
     assert 'QC07' in rad1.data
-    assert 'QC08' in rad1.data  
+    assert 'QC08' in rad1.data
     assert 'QC09' in rad1.data
     assert 'QC10' in rad1.data
     assert 'QC11' in rad1.data  # temporal gradient test
@@ -230,7 +230,7 @@ def test_wera_raw_to_quality_tabular_nc():
     rad1.to_netcdf(str(nc_file), model='tabular')
 
     xds2 = rad1.to_xarray('tabular', enhance=True)
-    
+
 
     with xr.open_dataset(nc_file) as xds1:
         assert len(xds1.QCTest) == 3  # no VFLG column so one test not run
@@ -355,4 +355,3 @@ class TestCombineRadials(unittest.TestCase):
             combined.time.values,
             np.sort(combined.time.values)
         )
- 

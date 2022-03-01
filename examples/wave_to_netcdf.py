@@ -10,7 +10,7 @@ log_format = '%(module)s:%(levelname)s:%(message)s [line %(lineno)d]'
 logging.basicConfig(stream=sys.stdout, format=log_format, level=log_level)
 
 
-def main(filename, save_dir, min=0.2, max=5):
+def main(filename, save_dir, minimum=0.2, maximum=5):
     # Convert save_dir to a Path object if its just a string.
     save_dir = Path(save_dir)
 
@@ -20,7 +20,7 @@ def main(filename, save_dir, min=0.2, max=5):
             return
 
     # Flag heights less than min and greater than max
-    w.flag_wave_heights(min=min, max=max, remove=True)
+    w.flag_wave_heights(minimum=minimum, maximum=maximum, remove=True)
 
     sname = save_dir / w.file_name
     w.export(sname, file_type='netcdf', prepend_ext=True)

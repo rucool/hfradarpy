@@ -4,7 +4,6 @@
 @email michaesm@marine.rutgers.edu
 @purpose Parse CODAR radial files utilizing the Radial subclass and convert to CF 1.6 NetCDF4 files
 """
-import os
 import glob
 from hfradarpy.radials import Radial
 from pathlib import Path

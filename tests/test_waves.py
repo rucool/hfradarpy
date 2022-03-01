@@ -68,12 +68,12 @@ def test_codar_ranged_wave_to_netcdf():
 
 def test_wave_filter():
     wave_file = data_root / 'waves' / 'wls' / 'SEAB' / 'WVLR_SEAB_2019_01_01_0000.wls'
-    
+
     # Load the wave file
     wav1 = Waves(wave_file, replace_invalid=False)
     assert len(wav1.data) == 12645
 
-    # Check that flag_wave_heights is removing the bad data (and not creating an extra column of flags) 
+    # Check that flag_wave_heights is removing the bad data (and not creating an extra column of flags)
     wav1.flag_wave_heights(2, 5, remove=True)
     assert len(wav1.data) < 12645
 
@@ -190,4 +190,3 @@ class TestCombineWaves(unittest.TestCase):
             combined.time.values,
             np.sort(combined.time.values)
         )
- 

@@ -20,7 +20,7 @@ class CTFParser(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, fname):
-        """     
+        """
         Return an LLUVParser object
 
         Args:

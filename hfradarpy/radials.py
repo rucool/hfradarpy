@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, clean=False, clean_path=None):
-    """Main function to parse and qc radial files.
+    """
+    Main function to parse and qc radial files.
 
     Setting clean to True will create two separate quality controlled radial files. Must set clean_path.
     The first radial file with containing flag metadata will be saved to save_path. This file contains data along with metadata flags.
@@ -44,7 +45,7 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
         qc_qartod_primary_flag=dict(include=['qc_qartod_syntax', 'qc_qartod_valid_location', 'qc_qartod_radial_count',
                                              'qc_qartod_maximum_velocity', 'qc_qartod_spatial_median'])
     )
-    
+
     if not isinstance(radial_file, Radial):
         r = Radial(radial_file)
     else:
@@ -107,7 +108,7 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
                 r.to_netcdf(os.path.join(save_path, r.file_name), 'tabular')
             elif export == 'netcdf-gridded':
                 r.to_netcdf(os.path.join(save_path, r.file_name), 'gridded')
-            
+
             if clean:
                 if export == 'radial':
                     rclean.to_ruv(os.path.join(clean_path, rclean.file_name))
@@ -118,7 +119,7 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
         else:
             return r
 
-def concat(radial_list, type='gridded', enhance=False):
+def concat(radial_list, method='gridded', enhance=False):
     """
     This function takes a list of Radial objects or radial file paths and
     combines them along the time dimension using xarrays built-in concatenation
@@ -126,7 +127,7 @@ def concat(radial_list, type='gridded', enhance=False):
 
     Args:
         radial_list (list): list of radial files or Radial objects that you want to concatenate
-        type (str, optional): 'gridded' or 'tabular'. Defaults to 'gridded'
+        method (str, optional): 'gridded' or 'tabular'. Defaults to 'gridded'
         enhance (bool, optional): Change manufacturer variables to cf compliant variable names. Add CF attributes and metadata. Defaults to False.
 
     Returns:
@@ -138,9 +139,9 @@ def concat(radial_list, type='gridded', enhance=False):
         if not isinstance(radial, Radial):
             radial = Radial(radial)
 
-        if type == 'gridded':
+        if method == 'gridded':
             radial_dict[radial.file_name] = radial.to_xarray('gridded', enhance=enhance)
-        elif type == 'tabular':
+        elif method == 'tabular':
             radial_dict[radial.file_name] = radial.to_xarray('tabular', enhance=enhance)
 
     ds = xr.concat(radial_dict.values(), 'time')
@@ -155,7 +156,8 @@ class Radial(CTFParser):
     ~/hfradarpy/ctf.py in order to load CODAR Radial files
     """
     def __init__(self, fname, replace_invalid=True, empty_radial=False):
-        """Initialize the radial object
+        """
+        Initialize the radial object
 
         Args:
             fname (str or Path): Full file path to the radial .ruv to be loaded
@@ -229,10 +231,11 @@ class Radial(CTFParser):
                 self._tables[key]['data'] = self.range_information
 
     def mask_over_land(self, subset=False):
-        """Mask out of any radial data that lies over the land.
+        """
+        Mask out of any radial data that lies over the land.
 
         Args:
-            subset (bool, optional): If True, removes any points not over water from the dataset. 
+            subset (bool, optional): If True, removes any points not over water from the dataset.
             If False, return an index of data that lies over water. Defaults to True.
 
         Returns:
@@ -272,13 +275,14 @@ class Radial(CTFParser):
 
 
     def to_xarray(self, model='tabular', enhance=False, range_minmax=None, bearing=None):
-        """Helper function 
+        """
+        Helper function
 
         Args:
             model (str, optional): Create an xarray dataset with a 'tabular' (time) or 'gridded' (time, range, bearing) data model. Defaults to 'tabular'.
             enhance (bool, optional): Change manufacturer variables to meaningful variable names. Add attributes and other metadata. Defaults to True.
-            range_minmax (list or tuple, optional): For gridded dataset only, Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data. 
-            bearing (list or tuple, optional): For gridded dataset only, Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data. 
+            range_minmax (list or tuple, optional): For gridded dataset only, Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data.
+            bearing (list or tuple, optional): For gridded dataset only, Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data.
         """
 
         if model == 'tabular':
@@ -291,7 +295,8 @@ class Radial(CTFParser):
 
 
     def _to_xarray_gridded(self, range_minmax=None, bearing=None, enhance=True):
-        """Convert radial file to an xarray dataset on a radial grid.
+        """
+        Convert radial file to an xarray dataset on a radial grid.
         This dataset has dimensions of time,range, and bearing.
         Add list range_min and range_max if you want to make the file only include range cells between the two.
 
@@ -299,8 +304,8 @@ class Radial(CTFParser):
         http://cordc.ucsd.edu/projects/mapping/documents/HFRNet_Radial_NetCDF.pdf
 
         Args:
-            range_minmax (list or tuple, optional): Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data. 
-            bearing (list or tuple, optional): Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data. 
+            range_minmax (list or tuple, optional): Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data.
+            bearing (list or tuple, optional): Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data.
             enhance (bool, optional): Change manufacturer variables to cf compliant variable names. Add CF attributes and metadata. Defaults to True.
 
         Returns:
@@ -341,7 +346,7 @@ class Radial(CTFParser):
         )
 
         #round floats to 4 decimal places due to inaccuracy of np.arange
-        range_dim = [round(x, 4) for x in range_dim] 
+        range_dim = [round(x, 4) for x in range_dim]
 
         # If bearing has user input and
         if bearing:
@@ -419,17 +424,18 @@ class Radial(CTFParser):
         for f in flips:
             if f in ds:
                 ds[f] = -ds[f]
-        
+
         # Assign header data to global attributes
         ds = ds.assign_attrs(self.metadata)
-        
+
         if enhance is True:
             ds = self.enhance_xarray(ds)
             ds = xr.decode_cf(ds)
         return ds
 
     def _to_xarray_tabular(self, enhance=False):
-        """Convert radial file to an xarray dataset on a radial grid.
+        """
+        Convert radial file to an xarray dataset on a radial grid.
         This dataset has one dimension, time.
 
         Args:
@@ -463,18 +469,20 @@ class Radial(CTFParser):
         for f in flips:
             if f in ds:
                 ds[f] = -ds[f]
-        
+
         # Assign header data to global attributes
         ds = ds.assign_attrs(self.metadata)
-        
+
         if enhance is True:
             ds = self.enhance_xarray(ds)
             ds = xr.decode_cf(ds)
 
         return ds
 
-    def enhance_xarray(self, xds):
-        """Change manufacturer variables to meaningful variable names. 
+    @staticmethod
+    def enhance_xarray(xds):
+        """
+        Change manufacturer variables to meaningful variable names.
         Add attributes and other metadata.
 
         Args:
@@ -762,11 +770,14 @@ class Radial(CTFParser):
         return xds
 
     def file_type(self):
-        """Return a string representing the type of file this is."""
+        """
+        Return a string representing the type of file this is.
+        """
         return 'radial'
 
     def clean_header(self, split_origin=False):
-        """Clean up the radial header dictionary so that you can upload it to the HFR MySQL Database.
+        """
+        Clean up the radial header dictionary so that you can upload it to the HFR MySQL Database.
 
         Args:
             split_origin (bool, optional): Split the 'Origin' string for the receiver location into a list of floats [lon, lat]. Defaults to False.
@@ -845,17 +856,18 @@ class Radial(CTFParser):
                 self.metadata[key] = None
 
     def to_netcdf(self, filename, model='tabular', prepend_extension=False, range_minmax=None, bearing=None, enhance=True):
-        """Create a compressed netCDF4 (.nc) file from the Radial object
+        """
+        Create a compressed netCDF4 (.nc) file from the Radial object
 
         Args:
             filename (str or Path): User defined filename of radial file you want to save
             model (str, optional): Create a 'tabular' (time) or 'gridded' (time, range, bearing) NetCDF. Defaults to 'tabular'.
             prepend_extension (bool, optional): Prepend a descriptive term (bearing or gridded, depending on the type of netcdf file produced) to the .nc extension. Defaults to False.
-            range_minmax (list or tuple, optional): For gridded NetCDF only, Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data. 
-            bearing (list or tuple, optional): For gridded NetCDF only, Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data. 
+            range_minmax (list or tuple, optional): For gridded NetCDF only, Range minimum (km) and range maximum (km) of the radial. Defaults to None which automatically infers the range based off of the radial data.
+            bearing (list or tuple, optional): For gridded NetCDF only, Antenna bearing (degrees) and angular resolution (degrees) of the radial grid. Defaults to None which automatically infers the bearing based off of the radial data.
             enhance (bool, optional): Change manufacturer variables to meaningful variable names. Add attributes and other metadata. Defaults to True.
         """
-        # Make sure filename is converted into a Path object 
+        # Make sure filename is converted into a Path object
         filename = Path(filename)
 
         if not self.is_valid():
@@ -865,7 +877,7 @@ class Radial(CTFParser):
         if not '.nc' in str(filename):
             filename = filename.with_suffix('.nc')
 
-        # If the outputted file exists already, delete the existing file  
+        # If the outputted file exists already, delete the existing file
         if os.path.isfile(filename):
             os.remove(filename)
 
@@ -877,8 +889,8 @@ class Radial(CTFParser):
         #     xds = self.to_xarray_tabular(enhance=enhance)
         # elif 'gridded' in netcdf_type:
         #     xds = self.to_xarray_gridded(range_minmax=range_minmax, bearing=bearing, enhance=enhance)
-        
-        # Check if dataset has distance_from_origin in coordinates. We will prepend the .nc extension 
+
+        # Check if dataset has distance_from_origin in coordinates. We will prepend the .nc extension
         # with the appropriate name depending on whether the radial file is tabular or gridded.
         if prepend_extension:
             if 'bearing' in xds.coords:
@@ -924,17 +936,18 @@ class Radial(CTFParser):
         )
 
     def to_ruv(self, filename):
-        """Create a CODAR Radial (.ruv) file from radial instance
+        """
+        Create a CODAR Radial (.ruv) file from radial instance
 
         Args:
             filename (str or Path): User defined filename of radial file you want to save
         """
-        # Make sure filename is converted into a Path object 
+        # Make sure filename is converted into a Path object
         filename = Path(filename)
 
         if not self.is_valid():
             raise ValueError("Could not export ASCII data, the input file was invalid.")
-            
+
         # Ensure that the filename passed into the export function is not the same as the filename that we read in.
         # # We do not want to overwrite the original wave file by accident.
         if self.full_file == str(filename):
@@ -1046,17 +1059,19 @@ class Radial(CTFParser):
                 f.write('%ProcessingTool: {}\n'.format(tool))
                 # f.write('%{}: {}\n'.format(footer_key, footer_value))
             f.write('%End:')
-            
+
 
     def initialize_qc(self):
-        """Initialize an empty list of QC tests
+        """
+        Initialize an empty list of QC tests
         """
         self.metadata['QCTest'] = []
 
     # QARTOD QC Tests
     def qc_qartod_avg_radial_bearing(self, reference_bearing, warning_threshold=15, failure_threshold=30):
         """
-        Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Integrated Ocean Observing System (IOOS)
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Valid Location (Test 12)
         Check that the average radial bearing remains relatively constant (Roarty et al. 2012).
 
@@ -1093,7 +1108,8 @@ class Radial(CTFParser):
 
     def qc_qartod_valid_location(self, use_mask=False):
         """
-        Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Integrated Ocean Observing System (IOOS) 
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Valid Location (Test 8)
         Removes radial vectors placed over land or in other unmeasureable areas
 
@@ -1107,7 +1123,7 @@ class Radial(CTFParser):
         Args:
             use_mask (bool, optional): Use mask_over_land function in addition to manufacturers flags. Defaults to False.
         """
-        
+
         test_str = 'QC08'
         flag_column = 'VFLG'
 
@@ -1127,7 +1143,8 @@ class Radial(CTFParser):
 
     def qc_qartod_radial_count(self, radial_min_count=150, radial_low_count=300):
         """
-        Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Integrated Ocean Observing System (IOOS) 
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Radial Count (Test 9)
         Rejects radials in files with low radial counts (poor radial map coverage).
 
@@ -1171,7 +1188,8 @@ class Radial(CTFParser):
 
     def qc_qartod_maximum_velocity(self, radial_max_speed=250, radial_high_speed=150):
         """
-        Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Integrated Ocean Observing System (IOOS)
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Max Threshold (Test 7)
         Ensures that a radial current speed is not unrealistically high.
 
@@ -1209,8 +1227,10 @@ class Radial(CTFParser):
 
     def qc_qartod_spatial_median(self, radial_smed_range_cell_limit=2.1, radial_smed_angular_limit=10, radial_smed_current_difference=30):
         """
-        Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Integrated Ocean Observing System (IOOS) 
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Spatial Median (Test 10)
+        
         Ensures that the radial velocity is not too different from nearby radial velocities.
         RV is the radial velocity
         NV is a set of radial velocities for neighboring radial cells (cells within radius of 'radial_smed_range_cell_limit' * Range Step (km)
@@ -1314,7 +1334,8 @@ class Radial(CTFParser):
 
     def qc_qartod_syntax(self):
         """
-        Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Integrated Ocean Observing System (IOOS)
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Syntax (Test 6)
 
         This test is required to be QARTOD compliant.
@@ -1376,7 +1397,8 @@ class Radial(CTFParser):
 
     def qc_qartod_temporal_gradient(self, r0, gradient_temp_fail=54, gradient_temp_warn=36):
         """
-        Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Integrated Ocean Observing System (IOOS)
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Temporal Gradient (Test 11)
         Checks for satisfactory temporal rate of change of radial components
 
@@ -1390,7 +1412,7 @@ class Radial(CTFParser):
         flag = 4
 
         Suspect = 3 The temporal change between successive radial velocities is less than the gradient failure threshold but exceeds the gradient warn threshold.
-        
+
         If GRADIENT_TEMP < GRADIENT_TEMP_FAIL & GRADIENT_TEMP ≥ GRADIENT_TEMP_WARN,
         flag = 3
 
@@ -1445,7 +1467,7 @@ class Radial(CTFParser):
         A primary flag is a single flag set to the worst case of all QC flags within the data record.
 
         Args:
-            include (list, optional): list of quality control tests which should be included in the primary flag.  Defaults to None, which will include all tests. 
+            include (list, optional): list of quality control tests which should be included in the primary flag.  Defaults to None, which will include all tests.
         """
         test_str = 'PRIM'
 
