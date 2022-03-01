@@ -1,0 +1,7 @@
+xarray
+netcdf4
+geopandas>=0.10.0
+rtree
+matplotlib
+cartopy
+cmocean
