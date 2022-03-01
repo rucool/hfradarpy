@@ -1,12 +1,10 @@
 
 import datetime as dt
-import geopandas as gpd
 import numpy as np
 import os
 import pandas as pd
 import re
 import copy
-from shapely.geometry import Point
 import xarray as xr
 from hfradarpy.ctf import CTFParser
 from hfradarpy.common import create_dir
@@ -48,7 +46,7 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
     )
     
     if not isinstance(radial_file, Radial):
-        r = Radial(radial_file, mask_over_land=False)
+        r = Radial(radial_file)
     else:
         r = radial_file
 
@@ -156,13 +154,12 @@ class Radial(CTFParser):
     This class should be used when loading a CODAR radial (.ruv) file. This class utilizes the generic LLUV class from
     ~/hfradarpy/ctf.py in order to load CODAR Radial files
     """
-    def __init__(self, fname, replace_invalid=True, mask_over_land=False, empty_radial=False):
+    def __init__(self, fname, replace_invalid=True, empty_radial=False):
         """Initialize the radial object
 
         Args:
             fname (str or Path): Full file path to the radial .ruv to be loaded
             replace_invalid (bool, optional): Replace invalid/dummy manufacturer fill values with NaN. Defaults to True.
-            mask_over_land (bool, optional): Mask radials that over land with NaN. Defaults to False.
             empty_radial (bool, optional): Returns an empty Radial object. Defaults to False.
         """
         logging.info('Loading radial file: {}'.format(fname))
@@ -192,9 +189,6 @@ class Radial(CTFParser):
         if not self.data.empty:
             if replace_invalid:
                 self.replace_invalid_values()
-
-            if mask_over_land:
-                self.mask_over_land()
 
             if empty_radial:
                 self.empty_radial()
@@ -238,36 +232,43 @@ class Radial(CTFParser):
         """Mask out of any radial data that lies over the land.
 
         Args:
-            subset (bool, optional): If True, removes any points not over water from the dataset. If False, return an index of data that lies over water. Defaults to True.
+            subset (bool, optional): If True, removes any points not over water from the dataset. 
+            If False, return an index of data that lies over water. Defaults to True.
 
         Returns:
-            self.data (pd.DataFrame): If subset = True, a pandas dataframe is returned with data that is over water.
+            self.data (pd.DataFrame): subset = True, a pandas dataframe is returned with data that is over water.
             or
-            water_index (pd.Series): If subset = False, a pandas series containing the index of points of water is returned
+            water_index (pd.Series): subset = False, pandas series containing the index of points of water is returned
         """
-        logging.info('Masking radials over land')
-
-        land = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-        land = land[land['continent'] == 'North America']
-
-        geodata = gpd.GeoDataFrame(
-            self.data[['LOND', 'LATD']],
-            crs='EPSG:4326',
-            geometry=[
-                Point(xy) for xy in zip(self.data.LOND.values, self.data.LATD.values)
-            ]
-        )
-        # Join the geodataframe containing radial points with geodataframe containing leasing areas
-        geodata = gpd.tools.sjoin(geodata.to_crs(4326), land.to_crs(4326), how='left', predicate='intersects')
-
-        # All data in the continent column that lies over water should be nan.
-        water_index = geodata['continent'].isna()
-
-        if subset:
-            # Subset the data to water only
-            self.data = self.data.loc[water_index].reset_index(drop=True)
+        try:
+            import geopandas as gpd
+            from shapely.geometry import Point
+        except ImportError:
+            raise NotImplementedError("You need geopandas>=0.10.0 and shapely installed in order to apply land mask")
         else:
-            return water_index
+            logging.info('Masking radials over land')
+
+            land = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+            land = land[land['continent'] == 'North America']
+
+            geodata = gpd.GeoDataFrame(
+                self.data[['LOND', 'LATD']],
+                crs='EPSG:4326',
+                geometry=[
+                    Point(xy) for xy in zip(self.data.LOND.values, self.data.LATD.values)
+                ]
+            )
+            # Join the geodataframe containing radial points with geodataframe containing leasing areas
+            geodata = gpd.tools.sjoin(geodata.to_crs(4326), land.to_crs(4326), how='left', predicate='intersects')
+
+            # All data in the continent column that lies over water should be nan.
+            water_index = geodata['continent'].isna()
+
+            if subset:
+                # Subset the data to water only
+                self.data = self.data.loc[water_index].reset_index(drop=True)
+            else:
+                return water_index
 
 
     def to_xarray(self, model='tabular', enhance=False, range_minmax=None, bearing=None):
@@ -1090,8 +1091,8 @@ class Radial(CTFParser):
         ))
         self.append_to_tableheader(test_str, '(flag)')
 
-    def qc_qartod_valid_location(self):
-        '''
+    def qc_qartod_valid_location(self, use_mask=False):
+        """
         Integrated Ocean Observing System (IOOS) Quality Assurance of Real-Time Oceanographic Data (QARTOD)
         Valid Location (Test 8)
         Removes radial vectors placed over land or in other unmeasureable areas
@@ -1102,14 +1103,19 @@ class Radial(CTFParser):
         in total vector calculations.
 
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-        '''
+
+        Args:
+            use_mask (bool, optional): Use mask_over_land function in addition to manufacturers flags. Defaults to False.
+        """
+        
         test_str = 'QC08'
         flag_column = 'VFLG'
 
         if flag_column in self.data:
             self.data[test_str] = 1  # add new column of passing values
-            self.data.loc[(self.data[flag_column] == 128), test_str] = 4  # set value equal to 4 where land is flagged (manufacturer)
-            self.data.loc[~self.mask_over_land(subset=False), test_str] = 4  # set value equal to 4 where land is flagged (mask_over_land)
+            self.data.loc[(self.data[flag_column] == 128), test_str] = 4 # set to 4 where land is flagged (manufacturer)
+            if use_mask:
+                self.data.loc[~self.mask_over_land(), test_str] = 4 # set to 4 where land is flagged (mask_over_land)
             self.metadata['QCTest'].append((
                 f'qc_qartod_valid_location ({test_str}) - Test applies to each row. Thresholds=[{flag_column}==128]: '
                 f'See results in column {test_str} below'
@@ -1490,6 +1496,7 @@ class Radial(CTFParser):
 
 if __name__ == '__main__':
     f = 'hfradarpy/data/radials/ruv/SEAB/RDLi_SEAB_2019_01_01_0200.ruv'
-    r = Radial(f, replace_invalid=True, mask_over_land=True)
+    r = Radial(f, replace_invalid=True)
+    r.mask_over_land()
     ds = r.to_xarray('gridded')
     print(ds)
