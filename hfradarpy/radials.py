@@ -941,6 +941,7 @@ class Radial(CTFParser):
 
         Args:
             filename (str or Path): User defined filename of radial file you want to save
+            validate (boolean): If False, no validation check will be performed before creating the file.
         """
         # Make sure filename is converted into a Path object
         filename = Path(filename)
