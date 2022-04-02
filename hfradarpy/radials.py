@@ -935,18 +935,20 @@ class Radial(CTFParser):
             unlimited_dims=['time']
         )
 
-    def to_ruv(self, filename):
+    def to_ruv(self, filename, validate=True):
         """
         Create a CODAR Radial (.ruv) file from radial instance
 
         Args:
             filename (str or Path): User defined filename of radial file you want to save
+            validate (boolean): If False, no validation check will be performed before creating the file.
         """
         # Make sure filename is converted into a Path object
         filename = Path(filename)
 
-        if not self.is_valid():
-            raise ValueError("Could not export ASCII data, the input file was invalid.")
+        if validate:
+                if not self.is_valid():
+                    raise ValueError("Could not export ASCII data, the input file was invalid.")
 
         # Ensure that the filename passed into the export function is not the same as the filename that we read in.
         # # We do not want to overwrite the original wave file by accident.
