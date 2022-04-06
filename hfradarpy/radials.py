@@ -935,12 +935,14 @@ class Radial(CTFParser):
             unlimited_dims=['time']
         )
 
-    def to_ruv(self, filename, validate=True):
+    def to_ruv(self, filename, validate=True, overwrite=False):
         """
         Create a CODAR Radial (.ruv) file from radial instance
 
         Args:
             filename (str or Path): User defined filename of radial file you want to save
+            validate (bool): If False, no validation check will be performed before creating the file. Defaults to True.
+            overwrite (bool): If True, an exported file can overwrite an existing file with the same name. Defaults to False.
         """
         # Make sure filename is converted into a Path object
         filename = Path(filename)
@@ -951,9 +953,10 @@ class Radial(CTFParser):
 
         # Ensure that the filename passed into the export function is not the same as the filename that we read in.
         # # We do not want to overwrite the original wave file by accident.
-        if self.full_file == str(filename):
-            suffix = f'.mod{filename.suffix}'
-            filename = filename.with_suffix(suffix)
+        if not overwrite:
+            if self.full_file == str(filename):
+                suffix = f'.mod{filename.suffix}'
+                filename = filename.with_suffix(suffix)
 
         if os.path.isfile(filename):
             os.remove(filename)
@@ -977,6 +980,9 @@ class Radial(CTFParser):
                 for table_key, table_value in self._tables[table].items():
                     if table_key != 'data':
                         if (table_key == 'TableType') & (table == '1'):
+                            if 'QCD' in self.metadata:
+                                for qcd_info in self.metadata['QCD']:
+                                    f.write('%{}\n'.format(qcd_info))
                             if 'QCTest' in self.metadata:
                                 f.write('%QCFileVersion: 1.0.0\n')
                                 f.write('%QCReference: Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n')
