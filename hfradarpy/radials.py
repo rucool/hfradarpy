@@ -941,8 +941,7 @@ class Radial(CTFParser):
 
         Args:
             filename (str or Path): User defined filename of radial file you want to save
-            validate (bool): If False, no validation check will be performed before creating the file. Defaults to True.
-            overwrite (bool): If True, an exported file can overwrite an existing file with the same name. Defaults to False.
+            validate (boolean): If False, no validation check will be performed before creating the file.
         """
         # Make sure filename is converted into a Path object
         filename = Path(filename)
@@ -981,7 +980,7 @@ class Radial(CTFParser):
                     if table_key != 'data':
                         if (table_key == 'TableType') & (table == '1'):
                             if 'QCD' in self.metadata:
-                                for qcd_info in self.metadata['QCD']:
+                               for qcd_info in self.metadata['QCD']:
                                     f.write('%{}\n'.format(qcd_info))
                             if 'QCTest' in self.metadata:
                                 f.write('%QCFileVersion: 1.0.0\n')
