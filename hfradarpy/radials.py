@@ -942,6 +942,8 @@ class Radial(CTFParser):
         Args:
             filename (str or Path): User defined filename of radial file you want to save
             validate (boolean): If False, no validation check will be performed before creating the file.
+            overwrite (bool): If True, an exported file can overwrite an existing file with the same name. Defaults to False.
+
         """
         # Make sure filename is converted into a Path object
         filename = Path(filename)
