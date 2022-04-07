@@ -76,7 +76,7 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
             r.qc_qartod_spatial_median(**qc_values['qc_qartod_spatial_median'])
 
         if 'qc_qartod_temporal_gradient' in qc_keys:
-            r.qc_qartod_temporal_gradient(previous_full_file)
+            r.qc_qartod_temporal_gradient(previous_full_file,**qc_values['qc_qartod_temporal_gradient'])
 
         if 'qc_qartod_avg_radial_bearing' in qc_keys:
             r.qc_qartod_avg_radial_bearing(**qc_values['qc_qartod_avg_radial_bearing'])
