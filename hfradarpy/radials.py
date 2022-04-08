@@ -1450,20 +1450,26 @@ class Radial(CTFParser):
         if os.path.exists(r0):
             r0 = Radial(r0)
 
-            merged = self.data.merge(r0.data, on=['LOND', 'LATD'], how='left', suffixes=(None, '_x'), indicator='Exist')
-            difference = (merged['VELO'] - merged['VELO_x']).abs()
+            if r0.is_valid():
 
-            # Add new column to dataframe for test, and set every row as passing, 1, flag
-            self.data[test_str] = 1
+                merged = self.data.merge(r0.data, on=['LOND', 'LATD'], how='left', suffixes=(None, '_x'), indicator='Exist')
+                difference = (merged['VELO'] - merged['VELO_x']).abs()
 
-            # If any point in the recent radial does not exist in the previous radial, set row as a not evaluated, 2, flag
-            self.data.loc[merged['Exist'] == 'left_only', test_str] = 2
+                # Add new column to dataframe for test, and set every row as passing, 1, flag
+                self.data[test_str] = 1
 
-            # velocity is less than radial_max_speed but greater than radial_high_speed, set row as a warning, 3, flag
-            self.data.loc[(difference < gradient_temp_fail) & (difference > gradient_temp_warn), test_str] = 3
+                # If any point in the recent radial does not exist in the previous radial, set row as a not evaluated, 2, flag
+                self.data.loc[merged['Exist'] == 'left_only', test_str] = 2
 
-            # if velocity is greater than radial_max_speed, set that row as a fail, 4, flag
-            self.data.loc[(difference > gradient_temp_fail), test_str] = 4
+                # velocity is less than radial_max_speed but greater than radial_high_speed, set row as a warning, 3, flag
+                self.data.loc[(difference < gradient_temp_fail) & (difference > gradient_temp_warn), test_str] = 3
+
+                # if velocity is greater than radial_max_speed, set that row as a fail, 4, flag
+                self.data.loc[(difference > gradient_temp_fail), test_str] = 4
+            else:
+                # Add new column to dataframe for test, and set every row as not_evaluated, 2, flag
+                self.data[test_str] = 2
+                logging.warning('{} is corrupt or contains no data. Setting column {} to not_evaluated flag'.format(r0, test_str))
 
         else:
             # Add new column to dataframe for test, and set every row as not_evaluated, 2, flag
