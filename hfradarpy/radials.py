@@ -76,7 +76,7 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
             r.qc_qartod_spatial_median(**qc_values['qc_qartod_spatial_median'])
 
         if 'qc_qartod_temporal_gradient' in qc_keys:
-            r.qc_qartod_temporal_gradient(previous_full_file)
+            r.qc_qartod_temporal_gradient(previous_full_file,**qc_values['qc_qartod_temporal_gradient'])
 
         if 'qc_qartod_avg_radial_bearing' in qc_keys:
             r.qc_qartod_avg_radial_bearing(**qc_values['qc_qartod_avg_radial_bearing'])
@@ -935,24 +935,29 @@ class Radial(CTFParser):
             unlimited_dims=['time']
         )
 
-    def to_ruv(self, filename):
+    def to_ruv(self, filename, validate=True, overwrite=False):
         """
         Create a CODAR Radial (.ruv) file from radial instance
 
         Args:
             filename (str or Path): User defined filename of radial file you want to save
+            validate (boolean): If False, no validation check will be performed before creating the file.
+            overwrite (bool): If True, an exported file can overwrite an existing file with the same name. Defaults to False.
+
         """
         # Make sure filename is converted into a Path object
         filename = Path(filename)
 
-        if not self.is_valid():
-            raise ValueError("Could not export ASCII data, the input file was invalid.")
+        if validate:
+                if not self.is_valid():
+                    raise ValueError("Could not export ASCII data, the input file was invalid.")
 
         # Ensure that the filename passed into the export function is not the same as the filename that we read in.
         # # We do not want to overwrite the original wave file by accident.
-        if self.full_file == str(filename):
-            suffix = f'.mod{filename.suffix}'
-            filename = filename.with_suffix(suffix)
+        if not overwrite:
+            if self.full_file == str(filename):
+                suffix = f'.mod{filename.suffix}'
+                filename = filename.with_suffix(suffix)
 
         if os.path.isfile(filename):
             os.remove(filename)
@@ -976,6 +981,9 @@ class Radial(CTFParser):
                 for table_key, table_value in self._tables[table].items():
                     if table_key != 'data':
                         if (table_key == 'TableType') & (table == '1'):
+                            if 'QCD' in self.metadata:
+                               for qcd_info in self.metadata['QCD']:
+                                    f.write('%{}\n'.format(qcd_info))
                             if 'QCTest' in self.metadata:
                                 f.write('%QCFileVersion: 1.0.0\n')
                                 f.write('%QCReference: Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n')
@@ -1442,20 +1450,26 @@ class Radial(CTFParser):
         if os.path.exists(r0):
             r0 = Radial(r0)
 
-            merged = self.data.merge(r0.data, on=['LOND', 'LATD'], how='left', suffixes=(None, '_x'), indicator='Exist')
-            difference = (merged['VELO'] - merged['VELO_x']).abs()
+            if r0.is_valid():
 
-            # Add new column to dataframe for test, and set every row as passing, 1, flag
-            self.data[test_str] = 1
+                merged = self.data.merge(r0.data, on=['LOND', 'LATD'], how='left', suffixes=(None, '_x'), indicator='Exist')
+                difference = (merged['VELO'] - merged['VELO_x']).abs()
 
-            # If any point in the recent radial does not exist in the previous radial, set row as a not evaluated, 2, flag
-            self.data.loc[merged['Exist'] == 'left_only', test_str] = 2
+                # Add new column to dataframe for test, and set every row as passing, 1, flag
+                self.data[test_str] = 1
 
-            # velocity is less than radial_max_speed but greater than radial_high_speed, set row as a warning, 3, flag
-            self.data.loc[(difference < gradient_temp_fail) & (difference > gradient_temp_warn), test_str] = 3
+                # If any point in the recent radial does not exist in the previous radial, set row as a not evaluated, 2, flag
+                self.data.loc[merged['Exist'] == 'left_only', test_str] = 2
 
-            # if velocity is greater than radial_max_speed, set that row as a fail, 4, flag
-            self.data.loc[(difference > gradient_temp_fail), test_str] = 4
+                # velocity is less than radial_max_speed but greater than radial_high_speed, set row as a warning, 3, flag
+                self.data.loc[(difference < gradient_temp_fail) & (difference > gradient_temp_warn), test_str] = 3
+
+                # if velocity is greater than radial_max_speed, set that row as a fail, 4, flag
+                self.data.loc[(difference > gradient_temp_fail), test_str] = 4
+            else:
+                # Add new column to dataframe for test, and set every row as not_evaluated, 2, flag
+                self.data[test_str] = 2
+                logging.warning('{} is corrupt or contains no data. Setting column {} to not_evaluated flag'.format(r0, test_str))
 
         else:
             # Add new column to dataframe for test, and set every row as not_evaluated, 2, flag

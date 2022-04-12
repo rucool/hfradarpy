@@ -109,3 +109,9 @@ output/plots/wera/RDL_csw_2019_10_24_162300-motion.png
 output/plots/wera/RDL_csw_2019_10_24_162300-velocity.png
 .ipynb_checkpoints/Untitled-checkpoint.ipynb
 junit.xml
+.idea/workspace.xml
+.idea/vcs.xml
+.idea/other.xml
+.idea/modules.xml
+.idea/misc.xml
+.idea/inspectionProfiles/profiles_settings.xml
