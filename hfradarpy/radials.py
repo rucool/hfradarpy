@@ -965,7 +965,8 @@ class Radial(CTFParser):
             if key not in present_keys:
                 self.metadata[key] = None
 
-    def to_netcdf(self, filename, model="tabular", prepend_extension=False, range_minmax=None, bearing=None, enhance=True):
+    def to_netcdf(self, filename, model="tabular", prepend_extension=False, range_minmax=None, bearing=None, enhance=True,
+                  user_attributes=None):
         """
         Create a compressed netCDF4 (.nc) file from the Radial object
 
@@ -1024,36 +1025,6 @@ class Radial(CTFParser):
         # Grab min and max time in dataset for entry into global attributes for cf compliance
         time_start = xds['time'].min().data
         time_end = xds['time'].max().data
-
-        user_attributes = dict(title='Marathon, FL (MARA) Long Range Radial Currents',
-                        naming_authority='edu.rutgers.marine.rucool',
-                        comment='Site maintained by the University of South Florida (USF). For oi_* global attribute explanations, see references attribute',
-                        acknowledgment='This data is provided by USF as part of the "Understand Gulf Ocean Systems (UGOS)" project. Funding is provided by the National Academies of Sciences, Engineering, and Medicine (NASEM).',
-                        standard_name_vocabulary='CF Standard Name Table v41',
-                        creator_name='Michael Smith',
-                        creator_email='michaesm@marine.rutgers.edu',
-                        creator_url='rucool.marine.rutgers.edu',
-                        creator_type='person',
-                        creator_institution='Center for Ocean Observing and Leadership, Department of Marine & Coastal Sciences, Rutgers University',
-                        institution='Ocean Circulation Group - University of South Florida, College of Marine Science',
-                        project='Understanding Gulf Ocean Systems - Dry Tortugas and Lower Keys High Frequency Radars - High Frequency Radar Sea Surface Current Mapping',
-                        sea_name='Straits of Florida',
-                        contributor_name='Clifford Merz, Yonggang Liu, Michael Smith',
-                        contributor_role='Principal Investigator/Hardware Maintenance, Data Analyst, Data QA/QC',
-                        platform='UGOS HF Radar 5MHz Network',
-                        instrument='CODAR SeaSonde High Frequency Radar - MARA - Marathon, FL',
-                        references='https://www.nationalacademies.org/gulf/fellowships-and-grants/understanding-gulf-ocean-systems',
-                        summary='Radial Vectors quality controlled using HFRadarPyPython toolbox',
-                        ncei_template_version='NCEI_NetCDF_Grid_Template_v2.0',
-                        history='Hourly codar radial data quality controlled to QARTOD .',
-                        cdm_data_type='Swath',
-                        source='CODAR SeaSonde Surface Current Mapping Device',
-                        processing_level='Level 3',
-                        keywords='Environmental Advisories > Marine Advisories > Marine Weather/Forecast, Oceans > Coastal Processes, Oceans > Ocean Circulation, Oceans > Ocean Waves, Oceans > Ocean Winds, Oceans > Ocean Tides, Spectral/Engineering > Radar',
-                        publisher_name='NOAA National Centers for Environmental Information',
-                        publisher_email='ncei.info@noaa.gov',
-                        publisher_url='www.ncei.noaa.gov',
-                        reference_time='seconds since 1970-01-01 00:00:00')
 
         if user_attributes:
             from hfradarpy.io.nc import required_global_attributes
