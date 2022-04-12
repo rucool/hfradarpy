@@ -9,35 +9,38 @@ import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import cartopy.feature as cfeature
 
-LAND = cfeature.NaturalEarthFeature(
-    'physical', 'land', '10m',
-    edgecolor='face',
-    facecolor='tan'
-)
+LAND = cfeature.NaturalEarthFeature("physical", "land", "10m", edgecolor="face", facecolor="tan")
 
 state_lines = cfeature.NaturalEarthFeature(
-    category='cultural',
-    name='admin_1_states_provinces_lines',
-    scale='50m',
-    facecolor='none'
+    category="cultural", name="admin_1_states_provinces_lines", scale="50m", facecolor="none"
 )
 
 
-def plot_common(time, lon, lat, u, v, *,
-                output_file=None,
-                color_clipped=None,
-                meshgrid=True,
-                sub=2,
-                markers=None,
-                offset=None,
-                extent=None,
-                lon_ticks=None,
-                lat_ticks=None,
-                cmap='jet',
-                colorbar=True,
-                ticks=None,
-                title='HF Radar',
-                scale=120, headwidth=2.5, headlength=4, headaxislength=4):
+def plot_common(
+    time,
+    lon,
+    lat,
+    u,
+    v,
+    *,
+    output_file=None,
+    color_clipped=None,
+    meshgrid=True,
+    sub=2,
+    markers=None,
+    offset=None,
+    extent=None,
+    lon_ticks=None,
+    lat_ticks=None,
+    cmap="jet",
+    colorbar=True,
+    ticks=None,
+    title="HF Radar",
+    scale=120,
+    headwidth=2.5,
+    headlength=4,
+    headaxislength=4,
+):
     """
     param markers:  a list of 3-tuple/lists containng [lon, lat, marker kwargs] as should be
                     passed into ax.plot()
@@ -53,59 +56,38 @@ def plot_common(time, lon, lat, u, v, *,
     else:
         lons, lats = lon, lat
 
-    extent = extent or [
-        lon.min() - 1,
-        lon.max() + 1,
-        lat.min() - 1,
-        lat.max() + 1
-    ]
+    extent = extent or [lon.min() - 1, lon.max() + 1, lat.min() - 1, lat.max() + 1]
 
-    fig, ax = plt.subplots(
-        figsize=(11, 8),
-        subplot_kw=dict(projection=ccrs.Mercator())
-    )
+    fig, ax = plt.subplots(figsize=(11, 8), subplot_kw=dict(projection=ccrs.Mercator()))
 
     # Plot title
-    plt.title('{} - {}'.format(title, pd.to_datetime(time).strftime('%Y-%m-%d %H:%M:%S GMT')))
+    plt.title("{} - {}".format(title, pd.to_datetime(time).strftime("%Y-%m-%d %H:%M:%S GMT")))
 
     qargs = dict(cmap=cmap, scale=scale, headwidth=headwidth, headlength=headlength, headaxislength=headaxislength)
-    qargs['transform'] = ccrs.PlateCarree()
-    qargs['norm'] = offset
+    qargs["transform"] = ccrs.PlateCarree()
+    qargs["norm"] = offset
 
     # plot arrows over pcolor
-    h = ax.quiver(
-        lons[::sub],
-        lats[::sub],
-        u[::sub],
-        v[::sub],
-        color_clipped,
-        **qargs
-    )
+    h = ax.quiver(lons[::sub], lats[::sub], u[::sub], v[::sub], color_clipped, **qargs)
 
     # generate colorbar
     if colorbar:
         divider = make_axes_locatable(ax)
-        cax = divider.new_horizontal(size='5%', pad=0.05, axes_class=plt.Axes)
+        cax = divider.new_horizontal(size="5%", pad=0.05, axes_class=plt.Axes)
         fig.add_axes(cax)
 
         cb = plt.colorbar(h, cax=cax, ticks=ticks)
-        cb.ax.set_yticklabels([f'{s:d}' for s in ticks])
-        cb.set_label('cm/s')
+        cb.ax.set_yticklabels([f"{s:d}" for s in ticks])
+        cb.set_label("cm/s")
 
     for m in markers:
-        ax.plot(m[0], m[1], transform=qargs['transform'], **m[2])
+        ax.plot(m[0], m[1], transform=qargs["transform"], **m[2])
 
     # Gridlines and grid labels
-    gl = ax.gridlines(
-        draw_labels=True,
-        linewidth=.5,
-        color='black',
-        alpha=0.25,
-        linestyle='--'
-    )
+    gl = ax.gridlines(draw_labels=True, linewidth=0.5, color="black", alpha=0.25, linestyle="--")
     gl.xlabels_top = gl.ylabels_right = False
-    gl.xlabel_style = {'size': 10, 'color': 'black'}
-    gl.ylabel_style = {'size': 10, 'color': 'black'}
+    gl.xlabel_style = {"size": 10, "color": "black"}
+    gl.ylabel_style = {"size": 10, "color": "black"}
 
     if lon_ticks:
         gl.xlocator = mticker.FixedLocator(lon_ticks)
@@ -117,10 +99,10 @@ def plot_common(time, lon, lat, u, v, *,
 
     # Axes properties and features
     ax.set_extent(extent)
-    ax.add_feature(LAND, zorder=0, edgecolor='black')
+    ax.add_feature(LAND, zorder=0, edgecolor="black")
     ax.add_feature(cfeature.LAKES)
     ax.add_feature(cfeature.BORDERS)
-    ax.add_feature(state_lines, edgecolor='black')
+    ax.add_feature(state_lines, edgecolor="black")
 
     fig_size = plt.rcParams["figure.figsize"]
     fig_size[0] = 12
@@ -130,7 +112,7 @@ def plot_common(time, lon, lat, u, v, *,
     if output_file is not None:
         create_dir(str(Path(output_file).parent))
         resoluton = 300  # plot resolution in DPI
-        plt.savefig(output_file, dpi=resoluton, bbox_inches='tight', pad_inches=0.1)
-        plt.close('all')
+        plt.savefig(output_file, dpi=resoluton, bbox_inches="tight", pad_inches=0.1)
+        plt.close("all")
     else:
         return plt

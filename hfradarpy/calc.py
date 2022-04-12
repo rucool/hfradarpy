@@ -1,10 +1,13 @@
+from dis import dis
 import numpy as np
 from pyproj import Geod
 
 import logging
+
 logger = logging.getLogger(__name__)
 
-geodesic = Geod(ellps='WGS84') #define the coordinate system. WGS84 is the standard used by GPS.
+geodesic = Geod(ellps="WGS84")  # define the coordinate system. WGS84 is the standard used by GPS.
+
 
 def reckon(origin_lon, origin_lat, forward_azimuth, distance):
     """
@@ -12,22 +15,29 @@ def reckon(origin_lon, origin_lat, forward_azimuth, distance):
     Helper function for pyproj.Geod forward transformation
 
     Args:
-        origin_lon (array, numpy.ndarray, list, tuple, or scalar): Longitude(s) of initial point(s)
-        origin_lat (array, numpy.ndarray, list, tuple, or scalar): Latitude(s) of initial point(s)
-        forward_azimuth (array, numpy.ndarray, list, tuple, or scalar): Azimuth/bearing(s) of the terminus point relative to the initial point(s)
-        distance (array, numpy.ndarray, list, tuple, or scalar): Distance(s) between initial and terminus point(s) in kilometers
+        origin_lon (array, numpy.ndarray, list, tuple, or scalar):
+            Longitude(s) of initial point(s)
+        origin_lat (array, numpy.ndarray, list, tuple, or scalar):
+            Latitude(s) of initial point(s)
+        forward_azimuth (array, numpy.ndarray, list, tuple, or scalar):
+            Azimuth/bearing(s) of the terminus point relative to the initial point(s)
+        distance (array, numpy.ndarray, list, tuple, or scalar):
+            Distance(s) between initial and terminus point(s) in kilometers
 
     Returns:
         array, numpy.ndarray, list, tuple, or scalar: Longitude(s) of terminus point(s)
         array, numpy.ndarray, list, tuple, or scalar: Latitude(s) of terminus point(s)
         array, numpy.ndarray, list, tuple, or scalar: Backwards azimuth(s) of terminus point(s)
     """
-    terminus_lon, terminus_lat, _ = geodesic.fwd(origin_lon, origin_lat, forward_azimuth, distance*1000)
-    logging.info(f'Calculating longitude and latitude of terminus points from origin based off of a bearing of \
-                 {forward_azimuth} (degrees) and range {distance} (km).')
-    logging.info(f'Origin - Lon (degrees): {origin_lon} degrees, Lat (degrees): {origin_lat}')
-    logging.info(f'Terminus - Lon(s) (degrees): {terminus_lon} degrees, Lat(s) (degrees): {terminus_lat}')
+    terminus_lon, terminus_lat, _ = geodesic.fwd(origin_lon, origin_lat, forward_azimuth, distance * 1000)
+    logging.info(
+        f"Calculating longitude and latitude of terminus points from origin based off of a bearing of \
+                 {forward_azimuth} (degrees) and range {distance} (km)."
+    )
+    logging.info(f"Origin - Lon (degrees): {origin_lon} degrees, Lat (degrees): {origin_lat}")
+    logging.info(f"Terminus - Lon(s) (degrees): {terminus_lon} degrees, Lat(s) (degrees): {terminus_lat}")
     return terminus_lon, terminus_lat
+
 
 def inverse_transformation(lons1, lats1, lons2, lats2):
     """
@@ -48,13 +58,23 @@ def inverse_transformation(lons1, lats1, lons2, lats2):
     # Determine forward and back azimuths, plus distances between initial points and terminus points.
     forward_azimuth, back_azimuth, distance = geodesic.inv(lons1, lats1, lons2, lats2)
 
-    distance = distance/1000 # Lets stick with kilometers as the output since RUV ranges are in kilometers
+    forward_azimuth = np.array(forward_azimuth)
+    back_azimuth = np.array(back_azimuth)
+    distance = np.array(distance)
+    forward_azimuth = np.mod(forward_azimuth, 360)
+    back_azimuth = np.mod(back_azimuth, 360)
+    
+    distance = distance / 1000  # Lets stick with kilometers as the output since RUV ranges are in kilometers
 
-    logging.info('Inversely calculating azimuth and range of initial point(s) to terminus point(s)')
-    logging.info(f'Origin - Lon (degrees): {lons1} degrees, Lat (degrees): {lats1}')
-    logging.info(f'Terminus - Lon(s) (degrees): {lons2} degrees, Lat(s) (degrees): {lats2}')
-    logging.info(f'Forward azimuth (CWN): {forward_azimuth} degrees, Back bearing (CWN): {back_azimuth} degrees, Range: {distance} kilometers')
+    logging.info("Inversely calculating azimuth and range of initial point(s) to terminus point(s)")
+    logging.info(f"Origin - Lon (degrees): {lons1} degrees, Lat (degrees): {lats1}")
+    logging.info(f"Terminus - Lon(s) (degrees): {lons2} degrees, Lat(s) (degrees): {lats2}")
+    logging.info(
+        f"Forward azimuth (CWN): {forward_azimuth} degrees,"
+        f"Back bearing (CWN): {back_azimuth} degrees, Range: {distance} kilometers"
+    )
     return forward_azimuth, back_azimuth, distance
+
 
 def spdir2uv(speed, direction, degrees=False):
     """
@@ -73,9 +93,10 @@ def spdir2uv(speed, direction, degrees=False):
         # Calculating u and v requires the data to be in radians
         direction = np.deg2rad(direction)
 
-    u = speed * np.sin(direction) # Calculate east-west component
-    v = speed * np.cos(direction) # Calculate north-south component
+    u = speed * np.sin(direction)  # Calculate east-west component
+    v = speed * np.cos(direction)  # Calculate north-south component
     return u, v
+
 
 def uv2spdir(u, v, mag=0, rot=0):
     """
@@ -96,7 +117,7 @@ def uv2spdir(u, v, mag=0, rot=0):
     u, v, mag, rot = list(map(np.asarray, (u, v, mag, rot)))
 
     vector = u + 1j * v
-    speed = np.abs(vector) #np.hypot(u, v) also works
+    speed = np.abs(vector)  # np.hypot(u, v) also works
     direction = np.angle(vector, deg=True)
     direction = direction - mag + rot
     direction = np.mod(90.0 - direction, 360.0)  # Zero is North.
