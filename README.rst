@@ -10,8 +10,10 @@ HFRadarPy
         :target: https://hfradarpy.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
     
-.. image:: https://circleci.com/gh/rucool/HFRadarPy/tree/master.svg?style=svg
-   :target: https://circleci.com/gh/rucool/HFRadarPy/tree/master
+.. image:: https://github.com/<rucool>/hfradarpy/actions/workflows/<WORKFLOW_FILE>/badge.sv
+
+.. .. image:: https://circleci.com/gh/rucool/HFRadarPy/tree/master.svg?style=svg
+..    :target: https://circleci.com/gh/rucool/HFRadarPy/tree/master
 
 .. image:: https://codecov.io/gh/rucool/hfradarpy/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/rucool/hfradarpy
