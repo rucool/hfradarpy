@@ -7,10 +7,12 @@ dependencies:
   - xarray
   - netcdf4
   - pyproj
-  # - bottleneck [--no-deps]
-  # - dask [--no-deps]
-  # - geopandas [--no-deps]
-  - cartopy [--no-deps]
-  - cmocean [--no-deps]
-  # - jupyterlab [--no-deps]
-  # - nb_conda_kernels [--no-deps]
+  - click
+  - bottleneck
+  - dask
+  - geopandas
+  - cartopy
+  - matplotlib
+  - cmocean
+  - jupyterlab
+  - nb_conda_kernels
