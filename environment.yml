@@ -16,3 +16,4 @@ dependencies:
   - cmocean
   - jupyterlab
   - nb_conda_kernels
+  - joblib
