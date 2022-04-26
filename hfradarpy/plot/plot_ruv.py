@@ -14,7 +14,7 @@ import cmocean
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def plot_ruv(radial_file, save_path=None, speed_display = 'color', redblue=True, plotflag=None,  scale = 50, vlims=(-100, 100)):
+def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, plotflag=None,  scale = 50, vlims=(-100, 100)):
     """
     Main function to plot radial files.
 
@@ -34,7 +34,10 @@ def plot_ruv(radial_file, save_path=None, speed_display = 'color', redblue=True,
         return
     if r._iscorrupt:
         return
-
+    
+    if speed_display == None:
+        speed_display = 'color'
+    
     # Adjust some standard plotting settings to make them the size of a sheet of paper
     fig_size = plt.rcParams["figure.figsize"]
     fig_size[0] = 12
