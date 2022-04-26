@@ -9,6 +9,25 @@ logger = logging.getLogger(__name__)
 geodesic = Geod(ellps="WGS84")  # define the coordinate system. WGS84 is the standard used by GPS.
 
 
+def find_nearest(array, value):
+    """
+    Find the index of the closest value in an array
+
+    Args:
+        array (list or np.array): Array to locate values on
+        value (list or np.array): Values to locate on array
+
+    Returns:
+        float, int: value(s), index of the nearest neighbors 
+    """
+    # Subtract values from array. Use .argmin() to find the indices of the minimum values along an axis.
+    idx = (np.abs(array-value)).argmin()
+    
+    # Return the closest value and the index of the closest value.
+    # Use .flat on the array to collapse the m x n array into a one dimensional array
+    return array.flat[idx], idx
+
+
 def reckon(origin_lon, origin_lat, forward_azimuth, distance):
     """
     Calculate lon, lat of a point from a specified azimuth, distance on sphere or ellipsoid
