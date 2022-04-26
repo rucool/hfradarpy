@@ -18,15 +18,13 @@ def test_command_line_interface():
     """Test the CLI."""
     radial_dir = data_path / "radials" / "ruv" / "SEAB" 
     path_save = output_path / "cli_output" 
-    lon = [-73.63, -73.63]
-    lat = [40.29, 40.31]
+    point1 = "-73.63, 40.29"
+    point2 = "-73.63, 40.31"
     runner = CliRunner()
     result = runner.invoke(
         cli.extract_timeseries, [
-            "--lon", lon[0], 
-            "--lat", lat[0],
-            "--lon", lon[1], 
-            "--lat", lat[1],
+            "--point", point1, 
+            "--point", point2,
             "--path_data", str(radial_dir),
             "--path_save", str(path_save),
             "--type", 'csv']
