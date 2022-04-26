@@ -171,7 +171,7 @@ def concat(rlist, method="gridded", enhance=False, parallel=False):
         for radial in rlist:
             if not isinstance(radial, Radial):
                 radial = Radial(radial)
-                radial_dict[radial.file_name] = radial.to_xarray(method, enhance=enhance)
+            radial_dict[radial.file_name] = radial.to_xarray(method, enhance=enhance)
 
     ds = xr.concat(radial_dict.values(), "time")
     return ds.sortby("time")
