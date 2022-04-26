@@ -9,7 +9,8 @@ from hfradarpy.ctf import CTFParser
 from hfradarpy.calc import reckon
 from hfradarpy.io.nc import make_encoding
 from pathlib import Path
-
+from joblib import Parallel, delayed
+import multiprocessing
 import logging
 
 logger = logging.getLogger(__name__)
@@ -135,33 +136,42 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
             return r
 
 
-def concat(radial_list, method="gridded", enhance=False):
+def concat(rlist, method="gridded", enhance=False, parallel=False):
     """
     This function takes a list of Radial objects or radial file paths and
     combines them along the time dimension using xarrays built-in concatenation
     routines.
 
     Args:
-        radial_list (list):
+        rlist (list):
             list of radial files or Radial objects that you want to concatenate
         method (str, optional):
             'gridded' or 'tabular'. Defaults to 'gridded'
         enhance (bool, optional):
             Change manufacturer variables to cf compliant variable names. Add CF attributes and metadata. Defaults to False.
+        parallel (bool, optional): Enables parallel processing. Defaults to False.
 
     Returns:
         xarray dataset: radials concatenated into an xarray dataset
     """
-    radial_dict = {}
-    for radial in radial_list:
-
+    def load_radials(radial, method, enhance=False):
         if not isinstance(radial, Radial):
             radial = Radial(radial)
+            ds = radial.to_xarray(method, enhance=enhance)
+        return (radial.file_name, ds)
 
-        if method == "gridded":
-            radial_dict[radial.file_name] = radial.to_xarray("gridded", enhance=enhance)
-        elif method == "tabular":
-            radial_dict[radial.file_name] = radial.to_xarray("tabular", enhance=enhance)
+    if parallel:
+        num_cores = multiprocessing.cpu_count()
+        radials = Parallel(n_jobs=num_cores)(
+            delayed(load_radials)(radial=r, method=method, enhance=enhance) for r in rlist
+        )
+        radial_dict = {radial: ds for (radial, ds) in radials}
+    else:
+        radial_dict = {}
+        for radial in rlist:
+            if not isinstance(radial, Radial):
+                radial = Radial(radial)
+                radial_dict[radial.file_name] = radial.to_xarray(method, enhance=enhance)
 
     ds = xr.concat(radial_dict.values(), "time")
     return ds.sortby("time")
@@ -175,7 +185,7 @@ class Radial(CTFParser):
     ~/hfradarpy/ctf.py in order to load CODAR Radial files
     """
 
-    def __init__(self, fname, replace_invalid=True, empty_radial=False):
+    def __init__(self, fname, replace_invalid=True, empty_radial=False, vflip=False):
         """
         Initialize the radial object
 
@@ -183,6 +193,7 @@ class Radial(CTFParser):
             fname (str or Path): Full file path to the radial .ruv to be loaded
             replace_invalid (bool, optional): Replace invalid/dummy manufacturer fill values with NaN. Defaults to True.
             empty_radial (bool, optional): Returns an empty Radial object. Defaults to False.
+            vflip (bool, optional): Flip sign of velocities [MINV, MAXV, VELO] so + is away and - is towards the radar. Defaults to False.
         """
         logging.info("Loading radial file: {}".format(fname))
         super().__init__(fname)
@@ -191,6 +202,7 @@ class Radial(CTFParser):
             return
 
         self.data = pd.DataFrame()
+        self.velocity_sign = "+: towards"
 
         for key in self._tables.keys():
             table = self._tables[key]
@@ -218,11 +230,33 @@ class Radial(CTFParser):
             if empty_radial:
                 self.empty_radial()
 
+        if vflip:
+            # CODAR standard: + velocities towards radar, - velocities away from radar
+            # Science standard: - velocities towards radar, + velocities away from radar
+            # Flip sign so positive velocities are away from the radar
+            self.flip_velocities()
+
     def __repr__(self):
         """
         Represent class's object as a string
         """
         return "<Radial: {}>".format(self.file_name)
+
+    def flip_velocities(self):
+        # CODAR standard: + velocities towards radar, - velocities away from radar
+        # Science standard: - velocities towards radar, + velocities away from radar
+        # Flip sign so positive velocities are away from the radar as per cf conventions
+        logging.info(f"Flipping the sign of radial velocities")
+        flips = ["MINV", "MAXV", "VELO"]
+        for f in flips:
+            if f in self.data:
+                self.data[f] = -self.data[f]
+        self.flipped_velocites = True
+        
+        if self.velocity_sign == "+: towards":
+            self.velocity_sign = "-: away"
+        elif self.velocity_sign == "-: away":
+            self.velocity_sign = "+: towards"
 
     def empty_radial(self):
         """
@@ -455,12 +489,6 @@ class Radial(CTFParser):
         # Drop extraneous variables
         ds = ds.drop_vars(["LOND", "LATD", "BEAR", "RNGE"])
 
-        # Flip sign so positive velocities are away from the radar as per cf conventions
-        flips = ["MINV", "MAXV", "VELO"]
-        for f in flips:
-            if f in ds:
-                ds[f] = -ds[f]
-
         # Assign header data to global attributes
         ds = ds.assign_attrs(self.metadata)
 
@@ -499,12 +527,6 @@ class Radial(CTFParser):
 
         # Check if calculated longitudes and latitudes align with given longitudes and latitudes
         # plt.plot(ds.lon, ds.lat, 'bo', ds.LOND.squeeze(), ds.LATD.squeeze(), 'rx')
-
-        # Flip sign so positive velocities are away from the radar as per cf conventions
-        flips = ["MINV", "MAXV", "VELO"]
-        for f in flips:
-            if f in ds:
-                ds[f] = -ds[f]
 
         # Assign header data to global attributes
         ds = ds.assign_attrs(self.metadata)
@@ -1699,7 +1721,7 @@ class Radial(CTFParser):
 
 if __name__ == "__main__":
     f = "/Users/mikesmith/Documents/github/rucool/hfradarpy/examples/data/radials/ruv/SEAB/RDLi_SEAB_2019_01_01_0100.ruv"
-    r = Radial(f, replace_invalid=True)
+    r = Radial(f, replace_invalid=True, vflip=True)
     r.mask_over_land()
     ds = r.to_xarray('gridded')
     print(ds)
