@@ -8,6 +8,7 @@ from hfradarpy.radials import concat
 import numpy as np
 import xarray as xr
 import pandas as pd
+from pathlib import Path
 
 fmt = "%Y-%m-%dT%H%M%S"
 
@@ -21,15 +22,15 @@ def main(args=None):
     # pass
 
 @click.command()
-@click.option("--lon", type=float, help="Longitude of point(s)", multiple=True)
-@click.option("--lat", type=float, help="Latitude of point(s)", multiple=True)
-@click.option("--time_start", "-t0", default=None, type=str, help="Start Time (yyyy-mm-dd HH:MM:SS")
-@click.option("--time_end", "-t1", default=None, type=str, help="End Time")
-@click.option("--path_data", "-pd", default=os.getcwd(), type=str, help="Path containing radial files.")
-@click.option("--path_save", "-ps", default=os.getcwd(), type=str,  help="Path to save output file")
-@click.option("--fname", "-f", type=str, help="Export filename. The timeseries range is appended to this")
-@click.option("--type",  "-o", default="csv", type=str, help="Format to save output: csv, netcdf")
-def extract_timeseries(lon, lat, time_start, time_end, path_data, path_save, fname, type):
+@click.option("--point", "-p", type=str, required=True, multiple=True, help="lon, lat of point(s) you want to extract.")
+@click.option("--time_start", "-t0", type=str, default=None, help="Start Time (yyyy-mm-dd HH:MM:SS)")
+@click.option("--time_end", "-t1", type=str, default=None, help="End Time (yyyy-mm-dd HH:MM:SS)")
+@click.option("--path_data", "-pd", type=str, default=os.getcwd(), help="Path to radial files.")
+@click.option("--path_save", "-ps", type=str, default=os.getcwd(), help="Path to save timeseries output")
+@click.option("--fname", "-f", type=str, help="Export filename. The time range will be appended to this")
+@click.option("--type",  "-o", type=str, default="csv", help="Format to save output: csv, netcdf")
+@click.option('--parallel', '-m', is_flag=True, default=False, help="Enable parallel processing.")
+def extract_timeseries(point, time_start, time_end, path_data, path_save, fname, type, parallel):
     click.echo("Executing hfradarpy.cli.extract_timeseries")
     click.echo("")
     os.makedirs(path_save, exist_ok=True)
@@ -58,7 +59,8 @@ def extract_timeseries(lon, lat, time_start, time_end, path_data, path_save, fna
         print(df.iloc[-1])
 
     try:
-        ds = concat(df['file'].tolist(), method='gridded', enhance=True)
+        ds = concat(df['file'].tolist(), method='gridded', enhance=True,
+                    parallel=parallel)
     except ValueError as e:
         click.echo(f"{e}: no radial data found. Check your file path")
         return
@@ -70,16 +72,21 @@ def extract_timeseries(lon, lat, time_start, time_end, path_data, path_save, fna
     click.echo("Extracting timeseries between the following points:")
     click.echo(f"Receiver - Lon: {rxloc[0]}, Lat: {rxloc[1]}")
 
-    for i,_ in enumerate(lon):
-        click.echo(f"Terminus {i} - Lon, {lon[i]} Lat: {lat[i]}")
+    lons = []
+    lats = []
+    for p in point:
+        pf = [float(x) for x in p.split(',')]
+        click.echo(f"Terminus - Lon, {pf[0]} Lat: {pf[1]}")
+        lons.append(pf[0])
+        lats.append(pf[1])
     click.echo("")
     
-    rxlon = np.full_like(lon, rxloc[0])
-    rxlat = np.full_like(lat, rxloc[1])
+    rxlon = np.full_like(lons, rxloc[0])
+    rxlat = np.full_like(lats, rxloc[1])
 
     # Inverse transformation
     # Determine forward and back azimuths, plus distances between initial points and terminus points.
-    forward_azimuth, _, distance = inv(rxlon, rxlat, lon, lat)
+    forward_azimuth, _, distance = inv(rxlon, rxlat, lons, lats)
     click.echo("")
     click.echo(f"Finding nearest gridpoint(s) based on bearing and range.")
     click.echo(f'Bearing(s) (CWN): {forward_azimuth} degrees, Range(s): {distance} kilometers') # degrees, meters
@@ -112,29 +119,23 @@ def extract_timeseries(lon, lat, time_start, time_end, path_data, path_save, fna
 main.add_command(extract_timeseries)
 
 if __name__ == "__main__":
-    # -pd /Users/mikesmith/Documents/ugos/new/qc -o csv -ps /Users/mikesmith/Documents/ -f test -t0 2020-01-01 -t1 2021-01-03
-    radial_dir = '/Users/mikesmith/Documents/ugos/new/qc/'
-    lon = [-80.5, -81.5] 
-    lat = [24.5, 24.25]
-    time_start = '2019-01-01T00:00:00Z'
-    time_end = '2020-01-02T00:00:00Z'
-    time_start = '2020-01-01'
-    time_end = '2020-01-03'
-    path_save = '/Users/mikesmith/Documents/'
+    data_path = (Path(__file__).parent.with_name("examples") / "data").resolve()
+    output_path = (Path(__file__).parent.with_name("examples") / "output").resolve()
+    radial_dir = data_path / "radials" / "ruv"/ "SEAB"
+    point1 = "-73.63, 40.29"
+    point2 = "-73.63, 40.31"
+    time_start = "2019-01-01T00:00:00Z"
+    time_end = "2019-01-02T00:00:00Z"
     extract_timeseries(
         [
-            "--lon", lon[0],
-            "--lat", lat[0],
-            "--lon", lon[1],
-            "--lat", lat[1],
+            "--point", point1,
+            "--point", point2,
             "--time_start", time_start,
             "--time_end", time_end,
             "--path_data", radial_dir,
-            "--path_save", path_save,
+            "--path_save", output_path,
             "--fname", 'test',
-            "--type", 'csv'
+            "--type", 'csv',
+            "--parallel"
             ]
         )
-
-
-    # sys.exit(main())  # pragma: no cover
