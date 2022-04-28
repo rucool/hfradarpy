@@ -14,16 +14,19 @@ import cmocean
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, plotflag=None,  scale = 50, vlims=(-100, 100)):
+def plot_ruv(radial_file, save_path=None, fname=None, speed_display = 'color', redblue=True, plotflag=None,  scale = 50, vlims=(-100, 100)):
     """
     Main function to plot radial files.
 
     Args:
         radial_file (str or Path): Path to radial file or a Radial object
         save_path (str or Path): Path to save figures
-        speed_display (str, optional): 'color' or 'arrowlength' to specify whether current speed is depicted by color or arrow length  Defaults to color
-        redblue (bool, optional): If True, colorbar scheme is redblue Defaults to True
-        plotflag (str, optional): QARTOD QC test code, fail and suspect flags for that test will be highlighted Defaults to Non
+        fname (str): Output file name. If not specified, the radial object filename is used,  Defaults to None
+        speed_display (str, optional): 'color' or 'arrowlength' to specify whether current speed is depicted by color or arrow length, Defaults to color
+        redblue (bool, optional): If True, colorbar scheme is redblue, Defaults to True
+        plotflag (str, optional): QARTOD QC test code, fail and suspect flags for that test will be highlighted, Defaults to None
+        scale (int, optional): Scaling factor for drawing the vectors, Default = 50
+        vlims (tuple, optional): Velocity limits for the colorbar, Default = (-100,100)
     """
     if not isinstance(radial_file, Radial):
         r = Radial(radial_file)
@@ -35,8 +38,8 @@ def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, pl
     if r._iscorrupt:
         return
     
-    if speed_display == None:
-        speed_display = 'color'
+    if fname == None:
+        fname = r.file_name[0:-4]
     
     # Adjust some standard plotting settings to make them the size of a sheet of paper
     fig_size = plt.rcParams["figure.figsize"]
@@ -71,6 +74,7 @@ def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, pl
     v = r.data.VELV.to_numpy()
     velocity = r.data.VELO.to_numpy()
     sitename = r.metadata['Site'][0:4]
+    ptype = r.metadata['PatternType']
 
     # Mask nans just in case there are any
     u = ma.masked_invalid(u)
@@ -128,20 +132,20 @@ def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, pl
             plt.quiver(lon[fail], lat[fail], u[fail], v[fail], transform=ccrs.PlateCarree(), scale=scale, scale_units=scale_units, width=width, color='red')
             plt.quiver(lon[suspect], lat[suspect], u[suspect], v[suspect], transform=ccrs.PlateCarree(), scale=scale, scale_units=scale_units, width=width, color='gold')
             plt.quiver(lon[noteval], lat[noteval], u[noteval], v[noteval], transform=ccrs.PlateCarree(), scale=scale, scale_units=scale_units, width=width, color='gray')
-            plt.title(f'{sitename} {plotflag}\nFail(red) Suspect(yellow) Not Evaluated(grey)\n{time}')
-            plt.savefig(save_path + '/' + r.file_name[0:-4] + '_' + plotflag)
+            plt.title(f'{sitename} {ptype} {plotflag}\nFail(red) Suspect(yellow) Not Evaluated(grey)\n{time}')
+            plt.savefig(save_path + '/' + fname + '_' + plotflag)
             plt.close('all')
         elif redblue:
             away = r.data.VELO > 0
             plt.quiver(lon, lat, u, v, transform=ccrs.PlateCarree(), scale=scale, scale_units=scale_units, width=width, color='red')
             plt.quiver(lon[away], lat[away], u[away], v[away], transform=ccrs.PlateCarree(), scale=scale, scale_units=scale_units, width=width, color='blue')
-            plt.title(f'{sitename}\n{time}')
-            plt.savefig(save_path + '/' + r.file_name[0:-4] + '_rb')
+            plt.title(f'{sitename} {ptype}\n{time}')
+            plt.savefig(save_path + '/' + fname + '_rb')
             plt.close('all')
         else:
             plt.quiver(lon, lat, u, v, transform=ccrs.PlateCarree(), scale=scale, scale_units=scale_units, width=width, color='wheat')
-            plt.title(f'{sitename}\n{time}')
-            plt.savefig(save_path + '/' + r.file_name[0:-4])
+            plt.title(f'{sitename} {ptype}\n{time}')
+            plt.savefig(save_path + '/' + fname)
             plt.close('all')
 
 
@@ -161,7 +165,7 @@ def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, pl
             offset = TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)
             cmap = colors.ListedColormap(['red', 'wheat'])
 
-            plt.title(f'{sitename} {plotflag} Fail\n{time}')
+            plt.title(f'{sitename} {ptype} {plotflag} Fail\n{time}')
 
             qargs = dict(cmap=cmap, scale=scale, headwidth=headwidth, headlength=headlength,
                          headaxislength=headaxislength)
@@ -178,7 +182,7 @@ def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, pl
                 **qargs
             )
 
-            plt.savefig(save_path + '/' + r.file_name[0:-4] + '_' + plotflag + '_fail')
+            plt.savefig(save_path + '/' + fname + '_' + plotflag + '_fail')
             plt.close('all')
 
         elif redblue:
@@ -198,7 +202,7 @@ def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, pl
 
             offset = TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)
 
-            plt.title(f'{sitename}\n{time}')
+            plt.title(f'{sitename} {ptype}\n{time}')
 
             qargs = dict(cmap=cmap, scale=scale, headwidth=headwidth, headlength=headlength,
                          headaxislength=headaxislength)
@@ -215,12 +219,12 @@ def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, pl
                 **qargs
             )
             # map_features(ax, extent, LAND, edgecolor, landcolor, state_lines)
-            plt.savefig(save_path + '/' + r.file_name[0:-4] + '_rb')
+            plt.savefig(save_path + '/' + fname + '_rb')
             plt.close('all')
 
         else:
 
-            plt.title(f'{sitename}\n{time}')
+            plt.title(f'{sitename} {ptype}\n{time}')
 
             cmap = cmocean.cm.balance
             # Colorbar options
@@ -265,7 +269,7 @@ def plot_ruv(radial_file, save_path=None, speed_display = None, redblue=True, pl
             cb.ax.set_yticklabels([f'{s:d}' for s in ticks])
             cb.set_label('cm/s')
 
-            plt.savefig(save_path + '/' + r.file_name[0:-4])
+            plt.savefig(save_path + '/' + fname)
             plt.close('all')
 
 
