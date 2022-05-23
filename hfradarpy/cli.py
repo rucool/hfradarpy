@@ -5,7 +5,6 @@ from hfradarpy import __version__
 from hfradarpy.calc import inverse_transformation as inv
 from hfradarpy.common import list_to_dataframe
 from hfradarpy.radials import concat
-from hfradarpy.plot.plot_ruv import plot_ruv
 import numpy as np
 import xarray as xr
 import pandas as pd
@@ -41,6 +40,12 @@ def main(args=None):
 
 # https://click.palletsprojects.com/en/8.1.x/options/#tuples-as-multi-value-options
 def plotruv(radial_file, path_data, path_save, time_start, time_end, prefix, outname, speed_display, redblue, plotflag, scale, limits):
+    try:
+        from hfradarpy.plot.plot_ruv import plot_ruv
+    except ImportError:
+        click.echo("Matplotlib and cartopy not installed. Please install.")
+        return
+
     click.echo("Executing hfradarpy.cli.plot_ruv")
     click.echo("")
 
