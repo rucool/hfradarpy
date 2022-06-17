@@ -1213,7 +1213,7 @@ class Radial(CTFParser):
                     else:
                         table_alias["data"].to_string(f, index=False, justify="center", header=True)
 
-                if int(table) > 1:
+                if table > 1:
                     f.write("\n%TableEnd: {}\n".format(table))
                 else:
                     f.write("\n%TableEnd: \n")
