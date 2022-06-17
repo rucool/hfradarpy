@@ -1105,7 +1105,7 @@ class Radial(CTFParser):
                 if "ProcessedTimeStamp" in metadata_key:
                     break
                 else:
-                    print(metadata_key)
+                    #print(metadata_key)
                     f.write("%{}: {}\n".format(metadata_key, metadata_value))
 
             # Write data tables. Anything beyond the first table is commented out.
@@ -1116,7 +1116,7 @@ class Radial(CTFParser):
 
                 for table_key, table_value in self._tables[table].items():
                     if table_key != 'data':
-                        if (table_key == 'TableType') & (table == '1'):
+                        if (table_key == 'TableType') & (table == 1):
                             if 'QCD' in self.metadata:
                                for qcd_info in self.metadata['QCD']:
                                     f.write('%{}\n'.format(qcd_info))
