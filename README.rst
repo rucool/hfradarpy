@@ -2,15 +2,14 @@
 HFRadarPy
 =========
 
+.. image:: https://github.com/rucool/hfradarpy/actions/workflows/python-package.yml/badge.svg
 
 .. image:: https://img.shields.io/pypi/v/hfradarpy.svg
     :target: https://pypi.python.org/pypi/hfradarpy
 
 .. image:: https://readthedocs.org/projects/hfradarpy/badge/?version=latest
         :target: https://hfradarpy.readthedocs.io/en/latest/?version=latest
-        :alt: Documentation Status
-    
-.. image:: https://github.com/<rucool>/hfradarpy/actions/workflows/<WORKFLOW_FILE>/badge.sv
+        :alt: Documentation Status 
 
 .. .. image:: https://circleci.com/gh/rucool/HFRadarPy/tree/master.svg?style=svg
 ..    :target: https://circleci.com/gh/rucool/HFRadarPy/tree/master
