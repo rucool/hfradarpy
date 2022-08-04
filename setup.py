@@ -11,7 +11,18 @@ with open("README.rst") as readme_file:
 with open("HISTORY.rst") as history_file:
     history = history_file.read()
 
-requirements = ["xarray", "netcdf4", "pyproj", "click"]
+requirements = [
+    "xarray", 
+    "netcdf4", 
+    "pyproj", 
+    "click",
+    "dask",
+    "geopandas",
+    "cartopy>0.20",
+    "matplotlib",
+    "cmocean",
+    "joblib",
+    ]
 
 test_requirements = [
     "pytest>=3",
