@@ -14,8 +14,8 @@ HFRadarPy
 .. .. image:: https://circleci.com/gh/rucool/HFRadarPy/tree/master.svg?style=svg
 ..    :target: https://circleci.com/gh/rucool/HFRadarPy/tree/master
 
-.. image:: https://codecov.io/gh/rucool/hfradarpy/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/rucool/hfradarpy
+.. .. image:: https://codecov.io/gh/rucool/hfradarpy/branch/master/graph/badge.svg
+..    :target: https://codecov.io/gh/rucool/hfradarpy
 
 
 
@@ -40,22 +40,7 @@ Installation
 Stable release
 --------------
 
-To install HFRadarPy, run this command in your terminal:
-
-.. code-block:: console
-
-    $ pip install hfradarpy
-
-This is the preferred method to install HFRadarPy, as it will always install the most recent stable release.
-
-If you don't have `pip`_ installed, this `Python installation guide`_ can guide
-you through the process.
-
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
-
-
-We also recommend using miniconda to manage your Python environments. Download and follow the `Miniconda installation guide`_ for the appropriate
+We recommend using miniconda to manage your Python environments. Download and follow the `Miniconda installation guide`_ for the appropriate
 Miniconda installer for your operating system. 
 
 .. _Miniconda installation guide: http://conda.pydata.org/miniconda.html
@@ -70,6 +55,14 @@ You can do this with the following command:
 .. code-block:: console
 
         conda config --add channels conda-forge
+
+To install HFRadarPy, run this command in your terminal:
+
+.. code-block:: console
+
+    $ conda install hfradarpy
+
+This method will always install the most recent stable release of HFRadarPy.
 
 From sources
 ------------
@@ -139,8 +132,6 @@ After setting up your environment, you can run all of the tests, provided you in
 .. code-block:: console
 
     $ pytest
-
-
 
 .. _Github repo: https://github.com/rucool/hfradarpy
 .. _tarball: https://github.com/rucool/hfradarpy/tarball/master
