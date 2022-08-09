@@ -69,8 +69,6 @@ examples/output/
 *.iml
 .vscode/launch.json
 .vscode/settings.json
-
-.ipynb_checkpoints/Untitled-checkpoint.ipynb
 junit.xml
 .idea/workspace.xml
 .idea/vcs.xml
