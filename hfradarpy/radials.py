@@ -6,6 +6,7 @@ import re
 import copy
 import xarray as xr
 from hfradarpy.ctf import CTFParser
+from hfradarpy.common import timestamp_from_lluv_filename as get_time
 from hfradarpy.calc import reckon
 from hfradarpy.io.nc import make_encoding
 from pathlib import Path
@@ -94,6 +95,10 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
         if 'qc_qartod_temporal_gradient' in qc_keys:
             r.qc_qartod_temporal_gradient(previous_full_file,**qc_values['qc_qartod_temporal_gradient'])
 
+        if 'qc_qartod_stuck_value' in qc_keys:
+            r.qc_qartod_stuck_value(**qc_values['qc_qartod_stuck_value'])
+            #r.qc_qartod_stuck_value_v2(**qc_values['qc_qartod_stuck_value'])
+
         if "qc_qartod_avg_radial_bearing" in qc_keys:
             r.qc_qartod_avg_radial_bearing(**qc_values["qc_qartod_avg_radial_bearing"])
 
@@ -158,7 +163,7 @@ def concat(rlist, method="gridded", enhance=False, parallel=False):
         if not isinstance(radial, Radial):
             radial = Radial(radial)
             ds = radial.to_xarray(method, enhance=enhance)
-        return (radial.file_name, ds)
+        return radial.file_name, ds
 
     if parallel:
         num_cores = multiprocessing.cpu_count()
@@ -1005,6 +1010,7 @@ class Radial(CTFParser):
                 Defaults to None which automatically infers the bearing based off of the radial data.
             enhance (bool, optional):
                 Change manufacturer variables to meaningful variable names. Add attributes and other metadata. Defaults to True
+            user_attributes (dictionary, optional): Dictionary containing metadata for the NetCDF. Defaults to None.
         """
         # Make sure filename is converted into a Path object
         filename = Path(filename)
@@ -1422,20 +1428,17 @@ class Radial(CTFParser):
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
 
         Args:
-            radial_smed_range_cell_limit (float, optional):
+            smed_range_cell_limit (float, optional):
                 Multiple of range step which depends on the radar type. Defaults to 2.1.
-            radial_smed_angular_limit (int, optional):
+            smed_angular_limit (int, optional):
                 Limit for number of degrees from source radial's bearing (degrees). Defaults to 10.
-            radial_smed_current_difference (int, optional):
+            smed_current_difference (int, optional):
                 Current difference (cm/s). Defaults to 30.
         """
         test_str = "QC10"
 
         self.data[test_str] = 1
         try:
-            Rstep = float(self.metadata["RangeResolutionKMeters"])
-            # Rstep = np.floor(min(np.diff(np.unique(self.data['RNGE'])))) #use as backup method if other fails?
-
             Bstep = [float(s) for s in re.findall(r"-?\d+\.?\d*", self.metadata["AngularResolution"])]
             Bstep = Bstep[0]
             # Bstep = int(min(np.diff(np.unique(self.data['BEAR']))))  #use as backup method if other fails?
@@ -1448,13 +1451,9 @@ class Radial(CTFParser):
             Bcell = ((self.data["BEAR"] - adj) / Bstep) - 1
             Bcell = Bcell.astype(int)
             # Btable = np.column_stack((self.data['BEAR'], Bcell))  #only for debugging
-
-            # convert range into range cell numbers
-            Rcell = np.floor((self.data["RNGE"] / Rstep) + 0.1)
-            Rcell = Rcell - min(Rcell)
-            Rcell = Rcell.astype(int)
-            # Rtable = np.column_stack((self.data['RNGE'], Rcell))   #only for debugging
+ 
             Rcell = self.data["SPRC"]
+            # Rtable = np.column_stack((self.data['RNGE'], Rcell))   #only for debugging
 
             # place velocities into a matrix with rows defined as bearing cell# and columns as range cell#
             BRvel = np.zeros((int(360 / Bstep), max(Rcell) + 1), dtype=int) + np.nan
@@ -1532,7 +1531,6 @@ class Radial(CTFParser):
         Pass: Applies for test pass condition.
         ----------------------------------------------------------------------------------------------------------------------
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-        :param threshold: Maximum Radial Speed (cm/s)
         """
         test_str = "QC06"
 
@@ -1657,6 +1655,186 @@ class Radial(CTFParser):
             logging.warning(
                 "{} does not exist at specified location. Setting column {} to not_evaluated flag".format(r0, test_str)
             )
+
+    def qc_qartod_stuck_value(self, resolution=0.01, N=3):
+        """
+        Integrated Ocean Observing System (IOOS)
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Radial Stuck Value (Test 9)
+        Tests for repeating values in radial time series at a location
+
+        If the temporal change between the most recent velocity and each of the previous N-1 radial velocities
+        has not exceeded the resolution of the measurement, the most recent velocity is considered a stuck value
+        and is assigned a fail flag.  Previous velocities are values obtained from N-1 successive time steps prior to the
+        measurement that is under evaluation.
+
+        Flags Condition Codable Instructions
+
+        V is a set of velocities where V at time=0 is the most recent velocity.
+        V = [Vt=-(N-1) ...  Vt=-1, Vt=0]
+
+        If all (Vt=0 - [ Vt=-1 ... Vt=-(N-1)]) < R,
+        flag = 4
+
+        Pass = 1
+        If any (Vt=0 - [ Vt=-1 ... Vt=-(N-1)]) >= R,
+        flag = 1
+
+        Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
+
+        Args:
+            resolution (int, optional): Radial velocity resolution (cm/s). Defaults to 0.01
+            N (int, optional): Number of successive time steps to check. Defaults to 3.
+        """
+        test_str = "Q209"
+        # self.data[test_str] = data
+        self.metadata["QCTest"].append(
+            (
+                f"qc_qartod_radial_stuck_value ({test_str}) - Test applies to each row. Thresholds="
+                "[ "
+                f"stuck_value_resolution={str(resolution)} (cm/s) "
+                f"stuck_value_number_of_timesteps={str(N)}"
+                f"]: See results in column {test_str} below"
+            )
+        )
+        self.append_to_tableheader(test_str, "(flag)")
+
+        # create list of previous files
+        i = 1
+        f0 = self.full_file
+        t0 = get_time(f0)
+        t0_str = t0.strftime('%Y_%m_%d_%H')
+        filelist = list()
+
+        while i < N:
+            prev_time = t0-dt.timedelta(hours = i)
+            prev_time_str = prev_time.strftime('%Y_%m_%d_%H')
+            prev_file = f0.replace(t0_str,prev_time_str)
+            filelist.append(prev_file)
+            i += 1
+
+        # Add new column to dataframe, and set every row as passing, 1, flag
+        self.data[test_str] = 1
+
+        # temporary object to add up results while looping through past files
+        rtemp = copy.deepcopy(self)
+        rtemp.data[test_str] = 0
+
+        for f in filelist:
+
+            if os.path.exists(f):
+                r0 = Radial(f)
+                if r0.is_valid():
+                    merged = self.data.merge(r0.data, on=["LOND", "LATD"], how="left", suffixes=(None, "_x"),
+                                                 indicator="Exist")
+                    difference = (merged["VELO"] - merged["VELO_x"]).abs()
+
+                    # If any point in the recent radial does not exist in the previous radial, set row as 999
+                    rtemp.data.loc[merged['Exist'] == 'left_only', test_str] = 999
+
+                    # If velocity difference is less than speed resolution, that's a stuck value to add to the count
+                    rtemp.data.loc[(difference < resolution), test_str] = rtemp.data.loc[(difference < resolution), test_str]+1
+                else:
+                    # If any of the previous files are invalid, set every row as not_evaluated, 2, flag. (Return, no need to check other files.)
+                    self.data[test_str] = 2
+                    logging.warning(
+                        '{} is corrupt or contains no data. Setting column {} to not_evaluated flag'.format(r0,                                                                                                            test_str))
+                    return
+            else:
+                # If any of the previous files do not exist, set every row as not_evaluated, 2, flag. (Return, no need to check other files.)
+                self.data[test_str] = 2
+                logging.warning(
+                    "{} does not exist at specified location. Setting column {} to not_evaluated flag".format(r0,
+                                                                                                              test_str)
+                )
+                return
+
+        # If stuck value persisted for N-1 previous files, then set row as a failure, 4, flag
+        self.data.loc[rtemp.data[test_str] == N-1,test_str] = 4
+
+        # If any points in the past radial files did not exist, set row as a not evaluated, 2, flag
+        self.data.loc[rtemp.data[test_str] >= 999,test_str] = 2
+
+    def qc_qartod_stuck_value_v2(self, resolution=0.01, N=3):
+        """
+        Integrated Ocean Observing System (IOOS)
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Radial Stuck Value (Test 9)
+        Tests for repeating values in radial time series at a location
+
+        If the difference between successive velocities has not exceeded the resolution of the measurement
+        for N time steps, the most recent velocity is considered a stuck value and is assigned a fail flag.
+
+        Flags Condition Codable Instructions
+
+        V is a set of velocities where V at time=0 is the most recent velocity.
+        V = [Vt=-(N-1) … Vt=-1, Vt=0]
+
+        IF MAX(ABS(DIFF(V)) < R,
+        flag = 4
+
+        Pass = 1
+        IF MAX(ABS(DIFF(V)) >= R
+        flag = 1
+
+        Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
+
+        Args:
+            resolution (int, optional): Radial velocity resolution (cm/s). Defaults to 0.01
+            N (int, optional): Number of successive time steps to check. Defaults to 3.
+        """
+        test_str = "Q209_v2"
+        # self.data[test_str] = data
+        self.metadata["QCTest"].append(
+            (
+                f"qc_qartod_radial_stuck_value_v2 ({test_str}) - Test applies to each row. Thresholds="
+                "[ "
+                f"stuck_value_resolution_v2={str(resolution)} (cm/s) "
+                f"stuck_value_number_of_timesteps_v2={str(N)}"
+                f"]: See results in column {test_str} below"
+            )
+        )
+        self.append_to_tableheader(test_str, "(flag)")
+
+        #set all results to passing
+        result = np.full(self.data['VELO'].shape,1)
+
+        # create list of previous N files
+        i = 1
+        f0 = self.full_file
+        t0 = get_time(f0)
+        t0_str = t0.strftime('%Y_%m_%d_%H')
+        filelist = list()
+        filelist.append(f0)
+
+        while i < N:
+            prev_time = t0-dt.timedelta(hours = i)
+            prev_time_str = prev_time.strftime('%Y_%m_%d_%H')
+            prev_file = f0.replace(t0_str,prev_time_str)
+            filelist.append(prev_file)
+            i += 1
+
+        rcat = concat(filelist, method="gridded", enhance=False, parallel=False)
+        # convert range coordinates to integer, multipy by 10 first to ensure no duplicates
+        rangex10 = rcat.range * 10
+        rcat = rcat.assign_coords(range=rangex10.astype(int))
+
+        # loop through all indices in the radial and obtain time series for each one
+        # by looking up velocities in concatenated radial for same bearing and range
+        for i in range(0,self.data.shape[0]):
+            rval = self.data['RNGE'][i]*10
+            tmp = rcat.sel(bearing = self.data['BEAR'][i], range = rval.astype(int))
+            ts = tmp['VELO'].data
+            if any(np.isnan(ts)):
+                    # If any points in the past radial files did not exist, set row as a not evaluated, 2, flag
+                    result[i] = 2
+            else:
+                if abs(np.diff(ts, 1)).max() < resolution:
+                    # If stuck value persisted for N-1 previous files, then set row as a failure, 4, flag
+                    result[i] = 4
+
+        # Add new column to dataframe
+        self.data[test_str] = result
 
     def qc_qartod_primary_flag(self, include=None):
         """
