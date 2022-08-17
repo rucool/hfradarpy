@@ -7,6 +7,7 @@ dependencies:
   - xarray
   - netcdf4
   - pyproj
+  - joblib
   - click
   - bottleneck
   - dask
@@ -16,4 +17,4 @@ dependencies:
   - cmocean
   - jupyterlab
   - nb_conda_kernels
-  - joblib
+  - pytest

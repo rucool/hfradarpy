@@ -1,0 +1,14 @@
+xarray
+netcdf4
+pyproj
+joblib
+geopandas
+cartopy>0.20
+matplotlib
+oceans
+cmocean
+click
+dask
+pytest
+jupyterlab
+nb_conda_kernels
