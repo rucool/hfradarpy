@@ -174,7 +174,7 @@ class CTFParser(object):
     @abstractmethod
     def file_type(self):
         """Return a string representing the type of file this is."""
-        pass
+        return self.metadata['FileType']
 
     def replace_invalid_values(self, values=[999.00, 1080.0]):
         """
@@ -186,7 +186,3 @@ class CTFParser(object):
         """
         logging.info("Replacing invalid values {} with NaN".format(values))
         self.data.replace(values, np.nan, inplace=True)
-
-    def file_type(self):
-        """Return a string representing the type of file this is."""
-        return self.metadata['FileType']
