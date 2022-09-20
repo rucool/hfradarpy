@@ -111,7 +111,8 @@ class CTFParser(object):
                                             # use pandas read_csv because it interprets the datatype for each column of the csv
                                             tdf = pd.read_csv(
                                                 io.StringIO(table_data),
-                                                sep=" ",
+                                                # sep=" ",
+                                                sep='\\s+',
                                                 header=None,
                                                 names=self._tables[table_count]["TableColumnTypes"].split(),
                                                 skipinitialspace=True,
@@ -185,3 +186,7 @@ class CTFParser(object):
         """
         logging.info("Replacing invalid values {} with NaN".format(values))
         self.data.replace(values, np.nan, inplace=True)
+
+    def file_type(self):
+        """Return a string representing the type of file this is."""
+        return self.metadata['FileType']
