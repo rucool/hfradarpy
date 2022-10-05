@@ -6,6 +6,7 @@ import re
 import copy
 import xarray as xr
 from hfradarpy.ctf import CTFParser
+from hfradarpy.common import timestamp_from_lluv_filename as get_time
 from hfradarpy.calc import reckon
 from hfradarpy.io.nc import make_encoding
 from pathlib import Path
@@ -94,6 +95,10 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
         if 'qc_qartod_temporal_gradient' in qc_keys:
             r.qc_qartod_temporal_gradient(previous_full_file,**qc_values['qc_qartod_temporal_gradient'])
 
+        if 'qc_qartod_stuck_value' in qc_keys:
+            r.qc_qartod_stuck_value(**qc_values['qc_qartod_stuck_value'])
+            #r.qc_qartod_stuck_value_v2(**qc_values['qc_qartod_stuck_value'])
+
         if "qc_qartod_avg_radial_bearing" in qc_keys:
             r.qc_qartod_avg_radial_bearing(**qc_values["qc_qartod_avg_radial_bearing"])
 
@@ -158,7 +163,7 @@ def concat(rlist, method="gridded", enhance=False, parallel=False):
         if not isinstance(radial, Radial):
             radial = Radial(radial)
             ds = radial.to_xarray(method, enhance=enhance)
-        return (radial.file_name, ds)
+        return radial.file_name, ds
 
     if parallel:
         num_cores = multiprocessing.cpu_count()
@@ -733,77 +738,87 @@ class Radial(CTFParser):
             xds["accuracy"].attrs["grid_mapping"] = "crs"
             xds["accuracy"].attrs["units"] = "cm s-1"
 
-        # QC06
-        if "QC06" in xds:
-            xds["QC06"].attrs["long_name"] = "Syntax (QARTOD Test 06) Flag Masks"
-            xds["QC06"].attrs["valid_range"] = [1, 9]
-            xds["QC06"].attrs["flag_values"] = [1, 2, 3, 4, 5]
-            xds["QC06"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
-            xds["QC06"].attrs["coordinates"] = "lon lat"
-            xds["QC06"].attrs["grid_mapping"] = "crs"
-            rename_qc["QC06"] = "syntax_qc"
+        # Q201
+        if "Q201" in xds:
+            xds["Q201"].attrs["long_name"] = "Syntax (QARTOD Test 201) Flag Masks"
+            xds["Q201"].attrs["valid_range"] = [1, 9]
+            xds["Q201"].attrs["flag_values"] = [1, 2, 3, 4, 5]
+            xds["Q201"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
+            xds["Q201"].attrs["coordinates"] = "lon lat"
+            xds["Q201"].attrs["grid_mapping"] = "crs"
+            rename_qc["Q201"] = "syntax_qc"
 
-        # QC07
-        if "QC07" in xds:
-            xds["QC07"].attrs["long_name"] = "Maximum Velocity Threshold (QARTOD Test 07) Flag Masks"
-            xds["QC07"].attrs["valid_range"] = [1, 9]
-            xds["QC07"].attrs["flag_values"] = [1, 2, 3, 4, 5]
-            xds["QC07"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
-            xds["QC07"].attrs["coordinates"] = "lon lat"
-            xds["QC07"].attrs["grid_mapping"] = "crs"
-            rename_qc["QC07"] = "max_threshold_qc"
+        # Q202
+        if "Q202" in xds:
+            xds["Q202"].attrs["long_name"] = "Maximum Velocity Threshold (QARTOD Test 202) Flag Masks"
+            xds["Q202"].attrs["valid_range"] = [1, 9]
+            xds["Q202"].attrs["flag_values"] = [1, 2, 3, 4, 5]
+            xds["Q202"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
+            xds["Q202"].attrs["coordinates"] = "lon lat"
+            xds["Q202"].attrs["grid_mapping"] = "crs"
+            rename_qc["Q202"] = "max_threshold_qc"
 
-        # QC08
-        if "QC08" in xds:
-            xds["QC08"].attrs["long_name"] = "Valid Location (QARTOD Test 08) Flag Masks"
-            xds["QC08"].attrs["valid_range"] = [1, 9]
-            xds["QC08"].attrs["flag_values"] = [1, 2, 3, 4, 5]
-            xds["QC08"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
-            xds["QC08"].attrs["coordinates"] = "lon lat"
-            xds["QC08"].attrs["grid_mapping"] = "crs"
-            rename_qc["QC08"] = "valid_location_qc"
+        # Q203
+        if "Q203" in xds:
+            xds["Q203"].attrs["long_name"] = "Valid Location (QARTOD Test 203) Flag Masks"
+            xds["Q203"].attrs["valid_range"] = [1, 9]
+            xds["Q203"].attrs["flag_values"] = [1, 2, 3, 4, 5]
+            xds["Q203"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
+            xds["Q203"].attrs["coordinates"] = "lon lat"
+            xds["Q203"].attrs["grid_mapping"] = "crs"
+            rename_qc["Q203"] = "valid_location_qc"
 
-        # QC09
-        if "QC09" in xds:
-            xds["QC09"].attrs["long_name"] = "Radial Count (QARTOD Test 09) Flag Masks"
-            xds["QC09"].attrs["valid_range"] = [1, 9]
-            xds["QC09"].attrs["flag_values"] = [1, 2, 3, 4, 5]
-            xds["QC09"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
-            xds["QC09"].attrs["coordinates"] = "lon lat"
-            xds["QC09"].attrs["grid_mapping"] = "crs"
-            rename_qc["QC09"] = "radial_count_qc"
+        # Q204
+        if "Q204" in xds:
+            xds["Q204"].attrs["long_name"] = "Radial Count (QARTOD Test 204) Flag Masks"
+            xds["Q204"].attrs["valid_range"] = [1, 9]
+            xds["Q204"].attrs["flag_values"] = [1, 2, 3, 4, 5]
+            xds["Q204"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
+            xds["Q204"].attrs["coordinates"] = "lon lat"
+            xds["Q204"].attrs["grid_mapping"] = "crs"
+            rename_qc["Q204"] = "radial_count_qc"
 
-        # QC10
-        if "QC10" in xds:
-            xds["QC10"].attrs["long_name"] = "Spatial Median Filter (QARTOD Test 10) Flag Masks"
-            xds["QC10"].attrs["valid_range"] = [1, 9]
-            xds["QC10"].attrs["flag_values"] = [1, 2, 3, 4, 5]
-            xds["QC10"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
-            xds["QC10"].attrs["coordinates"] = "lon lat"
-            xds["QC10"].attrs["grid_mapping"] = "crs"
-            rename_qc["QC10"] = "spatial_median_filter_qc"
+        # Q205
+        if "Q205" in xds:
+            xds["Q205"].attrs["long_name"] = "Spatial Median Filter (QARTOD Test 205) Flag Masks"
+            xds["Q205"].attrs["valid_range"] = [1, 9]
+            xds["Q205"].attrs["flag_values"] = [1, 2, 3, 4, 5]
+            xds["Q205"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
+            xds["Q205"].attrs["coordinates"] = "lon lat"
+            xds["Q205"].attrs["grid_mapping"] = "crs"
+            rename_qc["Q205"] = "spatial_median_filter_qc"
 
-        # QC11
-        if "QC11" in xds:
-            xds["QC11"].attrs["long_name"] = "Temporal Gradient (QARTOD Test 11) Flag Masks"
-            xds["QC11"].attrs["valid_range"] = [1, 9]
-            xds["QC11"].attrs["flag_values"] = [1, 2, 3, 4, 5]
-            xds["QC11"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
-            xds["QC11"].attrs["coordinates"] = "lon lat"
-            xds["QC11"].attrs["grid_mapping"] = "crs"
-            rename_qc["QC11"] = "temporal_gradient_qc"
+        # Q206
+        if "Q206" in xds:
+            xds["Q206"].attrs["long_name"] = "Temporal Gradient (QARTOD Test 206) Flag Masks"
+            xds["Q206"].attrs["valid_range"] = [1, 9]
+            xds["Q206"].attrs["flag_values"] = [1, 2, 3, 4, 5]
+            xds["Q206"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
+            xds["Q206"].attrs["coordinates"] = "lon lat"
+            xds["Q206"].attrs["grid_mapping"] = "crs"
+            rename_qc["Q206"] = "temporal_gradient_qc"
 
-        # QC12
-        if "QC12" in xds:
-            xds["QC12"].attrs["long_name"] = "Average Radial Bearing (QARTOD Test 12) Flag Masks"
-            xds["QC12"].attrs["valid_range"] = [1, 9]
-            xds["QC12"].attrs["flag_values"] = [1, 2, 3, 4, 5]
-            xds["QC12"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
-            xds["QC12"].attrs["coordinates"] = "lon lat"
-            xds["QC12"].attrs["grid_mapping"] = "crs"
-            rename_qc["QC12"] = "average_radial_bearing_qc"
+        # Q207
+        if "Q207" in xds:
+            xds["Q207"].attrs["long_name"] = "Average Radial Bearing (QARTOD Test 207) Flag Masks"
+            xds["Q207"].attrs["valid_range"] = [1, 9]
+            xds["Q207"].attrs["flag_values"] = [1, 2, 3, 4, 5]
+            xds["Q207"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
+            xds["Q207"].attrs["coordinates"] = "lon lat"
+            xds["Q207"].attrs["grid_mapping"] = "crs"
+            rename_qc["Q207"] = "average_radial_bearing_qc"
 
-        # QC12
+        # Q209
+        if "Q209" in xds:
+            xds["Q209"].attrs["long_name"] = "Radial Stuck Value (QARTOD Test 209) Flag Masks"
+            xds["Q209"].attrs["valid_range"] = [1, 9]
+            xds["Q209"].attrs["flag_values"] = [1, 2, 3, 4, 5]
+            xds["Q209"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
+            xds["Q209"].attrs["coordinates"] = "lon lat"
+            xds["Q209"].attrs["grid_mapping"] = "crs"
+            rename_qc["Q209"] = "radial_stuck_value_qc"
+
+        # PRIM
         if "PRIM" in xds:
             xds["PRIM"].attrs["long_name"] = "Primary Flag Masks"
             xds["PRIM"].attrs["valid_range"] = [1, 9]
@@ -813,6 +828,7 @@ class Radial(CTFParser):
             xds["PRIM"].attrs["grid_mapping"] = "crs"
             rename_qc["PRIM"] = "primary_flag_qc"
 
+        #QCOP
         if "QCOP" in xds:
             xds["QCOP"].attrs["long_name"] = "Operator Flag Masks"
             xds["QCOP"].attrs["valid_range"] = [1, 9]
@@ -1005,6 +1021,7 @@ class Radial(CTFParser):
                 Defaults to None which automatically infers the bearing based off of the radial data.
             enhance (bool, optional):
                 Change manufacturer variables to meaningful variable names. Add attributes and other metadata. Defaults to True
+            user_attributes (dictionary, optional): Dictionary containing metadata for the NetCDF. Defaults to None.
         """
         # Make sure filename is converted into a Path object
         filename = Path(filename)
@@ -1121,8 +1138,8 @@ class Radial(CTFParser):
                                for qcd_info in self.metadata['QCD']:
                                     f.write('%{}\n'.format(qcd_info))
                             if 'QCTest' in self.metadata:
-                                f.write('%QCFileVersion: 1.0.0\n')
-                                f.write('%QCReference: Quality control reference: IOOS QARTOD HF Radar ver 1.0 May 2016\n')
+                                f.write('%QCFileVersion: 2.0.0\n')
+                                f.write('%QCReference: Quality control reference: IOOS QARTOD HF Radar ver 2.0 June 2022\n')
                                 f.write('%QCFlagDefinitions: 1=pass 2=not_evaluated 3=suspect 4=fail 9=missing_data\n')
                                 f.write('%QCTestFormat: "test_name [qc_thresholds]: test_result"\n')
 
@@ -1249,7 +1266,7 @@ class Radial(CTFParser):
             warning_threshold (int, optional): Warning Threshold. Defaults to 15.
             failure_threshold (int, optional): Failure Threshold. Defaults to 30.
         """
-        test_str = "QC12"
+        test_str = "Q207"
         # Absolute value of the difference between the bearing mean and reference bearing
         absolute_difference = np.abs(self.data["BEAR"].mean() - reference_bearing)
 
@@ -1291,7 +1308,7 @@ class Radial(CTFParser):
             use_mask (bool, optional): Use mask_over_land function in addition to manufacturers flags. Defaults to False.
         """
 
-        test_str = "QC08"
+        test_str = "Q203"
         flag_column = "VFLG"
 
         if flag_column in self.data:
@@ -1330,7 +1347,7 @@ class Radial(CTFParser):
             low_count (int, optional):
                 Low radial count threshold (warning) below which the file should be considered suspect. Defaults to 300.
         """
-        test_str = "QC09"
+        test_str = "Q204"
         column_flag = "VFLG"
 
         # If a vector flag is supplied by the vendor, subset by that first
@@ -1377,7 +1394,7 @@ class Radial(CTFParser):
             high_speed (int, optional):
                 High Radial Speed (cm/s). Radials between high and max speed will be flagged suspect. Defaults to 150
         """
-        test_str = "QC07"
+        test_str = "Q202"
 
         self.data["VELO"] = self.data["VELO"].astype(float)  # make sure VELO is a float
 
@@ -1422,20 +1439,17 @@ class Radial(CTFParser):
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
 
         Args:
-            radial_smed_range_cell_limit (float, optional):
+            smed_range_cell_limit (float, optional):
                 Multiple of range step which depends on the radar type. Defaults to 2.1.
-            radial_smed_angular_limit (int, optional):
+            smed_angular_limit (int, optional):
                 Limit for number of degrees from source radial's bearing (degrees). Defaults to 10.
-            radial_smed_current_difference (int, optional):
+            smed_current_difference (int, optional):
                 Current difference (cm/s). Defaults to 30.
         """
-        test_str = "QC10"
+        test_str = "Q205"
 
         self.data[test_str] = 1
         try:
-            Rstep = float(self.metadata["RangeResolutionKMeters"])
-            # Rstep = np.floor(min(np.diff(np.unique(self.data['RNGE'])))) #use as backup method if other fails?
-
             Bstep = [float(s) for s in re.findall(r"-?\d+\.?\d*", self.metadata["AngularResolution"])]
             Bstep = Bstep[0]
             # Bstep = int(min(np.diff(np.unique(self.data['BEAR']))))  #use as backup method if other fails?
@@ -1449,12 +1463,8 @@ class Radial(CTFParser):
             Bcell = Bcell.astype(int)
             # Btable = np.column_stack((self.data['BEAR'], Bcell))  #only for debugging
 
-            # convert range into range cell numbers
-            Rcell = np.floor((self.data["RNGE"] / Rstep) + 0.1)
-            Rcell = Rcell - min(Rcell)
-            Rcell = Rcell.astype(int)
-            # Rtable = np.column_stack((self.data['RNGE'], Rcell))   #only for debugging
             Rcell = self.data["SPRC"]
+            # Rtable = np.column_stack((self.data['RNGE'], Rcell))   #only for debugging
 
             # place velocities into a matrix with rows defined as bearing cell# and columns as range cell#
             BRvel = np.zeros((int(360 / Bstep), max(Rcell) + 1), dtype=int) + np.nan
@@ -1532,9 +1542,8 @@ class Radial(CTFParser):
         Pass: Applies for test pass condition.
         ----------------------------------------------------------------------------------------------------------------------
         Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
-        :param threshold: Maximum Radial Speed (cm/s)
         """
-        test_str = "QC06"
+        test_str = "Q201"
 
         i = 0
 
@@ -1614,7 +1623,7 @@ class Radial(CTFParser):
             gradient_temp_fail (int, optional): Maximum Radial Speed (cm/s). Defaults to 54.
             gradient_temp_warn (int, optional): Warning Radial Speed (cm/s). Defaults to 36.
         """
-        test_str = "QC11"
+        test_str = "Q206"
         # self.data[test_str] = data
         self.metadata["QCTest"].append(
             (
@@ -1657,6 +1666,186 @@ class Radial(CTFParser):
             logging.warning(
                 "{} does not exist at specified location. Setting column {} to not_evaluated flag".format(r0, test_str)
             )
+
+    def qc_qartod_stuck_value(self, resolution=0.01, N=3):
+        """
+        Integrated Ocean Observing System (IOOS)
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Radial Stuck Value (Test 9)
+        Tests for repeating values in radial time series at a location
+
+        If the temporal change between the most recent velocity and each of the previous N-1 radial velocities
+        has not exceeded the resolution of the measurement, the most recent velocity is considered a stuck value
+        and is assigned a fail flag.  Previous velocities are values obtained from N-1 successive time steps prior to the
+        measurement that is under evaluation.
+
+        Flags Condition Codable Instructions
+
+        V is a set of velocities where V at time=0 is the most recent velocity.
+        V = [Vt=-(N-1) ...  Vt=-1, Vt=0]
+
+        If all (Vt=0 - [ Vt=-1 ... Vt=-(N-1)]) < R,
+        flag = 4
+
+        Pass = 1
+        If any (Vt=0 - [ Vt=-1 ... Vt=-(N-1)]) >= R,
+        flag = 1
+
+        Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
+
+        Args:
+            resolution (int, optional): Radial velocity resolution (cm/s). Defaults to 0.01
+            N (int, optional): Number of successive time steps to check. Defaults to 3.
+        """
+        test_str = "Q209"
+        # self.data[test_str] = data
+        self.metadata["QCTest"].append(
+            (
+                f"qc_qartod_radial_stuck_value ({test_str}) - Test applies to each row. Thresholds="
+                "[ "
+                f"stuck_value_resolution={str(resolution)} (cm/s) "
+                f"stuck_value_number_of_timesteps={str(N)}"
+                f"]: See results in column {test_str} below"
+            )
+        )
+        self.append_to_tableheader(test_str, "(flag)")
+
+        # create list of previous files
+        i = 1
+        f0 = self.full_file
+        t0 = get_time(f0)
+        t0_str = t0.strftime('%Y_%m_%d_%H')
+        filelist = list()
+
+        while i < N:
+            prev_time = t0-dt.timedelta(hours = i)
+            prev_time_str = prev_time.strftime('%Y_%m_%d_%H')
+            prev_file = f0.replace(t0_str,prev_time_str)
+            filelist.append(prev_file)
+            i += 1
+
+        # Add new column to dataframe, and set every row as passing, 1, flag
+        self.data[test_str] = 1
+
+        # temporary object to add up results while looping through past files
+        rtemp = copy.deepcopy(self)
+        rtemp.data[test_str] = 0
+
+        for f in filelist:
+
+            if os.path.exists(f):
+                r0 = Radial(f)
+                if r0.is_valid():
+                    merged = self.data.merge(r0.data, on=["LOND", "LATD"], how="left", suffixes=(None, "_x"),
+                                                 indicator="Exist")
+                    difference = (merged["VELO"] - merged["VELO_x"]).abs()
+
+                    # If any point in the recent radial does not exist in the previous radial, set row as 999
+                    rtemp.data.loc[merged['Exist'] == 'left_only', test_str] = 999
+
+                    # If velocity difference is less than speed resolution, that's a stuck value to add to the count
+                    rtemp.data.loc[(difference < resolution), test_str] = rtemp.data.loc[(difference < resolution), test_str]+1
+                else:
+                    # If any of the previous files are invalid, set every row as not_evaluated, 2, flag. (Return, no need to check other files.)
+                    self.data[test_str] = 2
+                    logging.warning(
+                        '{} is corrupt or contains no data. Setting column {} to not_evaluated flag'.format(r0,                                                                                                            test_str))
+                    return
+            else:
+                # If any of the previous files do not exist, set every row as not_evaluated, 2, flag. (Return, no need to check other files.)
+                self.data[test_str] = 2
+                logging.warning(
+                    "{} does not exist at specified location. Setting column {} to not_evaluated flag".format(r0,
+                                                                                                              test_str)
+                )
+                return
+
+        # If stuck value persisted for N-1 previous files, then set row as a failure, 4, flag
+        self.data.loc[rtemp.data[test_str] == N-1,test_str] = 4
+
+        # If any points in the past radial files did not exist, set row as a not evaluated, 2, flag
+        self.data.loc[rtemp.data[test_str] >= 999,test_str] = 2
+
+    def qc_qartod_stuck_value_v2(self, resolution=0.01, N=3):
+        """
+        Integrated Ocean Observing System (IOOS)
+        Quality Assurance of Real-Time Oceanographic Data (QARTOD)
+        Radial Stuck Value (Test 9)
+        Tests for repeating values in radial time series at a location
+
+        If the difference between successive velocities has not exceeded the resolution of the measurement
+        for N time steps, the most recent velocity is considered a stuck value and is assigned a fail flag.
+
+        Flags Condition Codable Instructions
+
+        V is a set of velocities where V at time=0 is the most recent velocity.
+        V = [Vt=-(N-1) … Vt=-1, Vt=0]
+
+        IF MAX(ABS(DIFF(V)) < R,
+        flag = 4
+
+        Pass = 1
+        IF MAX(ABS(DIFF(V)) >= R
+        flag = 1
+
+        Link: https://ioos.noaa.gov/ioos-in-action/manual-real-time-quality-control-high-frequency-radar-surface-current-data/
+
+        Args:
+            resolution (int, optional): Radial velocity resolution (cm/s). Defaults to 0.01
+            N (int, optional): Number of successive time steps to check. Defaults to 3.
+        """
+        test_str = "Q209_v2"
+        # self.data[test_str] = data
+        self.metadata["QCTest"].append(
+            (
+                f"qc_qartod_radial_stuck_value_v2 ({test_str}) - Test applies to each row. Thresholds="
+                "[ "
+                f"stuck_value_resolution_v2={str(resolution)} (cm/s) "
+                f"stuck_value_number_of_timesteps_v2={str(N)}"
+                f"]: See results in column {test_str} below"
+            )
+        )
+        self.append_to_tableheader(test_str, "(flag)")
+
+        #set all results to passing
+        result = np.full(self.data['VELO'].shape,1)
+
+        # create list of previous N files
+        i = 1
+        f0 = self.full_file
+        t0 = get_time(f0)
+        t0_str = t0.strftime('%Y_%m_%d_%H')
+        filelist = list()
+        filelist.append(f0)
+
+        while i < N:
+            prev_time = t0-dt.timedelta(hours = i)
+            prev_time_str = prev_time.strftime('%Y_%m_%d_%H')
+            prev_file = f0.replace(t0_str,prev_time_str)
+            filelist.append(prev_file)
+            i += 1
+
+        rcat = concat(filelist, method="gridded", enhance=False, parallel=False)
+        # convert range coordinates to integer, multipy by 10 first to ensure no duplicates
+        rangex10 = rcat.range * 10
+        rcat = rcat.assign_coords(range=rangex10.astype(int))
+
+        # loop through all indices in the radial and obtain time series for each one
+        # by looking up velocities in concatenated radial for same bearing and range
+        for i in range(0,self.data.shape[0]):
+            rval = self.data['RNGE'][i]*10
+            tmp = rcat.sel(bearing = self.data['BEAR'][i], range = rval.astype(int))
+            ts = tmp['VELO'].data
+            if any(np.isnan(ts)):
+                    # If any points in the past radial files did not exist, set row as a not evaluated, 2, flag
+                    result[i] = 2
+            else:
+                if abs(np.diff(ts, 1)).max() < resolution:
+                    # If stuck value persisted for N-1 previous files, then set row as a failure, 4, flag
+                    result[i] = 4
+
+        # Add new column to dataframe
+        self.data[test_str] = result
 
     def qc_qartod_primary_flag(self, include=None):
         """
