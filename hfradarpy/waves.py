@@ -88,10 +88,6 @@ class Waves(CTFParser):
         """
         return "<Wave: {}>".format(self.file_name)
 
-    def file_type(self):
-        """Return a string representing the type of file this is."""
-        return "wave"
-
     def clean_header(self):
         """
         Cleans the header data from the wave data for proper input into MySQL database
