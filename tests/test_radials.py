@@ -22,7 +22,7 @@ def test_codar_radial_to_tabular_netcdf():
     # This automatically 'enhances' the netCDF file
     # with better variable names and attributes.
     rad1 = Radial(radial_file)
-    rad1.to_netcdf(str(nc_file), model="tabular")
+    rad1.to_netcdf(str(nc_file), model="tabular", enhance=True)
 
     # Convert it to an xarray Dataset with no variable
     # or attribte enhancements
@@ -71,7 +71,6 @@ def test_codar_radial_to_gridded_netcdf():
         assert not xds1.identical(xds2)
 
 
-@pytest.mark.skipif("geopandas" not in sys.modules, reason="requires the geopandas library.")
 def test_codar_mask():
     radial_file = data_path / "radials" / "ruv" / "SEAB" / "RDLi_SEAB_2019_01_01_0000.ruv"
     rad1 = Radial(radial_file, replace_invalid=False)
@@ -89,6 +88,7 @@ def test_codar_qc():
     rad1.initialize_qc()
     # assert len(rad1.data) == 733
     # rad1.mask_over_land(subset=True)
+    rad1.qc_qartod_syntax() #QC201
     rad1.qc_qartod_radial_count()
     rad1.qc_qartod_valid_location()
     rad1.qc_qartod_maximum_velocity()
@@ -96,13 +96,16 @@ def test_codar_qc():
     rad1.qc_qartod_temporal_gradient(radial_file_previous)
     rad1.qc_qartod_avg_radial_bearing(reference_bearing=180)
     rad1.qc_qartod_primary_flag()
+    rad1.qc_qartod_stuck_value()
     # assert len(rad1.data) == 587
-    assert "QC07" in rad1.data
-    assert "QC08" in rad1.data
-    assert "QC09" in rad1.data
-    assert "QC10" in rad1.data
-    assert "QC11" in rad1.data  # temporal gradient test
-    assert "QC12" in rad1.data
+    assert "Q201" in rad1.data
+    assert "Q202" in rad1.data
+    assert "Q203" in rad1.data
+    assert "Q204" in rad1.data
+    assert "Q205" in rad1.data  # temporal gradient test
+    assert "Q206" in rad1.data
+    assert "Q207" in rad1.data
+    assert "Q209" in rad1.data
     assert "PRIM" in rad1.data
 
 
@@ -164,10 +167,9 @@ def test_wera_radial_to_gridded_netcdf():
         assert not xds1.identical(xds2)
 
 
-@pytest.mark.skipif("geopandas" not in sys.modules, reason="requires the geopandas library.")
 def test_wera_mask():
     radial_file = data_path / "radials" / "ruv" / "WERA" / "RDL_csw_2019_10_24_162300.ruv"
-    rad1 = Radial(radial_file, mask_over_land=False, replace_invalid=False)
+    rad1 = Radial(radial_file, replace_invalid=False)
     # Total points before masking
     assert len(rad1.data) == 6327
     rad1.mask_over_land(subset=True)
@@ -180,7 +182,7 @@ def test_wera_qc():
     rad1 = Radial(radial_file, replace_invalid=False)
     rad1.initialize_qc()
     # assert len(rad1.data) == 6327
-    # rad1.mask_over_land(subset=True)
+    rad1.mask_over_land(subset=True)
     rad1.qc_qartod_radial_count()
     rad1.qc_qartod_valid_location()
     rad1.qc_qartod_maximum_velocity()
@@ -188,12 +190,12 @@ def test_wera_qc():
     rad1.qc_qartod_avg_radial_bearing(reference_bearing=180)
     rad1.qc_qartod_primary_flag()
     # assert len(rad1.data) == 5745
-    assert "QC07" in rad1.data
-    assert "QC08" not in rad1.data  # no VFLG column so we can't run it
-    assert "QC09" in rad1.data
-    assert "QC10" in rad1.data
+    assert "Q204" in rad1.data
+    assert "Q203" not in rad1.data  # no VFLG column so we can't run it
+    assert "Q202" in rad1.data
+    assert "Q205" in rad1.data
     # assert 'QC11' in rad1.data  # temporal gradient test
-    assert "QC12" in rad1.data
+    assert "Q207" in rad1.data
     assert "PRIM" in rad1.data
 
 

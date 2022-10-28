@@ -141,7 +141,8 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
             return r
 
 
-def concat(rlist, method="gridded", enhance=False, parallel=False):
+def concat(rlist, range_minmax=None, bearing=None,
+           method="gridded", enhance=False, parallel=False):
     """
     This function takes a list of Radial objects or radial file paths and
     combines them along the time dimension using xarrays built-in concatenation
@@ -162,8 +163,8 @@ def concat(rlist, method="gridded", enhance=False, parallel=False):
     def load_radials(radial, method, enhance=False):
         if not isinstance(radial, Radial):
             radial = Radial(radial)
-            ds = radial.to_xarray(method, enhance=enhance)
-        return radial.file_name, ds
+            ds = radial.to_xarray(method, enhance=enhance, range_minmax=range_minmax, bearing=bearing)
+        return (radial.file_name, ds)
 
     if parallel:
         num_cores = multiprocessing.cpu_count()
@@ -176,7 +177,7 @@ def concat(rlist, method="gridded", enhance=False, parallel=False):
         for radial in rlist:
             if not isinstance(radial, Radial):
                 radial = Radial(radial)
-            radial_dict[radial.file_name] = radial.to_xarray(method, enhance=enhance)
+            radial_dict[radial.file_name] = radial.to_xarray(method, enhance=enhance, range_minmax=range_minmax, bearing=bearing)
 
     ds = xr.concat(radial_dict.values(), "time")
     return ds.sortby("time")
@@ -323,7 +324,7 @@ class Radial(CTFParser):
                 geometry=[Point(xy) for xy in zip(self.data.LOND.values, self.data.LATD.values)],
             )
             # Join the geodataframe containing radial points with geodataframe containing leasing areas
-            geodata = gpd.tools.sjoin(geodata.to_crs(4326), land.to_crs(4326), how="left", predicate="intersects")
+            geodata = gpd.sjoin(geodata.to_crs(4326), land.to_crs(4326), how="left", predicate="intersects")
 
             # All data in the continent column that lies over water should be nan.
             water_index = geodata["continent"].isna()
@@ -526,9 +527,6 @@ class Radial(CTFParser):
 
         # Intitialize xarray dataset
         ds = self.data.to_xarray()
-        # ds = self.data.to_xarray().expand_dims('time').assign_coords(time=('time', [timestamp]))
-        # ds.coords['time'] = pd.date_range(timestamp, periods=1)
-        # ds.expand_dims('time').assign_coords(time=('time', [timestamp]))
 
         # Check if calculated longitudes and latitudes align with given longitudes and latitudes
         # plt.plot(ds.lon, ds.lat, 'bo', ds.LOND.squeeze(), ds.LATD.squeeze(), 'rx')
@@ -594,6 +592,7 @@ class Radial(CTFParser):
         xds["lon"].attrs["axis"] = "X"
         xds["lon"].attrs["valid_min"] = np.float32(-180.0)
         xds["lon"].attrs["valid_max"] = np.float32(180.0)
+        # xds['lon'] = xds['lon'].astype(np.float64)
 
         # Set lat attributes
         xds["lat"].attrs["long_name"] = "Latitude"
@@ -603,6 +602,8 @@ class Radial(CTFParser):
         xds["lat"].attrs["axis"] = "Y"
         xds["lat"].attrs["valid_min"] = np.float32(-90.0)
         xds["lat"].attrs["valid_max"] = np.float32(90.0)
+        # xds['lat'] = xds['lat'].astype(np.float64)
+
 
         # Set u attributes
         xds["u"].attrs["long_name"] = "Eastward Surface Current (cm/s)"
@@ -613,6 +614,7 @@ class Radial(CTFParser):
         xds["u"].attrs["valid_max"] = np.float32(300)
         xds["u"].attrs["coordinates"] = "lon lat"
         xds["u"].attrs["grid_mapping"] = "crs"
+        # xds['u'] = xds['u'].astype(np.float64)
 
         # Set v attributes
         xds["v"].attrs["long_name"] = "Northward Surface Current (cm/s)"
@@ -623,6 +625,8 @@ class Radial(CTFParser):
         xds["v"].attrs["valid_max"] = np.float32(300)
         xds["v"].attrs["coordinates"] = "lon lat"
         xds["v"].attrs["grid_mapping"] = "crs"
+        # xds['v'] = xds['v'].astype(np.float64)
+
 
         # Set bearing attributes
         xds["bearing"].attrs["long_name"] = "Bearing from origin (away from instrument)"
@@ -632,6 +636,8 @@ class Radial(CTFParser):
         xds["bearing"].attrs["valid_max"] = np.float32(360)
         xds["bearing"].attrs["grid_mapping"] = "crs"
         xds["bearing"].attrs["axis"] = "Y"
+        # xds['bearing'] = xds['bearing'].astype(np.float64)
+
 
         # Set range attributes
         xds["range"].attrs["long_name"] = "Range from origin (away from instrument)"
@@ -641,6 +647,7 @@ class Radial(CTFParser):
         xds["range"].attrs["valid_max"] = np.float32(1000)
         xds["range"].attrs["grid_mapping"] = "crs"
         xds["range"].attrs["axis"] = "X"
+        # xds['range'] = xds['range'].astype(np.float64)
 
         # velocity
         xds["velocity"].attrs["valid_range"] = [-1000, 1000]
@@ -648,6 +655,8 @@ class Radial(CTFParser):
         xds["velocity"].attrs["units"] = "cm s-1"
         xds["velocity"].attrs["coordinates"] = "lon lat"
         xds["velocity"].attrs["grid_mapping"] = "crs"
+        # xds['velocity'] = xds['velocity'].astype(np.float64)
+
 
         # heading
         if "heading" in xds:
@@ -657,6 +666,7 @@ class Radial(CTFParser):
             xds["heading"].attrs["coordinates"] = "lon lat"
             xds["heading"].attrs["scale_factor"] = 0.1
             xds["heading"].attrs["grid_mapping"] = "crs"
+            # xds['heading'] = xds['heading'].astype(np.float64)
 
         # vector_flag
         if "vector_flag" in xds:
@@ -670,6 +680,7 @@ class Radial(CTFParser):
                 "reserved reserved"
             xds["vector_flag"].attrs["coordinates"] = "lon lat"
             xds["vector_flag"].attrs["grid_mapping"] = "crs"
+            # xds['vector_flag'] = xds['vector_flag'].astype(np.float64)
 
         # spatial_quality
         if "spatial_quality" in xds:
@@ -677,6 +688,7 @@ class Radial(CTFParser):
             xds["spatial_quality"].attrs["units"] = "cm s-1"
             xds["spatial_quality"].attrs["coordinates"] = "lon lat"
             xds["spatial_quality"].attrs["grid_mapping"] = "crs"
+            # xds['spatial_quality'] = xds['spatial_quality'].astype(np.float64)
 
         # temporal_quality
         if "temporal_quality" in xds:
@@ -684,6 +696,8 @@ class Radial(CTFParser):
             xds["temporal_quality"].attrs["units"] = "cm s-1"
             xds["temporal_quality"].attrs["coordinates"] = "lon lat"
             xds["temporal_quality"].attrs["grid_mapping"] = "crs"
+            # xds['temporal_quality'] = xds['temporal_quality'].astype(np.float64)
+    
 
         # velocity_max
         if "velocity_max" in xds:
@@ -691,6 +705,7 @@ class Radial(CTFParser):
             xds["velocity_max"].attrs["units"] = "cm s-1"
             xds["velocity_max"].attrs["coordinates"] = "lon lat"
             xds["velocity_max"].attrs["grid_mapping"] = "crs"
+            # xds['velocity_max'] = xds['velocity_max'].astype(np.float64)
 
         # velocity_min
         if "velocity_min" in xds:
@@ -698,18 +713,21 @@ class Radial(CTFParser):
             xds["velocity_min"].attrs["units"] = "cm s-1"
             xds["velocity_min"].attrs["coordinates"] = "lon lat"
             xds["velocity_min"].attrs["grid_mapping"] = "crs"
+            # xds['velocity_min'] = xds['velocity_min'].astype(np.float64)
 
         # spatial_count
         if "spatial_count" in xds:
             xds["spatial_count"].attrs["long_name"] = "Spatial count of sea water velocity (away from instrument)"
             xds["spatial_count"].attrs["coordinates"] = "lon lat"
             xds["spatial_count"].attrs["grid_mapping"] = "crs"
+            # xds['spatial_count'] = xds['spatial_count'].astype(np.float64)
 
         # temporal_count
         if "temporal_count" in xds:
             xds["temporal_count"].attrs["long_name"] = "Temporal count of sea water velocity (away from instrument)"
             xds["temporal_count"].attrs["coordinates"] = "lon lat"
             xds["temporal_count"].attrs["grid_mapping"] = "crs"
+            # xds['temporal_count'] = xds['temporal_count'].astype(np.float64)
 
         # east_dist_from_origin
         if "dist_east_from_origin" in xds:
@@ -717,6 +735,8 @@ class Radial(CTFParser):
             xds["dist_east_from_origin"].attrs["units"] = "km"
             xds["dist_east_from_origin"].attrs["coordinates"] = "lon lat"
             xds["dist_east_from_origin"].attrs["grid_mapping"] = "crs"
+            # xds['dist_east_from_origin'] = xds['dist_east_from_origin'].astype(np.float64)
+
 
         # north_dist_from_origin
         if "dist_north_from_origin" in xds:
@@ -724,12 +744,14 @@ class Radial(CTFParser):
             xds["dist_north_from_origin"].attrs["units"] = "km"
             xds["dist_north_from_origin"].attrs["coordinates"] = "lon lat"
             xds["dist_north_from_origin"].attrs["grid_mapping"] = "crs"
+            # xds['dist_north_from_origin'] = xds['dist_north_from_origin'].astype(np.float64)
 
         # range_cell
         if "range_cell" in xds:
             xds["range_cell"].attrs["long_name"] = "Cross Spectra Range Cell  of sea water velocity (away from instrument)"
             xds["range_cell"].attrs["coordinates"] = "lon lat"
             xds["range_cell"].attrs["grid_mapping"] = "crs"
+            # xds['range_cell'] = xds['range_cell'].astype(np.float64)
 
         # range_cell
         if "accuracy" in xds:
@@ -737,6 +759,8 @@ class Radial(CTFParser):
             xds["accuracy"].attrs["coordinates"] = "lon lat"
             xds["accuracy"].attrs["grid_mapping"] = "crs"
             xds["accuracy"].attrs["units"] = "cm s-1"
+            # xds['accuracy'] = xds['accuracy'].astype(np.float64)
+
 
         # Q201
         if "Q201" in xds:
@@ -746,7 +770,9 @@ class Radial(CTFParser):
             xds["Q201"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["Q201"].attrs["coordinates"] = "lon lat"
             xds["Q201"].attrs["grid_mapping"] = "crs"
+            # xds['Q201'] = xds['Q201'].astype(np.float64)
             rename_qc["Q201"] = "syntax_qc"
+
 
         # Q202
         if "Q202" in xds:
@@ -756,7 +782,9 @@ class Radial(CTFParser):
             xds["Q202"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["Q202"].attrs["coordinates"] = "lon lat"
             xds["Q202"].attrs["grid_mapping"] = "crs"
+            # xds['Q202'] = xds['Q202'].astype(np.float64)
             rename_qc["Q202"] = "max_threshold_qc"
+
 
         # Q203
         if "Q203" in xds:
@@ -766,6 +794,7 @@ class Radial(CTFParser):
             xds["Q203"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["Q203"].attrs["coordinates"] = "lon lat"
             xds["Q203"].attrs["grid_mapping"] = "crs"
+            # xds['Q203'] = xds['Q203'].astype(np.float64)
             rename_qc["Q203"] = "valid_location_qc"
 
         # Q204
@@ -776,7 +805,9 @@ class Radial(CTFParser):
             xds["Q204"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["Q204"].attrs["coordinates"] = "lon lat"
             xds["Q204"].attrs["grid_mapping"] = "crs"
+            # xds['Q204'] = xds['Q204'].astype(np.float64)
             rename_qc["Q204"] = "radial_count_qc"
+
 
         # Q205
         if "Q205" in xds:
@@ -786,7 +817,9 @@ class Radial(CTFParser):
             xds["Q205"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["Q205"].attrs["coordinates"] = "lon lat"
             xds["Q205"].attrs["grid_mapping"] = "crs"
+            # xds['Q205'] = xds['Q205'].astype(np.float64)
             rename_qc["Q205"] = "spatial_median_filter_qc"
+
 
         # Q206
         if "Q206" in xds:
@@ -796,6 +829,7 @@ class Radial(CTFParser):
             xds["Q206"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["Q206"].attrs["coordinates"] = "lon lat"
             xds["Q206"].attrs["grid_mapping"] = "crs"
+            # xds['Q206'] = xds['Q206'].astype(np.float64)
             rename_qc["Q206"] = "temporal_gradient_qc"
 
         # Q207
@@ -806,6 +840,7 @@ class Radial(CTFParser):
             xds["Q207"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["Q207"].attrs["coordinates"] = "lon lat"
             xds["Q207"].attrs["grid_mapping"] = "crs"
+            # xds['Q207'] = xds['Q207'].astype(np.float64)
             rename_qc["Q207"] = "average_radial_bearing_qc"
 
         # Q209
@@ -816,6 +851,7 @@ class Radial(CTFParser):
             xds["Q209"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["Q209"].attrs["coordinates"] = "lon lat"
             xds["Q209"].attrs["grid_mapping"] = "crs"
+            # xds['Q209'] = xds['Q209'].astype(np.float64)
             rename_qc["Q209"] = "radial_stuck_value_qc"
 
         # PRIM
@@ -826,6 +862,7 @@ class Radial(CTFParser):
             xds["PRIM"].attrs["flag_meanings"] = "pass not_evaluated suspect fail missing_data"
             xds["PRIM"].attrs["coordinates"] = "lon lat"
             xds["PRIM"].attrs["grid_mapping"] = "crs"
+            # xds['PRIM'] = xds['PRIM'].astype(np.float64)
             rename_qc["PRIM"] = "primary_flag_qc"
 
         #QCOP
@@ -839,6 +876,7 @@ class Radial(CTFParser):
             xds["QCOP"].attrs[
                 "comment"
             ] = "Flag that is manually set by operator. Flag vectors that are not detected by QC tests but are clearly wrong."
+            # xds['QCOP'] = xds['QCOP'].astype(np.float64)
             rename_qc["QCOP"] = "operator_flag_qc"
 
         # rename variables to something meaningful if they exist in the xarray dataset
@@ -846,12 +884,6 @@ class Radial(CTFParser):
         # del xds.attrs['TimeStamp']
 
         return xds
-
-    def file_type(self):
-        """
-        Return a string representing the type of file this is.
-        """
-        return "radial"
 
     def clean_header(self, split_origin=False):
         """
@@ -1078,12 +1110,12 @@ class Radial(CTFParser):
             xds = xds.assign_attrs(global_attributes)
 
         # Encode and compress variables 
-        encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
+        encoding = make_encoding(xds, comp_level=4, fillvalue=-999.0)
         
         if "gridded" in model:
             encoding["bearing"] = dict(zlib=False, _FillValue=None)
             encoding["range"] = dict(zlib=False, _FillValue=None)
-        # encoding["time"] = dict(zlib=False, _FillValue=None)
+        encoding["time"] = dict(zlib=False, _FillValue=None)
 
         xds.to_netcdf(filename, encoding=encoding, format="netCDF4", engine="netcdf4", unlimited_dims=["time"])
 
@@ -1909,8 +1941,11 @@ class Radial(CTFParser):
 
 
 if __name__ == "__main__":
-    f = "/Users/mikesmith/Documents/github/rucool/hfradarpy/examples/data/radials/ruv/SEAB/RDLi_SEAB_2019_01_01_0100.ruv"
+    from pathlib import Path
+    data_path = (Path(__file__).parent.with_name("examples") / "data").resolve()
+    f = data_path / "radials" /  "ruv" / "SEAB" / "RDLi_SEAB_2019_01_01_0100.ruv"
+    
     r = Radial(f, replace_invalid=True, vflip=True)
-    r.mask_over_land()
+    # r.mask_over_land()
     ds = r.to_xarray('gridded')
     print(ds)

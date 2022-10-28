@@ -364,7 +364,7 @@ class Waves(CTFParser):
             filename = filename.with_suffix(f".{pre_ext}.nc")
 
         # Pass through make_encoding function fo automatically
-        encoding = make_encoding(xds, comp_level=4, fillvalue=np.nan)
+        encoding = make_encoding(xds, comp_level=4, fillvalue=-999.0)
         encoding["time"] = dict(zlib=False, _FillValue=None)
 
         # Convert files to netcdf
