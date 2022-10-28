@@ -18,7 +18,7 @@ requirements = [
     "click",
     "dask",
     "geopandas",
-    "cartopy>0.20",
+    "cartopy",
     "matplotlib",
     "cmocean",
     "joblib",
