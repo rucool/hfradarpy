@@ -392,8 +392,9 @@ class Radial(CTFParser):
             # range_include = True, because it is not a NoneType
             if isinstance(range_minmax, (list, tuple)):
                 # range_include must be a tuple or a list that has data inside
-                range_min = np.float32(range_minmax[0])
-                range_max = np.float32(range_minmax[1])
+                if isinstance(range_minmax, (tuple)):
+                    range_min = np.float32(range_minmax[0])
+                    range_max = np.float32(range_minmax[1])
             else:
                 # range_minmax is not a tuple or a list, so error out and return to the original function
                 raise TypeError(
@@ -405,11 +406,14 @@ class Radial(CTFParser):
             range_min = self.data.RNGE.min()
             range_max = self.data.RNGE.max()
 
-        # Get the range resolution of the radar site from the metadata
-        range_step = np.double(self.metadata["RangeResolutionKMeters"].split()[0])
+        if isinstance(range_minmax, (list)):
+            range_dim = range_minmax
+        else:
+            # Get the range resolution of the radar site from the metadata
+            range_step = np.double(self.metadata["RangeResolutionKMeters"].split()[0])
 
-        # Create an array from range_min to range_max with range_step between each range
-        range_dim = np.arange(range_min, np.round(range_max + range_step, 4), range_step, dtype=np.float32)
+            # Create an array from range_min to range_max with range_step between each range
+            range_dim = np.arange(range_min, np.round(range_max + range_step, 4), range_step, dtype=np.float32)
 
         # round floats to 4 decimal places due to inaccuracy of np.arange
         range_dim = [round(x, 4) for x in range_dim]
@@ -442,13 +446,17 @@ class Radial(CTFParser):
                 angular_resolution = 1
                 antenna_bearing = 0
 
-        # Calculate bearings with the AntennaBearing as the min
-        # and AntennaBearing+360 as the max
-        # with angular_resolution as the spacing between each bearing.
-        #  We use np.mod(bearings, 360) to convert back to 0 to 360
-        bearing_dim = sorted(
-            np.mod(np.arange(antenna_bearing, antenna_bearing + 360, angular_resolution, dtype=np.short), 360)
-        )
+
+        if isinstance(bearing, (list)):
+            bearing_dim = bearing
+        else:
+            # Calculate bearings with the AntennaBearing as the min
+            # and AntennaBearing+360 as the max
+            # with angular_resolution as the spacing between each bearing.
+            #  We use np.mod(bearings, 360) to convert back to 0 to 360
+            bearing_dim = sorted(
+                np.mod(np.arange(antenna_bearing, antenna_bearing + 360, angular_resolution, dtype=np.short), 360)
+            )
 
         # create radial grid from bearing and range
         [bearings, ranges] = np.meshgrid(bearing_dim, range_dim)

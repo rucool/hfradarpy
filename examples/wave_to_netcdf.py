@@ -23,7 +23,7 @@ def main(filename, save_dir, minimum=0.2, maximum=5):
     w.flag_wave_heights(minimum=minimum, maximum=maximum, remove=True)
 
     sname = save_dir / w.file_name
-    w.export(sname, file_type='netcdf', prepend_ext=True)
+    w.to_netcdf(sname, prepend_extension=True, enhance=True)
 
 
 if __name__ == '__main__':
