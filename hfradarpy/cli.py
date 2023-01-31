@@ -178,7 +178,65 @@ def extract_timeseries(point, time_start, time_end, path_data, path_save, fname,
     click.echo("")
     click.echo(f'Timeseries successfully extracted from radial data and saved to {save_file}')
 
+
+@click.command()
+@click.option("--time_start", "-t0", type=str, default=None, help="Start Time (yyyy-mm-dd HH:MM:SS)")
+@click.option("--time_end", "-t1", type=str, default=None, help="End Time (yyyy-mm-dd HH:MM:SS)")
+@click.option("--path_data", "-pd", type=str, default=os.getcwd(), help="Path to radial files.")
+@click.option("--path_save", "-ps", type=str, default=os.getcwd(), help="Path to save concatenated output.")
+@click.option("--fname", "-f", type=str, help="Export filename. The time range will be appended to this.")
+@click.option('--parallel', '-m', is_flag=True, default=False, help="Enable parallel processing.")
+def concat_radials(time_start, time_end, path_data, path_save, fname, parallel):
+    click.echo("Executing hfradarpy.cli.concat_radials")
+    click.echo("")
+    os.makedirs(path_save, exist_ok=True)
+    click.echo(f"Checking for radial data in {path_data}")
+
+    files = sorted(glob.glob(os.path.join(path_data, '*.ruv')))
+    click.echo(f"{len(files)} radial files found")
+    df = list_to_dataframe(files)
+    click.echo(f"Data from {df.iloc[0].name} to {df.iloc[-1].name}")
+
+    if time_start or time_end:
+        if time_start:
+            time_start = pd.to_datetime(time_start).tz_localize(None)
+        else:
+            time_start = df.iloc[0].name
+
+        if time_end:
+            time_end = pd.to_datetime(time_end).tz_localize(None)
+        else:
+            time_end = df.iloc[-1].name
+
+        click.echo(f"Subsetting from {time_start} to {time_end}")
+        click.echo("")
+        df = df[time_start:time_end]
+        print(df.iloc[0])
+        print(df.iloc[-1])
+
+    try:
+        ds = concat(df['file'].tolist(), method='gridded', enhance=True,
+                    parallel=parallel)
+    except ValueError as e:
+        click.echo(f"{e}: no radial data found. Check your file path")
+        return
+
+    tmin = pd.to_datetime(ds.time.min().data)
+    tmax = pd.to_datetime(ds.time.max().data)
+
+    if fname:
+        fname = f'{fname}_radials_{tmin.strftime(fmt)}-{tmax.strftime(fmt)}'
+    else:
+        fname = f'{ds.Site.split()[0].lower()}_radials_{tmin.strftime(fmt)}-{tmax.strftime(fmt)}'
+
+    save_file = os.path.join(path_save, fname + '.nc')
+    ds.to_netcdf(save_file)
+    click.echo("")
+    click.echo(f'Radial files successfully concatenated and saved to {save_file}')
+
+
 # Add each nested command to the main function here.
+main.add_command(concat_radials)
 main.add_command(extract_timeseries)
 main.add_command(plotruv)
 
@@ -214,6 +272,15 @@ if __name__ == "__main__":
             "--parallel"
             ]
         )
-
+    concat_radials(
+        [
+            "--time_start", time_start,
+            "--time_end", time_end,
+            "--path_data", radial_dir,
+            "--path_save", output_path,
+            "--fname", 'test_concat',
+            "--parallel"
+            ]
+        )
 
 

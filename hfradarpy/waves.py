@@ -327,14 +327,14 @@ class Waves(CTFParser):
 
         return xds
 
-    def to_netcdf(self, filename, prepend_ext=False, enhance=True):
+    def to_netcdf(self, filename, prepend_extension=False, enhance=True):
         """
         Create a compressed netCDF4 (.nc) file from the radial instance
 
         Args:
             filename (str or path.Path):
                 User defined filename of radial file you want to save
-            prepend_ext (bool, optional):
+            prepend_extension (bool, optional):
                 Prepend a descriptive term (ranged or averaged) to the .nc extension. Defaults to False.
             enhance (bool, optional):
                 Rename variable names to meaningful names and add attributes. Defaults to True.
@@ -355,7 +355,7 @@ class Waves(CTFParser):
 
         # Check if dataset has distance_from_origin in coordinates. We will prepend the .nc extension
         # with the appropriate name depending on whether the wave file is averaged or arranged by distance
-        if prepend_ext:
+        if prepend_extension:
             if "distance_from_origin" in xds.coords:
                 pre_ext = "ranged"
             else:

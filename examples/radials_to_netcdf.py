@@ -34,7 +34,8 @@ def main(radial_file, save_dir, types=['tabular']):
         sname = save_dir / r.file_name
         try:
             for t in types:
-                r.export(sname, 'netcdf-{}'.format(t), prepend_ext=True)
+                r.to_netcdf(sname, model=t, prepend_extension=True, range_minmax=None, bearing=None,
+                          enhance=True, user_attributes=None)
         except ValueError:
             pass
 
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     radial_path = data_root / 'radials' / 'ruv' / 'SEAB'
     radial_output = output_path / 'radials' / 'nc' / 'SEAB'
 
-    types = ['tabular', 'multidimensional']
+    types = ['tabular', 'gridded']
 
     for radial in sorted(radial_path.glob('*.ruv')):
         try:
