@@ -92,16 +92,24 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
         if "qc_qartod_spatial_median" in qc_keys:
             r.qc_qartod_spatial_median(**qc_values["qc_qartod_spatial_median"])
 
-        if 'qc_qartod_temporal_gradient' in qc_keys:
-            r.qc_qartod_temporal_gradient(previous_full_file,**qc_values['qc_qartod_temporal_gradient'])
+        if "qc_qartod_temporal_gradient" in qc_keys:
+            r.qc_qartod_temporal_gradient(previous_full_file,**qc_values["qc_qartod_temporal_gradient"])
 
-        if 'qc_qartod_stuck_value' in qc_keys:
-            r.qc_qartod_stuck_value(**qc_values['qc_qartod_stuck_value'])
+        if "qc_qartod_stuck_value" in qc_keys:
+            r.qc_qartod_stuck_value(**qc_values["qc_qartod_stuck_value"])
             #r.qc_qartod_stuck_value_v2(**qc_values['qc_qartod_stuck_value'])
 
         if "qc_qartod_avg_radial_bearing" in qc_keys:
             r.qc_qartod_avg_radial_bearing(**qc_values["qc_qartod_avg_radial_bearing"])
 
+        # --------------------------------------------------------------------------
+        # Tests that have not been included in the QARTOD manual
+        if "qc_qartod_stuck_value_version_2" in qc_keys:
+            r.qc_qartod_stuck_value_version_2(**qc_values["qc_qartod_stuck_value"])
+            #r.qc_qartod_stuck_value_v2(**qc_values['qc_qartod_stuck_value'])
+        # --------------------------------------------------------------------------
+
+        # Primary flag test is performed last
         if "qc_qartod_primary_flag" in qc_keys:
             r.qc_qartod_primary_flag(**qc_values["qc_qartod_primary_flag"])
 
@@ -1707,7 +1715,7 @@ class Radial(CTFParser):
                 "{} does not exist at specified location. Setting column {} to not_evaluated flag".format(r0, test_str)
             )
 
-    def qc_qartod_stuck_value(self, resolution=0.01, N=3):
+    def qc_qartod_stuck_value_version_2(self, resolution=0.01, N=3):
         """
         Integrated Ocean Observing System (IOOS)
         Quality Assurance of Real-Time Oceanographic Data (QARTOD)
@@ -1737,7 +1745,7 @@ class Radial(CTFParser):
             resolution (int, optional): Radial velocity resolution (cm/s). Defaults to 0.01
             N (int, optional): Number of successive time steps to check. Defaults to 3.
         """
-        test_str = "Q209"
+        test_str = "Q901"
         # self.data[test_str] = data
         self.metadata["QCTest"].append(
             (
@@ -1806,7 +1814,7 @@ class Radial(CTFParser):
         # If any points in the past radial files did not exist, set row as a not evaluated, 2, flag
         self.data.loc[rtemp.data[test_str] >= 999,test_str] = 2
 
-    def qc_qartod_stuck_value_v2(self, resolution=0.01, N=3):
+    def qc_qartod_stuck_value(self, resolution=0.01, N=3):
         """
         Integrated Ocean Observing System (IOOS)
         Quality Assurance of Real-Time Oceanographic Data (QARTOD)
@@ -1834,7 +1842,7 @@ class Radial(CTFParser):
             resolution (int, optional): Radial velocity resolution (cm/s). Defaults to 0.01
             N (int, optional): Number of successive time steps to check. Defaults to 3.
         """
-        test_str = "Q209_v2"
+        test_str = "Q209"
         # self.data[test_str] = data
         self.metadata["QCTest"].append(
             (
