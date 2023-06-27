@@ -72,7 +72,7 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
             rclean = copy.deepcopy(r)
         t0 = r.time - dt.timedelta(hours=1)
         previous_radial = "{}_{}{}".format(
-            "_".join(r.file_name.split("_")[:2]), t0.strftime("%Y_%m_%d_%H00"), os.path.splitext(r.file_name)[1]
+            "_".join(r.file_name.split("_")[:2]), t0.strftime("%Y_%m_%d_%H%M"), os.path.splitext(r.file_name)[1]
         )
         previous_full_file = os.path.join(os.path.dirname(r.full_file), previous_radial)
         qc_keys = qc_values.keys()
@@ -185,7 +185,8 @@ def concat(rlist, range_minmax=None, bearing=None,
         for radial in rlist:
             if not isinstance(radial, Radial):
                 radial = Radial(radial)
-            radial_dict[radial.file_name] = radial.to_xarray(method, enhance=enhance, range_minmax=range_minmax, bearing=bearing)
+            if radial.data.shape[0] > 0:
+                radial_dict[radial.file_name] = radial.to_xarray(method, enhance=enhance, range_minmax=range_minmax, bearing=bearing)
 
     ds = xr.concat(radial_dict.values(), "time")
     return ds.sortby("time")
