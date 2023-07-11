@@ -1750,7 +1750,7 @@ class Radial(CTFParser):
         # self.data[test_str] = data
         self.metadata["QCTest"].append(
             (
-                f"qc_qartod_radial_stuck_value ({test_str}) - Test applies to each row. Thresholds="
+                f"qc_qartod_radial_stuck_value_version_2 ({test_str}) - Test applies to each row. Thresholds="
                 "[ "
                 f"stuck_value_resolution={str(resolution)} (cm/s) "
                 f"stuck_value_number_of_timesteps={str(N)}"
@@ -1847,10 +1847,10 @@ class Radial(CTFParser):
         # self.data[test_str] = data
         self.metadata["QCTest"].append(
             (
-                f"qc_qartod_radial_stuck_value_v2 ({test_str}) - Test applies to each row. Thresholds="
+                f"qc_qartod_radial_stuck_value ({test_str}) - Test applies to each row. Thresholds="
                 "[ "
-                f"stuck_value_resolution_v2={str(resolution)} (cm/s) "
-                f"stuck_value_number_of_timesteps_v2={str(N)}"
+                f"stuck_value_resolution={str(resolution)} (cm/s) "
+                f"stuck_value_number_of_timesteps={str(N)}"
                 f"]: See results in column {test_str} below"
             )
         )
