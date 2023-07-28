@@ -1866,32 +1866,41 @@ class Radial(CTFParser):
         t0_str = t0.strftime('%Y_%m_%d_%H')
         filelist = list()
         filelist.append(f0)
+        merged = copy.deepcopy(self.data[['LOND','LATD','VELO']])
+        vlist = list()
+        vlist.append('VELO')
 
         while i < N:
             prev_time = t0-dt.timedelta(hours = i)
             prev_time_str = prev_time.strftime('%Y_%m_%d_%H')
             prev_file = f0.replace(t0_str,prev_time_str)
             filelist.append(prev_file)
+            previous_r = Radial(prev_file)
+            if previous_r.is_valid():
+                suf="_" + str(i)
+                merged = merged.merge(previous_r.data[['LOND','LATD','VELO']], on=["LOND", "LATD"], how="left", suffixes=(None, suf),
+                                         indicator=False)
+                # build list of merged velocity columns
+                vlist.append('VELO'+suf)
             i += 1
 
-        rcat = concat(filelist, method="gridded", enhance=False, parallel=False)
-        # convert range coordinates to integer, multipy by 10 first to ensure no duplicates
-        rangex10 = rcat.range * 10
-        rcat = rcat.assign_coords(range=rangex10.astype(int))
+        #pull out subset of data with only the velocity columns
+        ts = merged[vlist]
 
-        # loop through all indices in the radial and obtain time series for each one
-        # by looking up velocities in concatenated radial for same bearing and range
-        for i in range(0,self.data.shape[0]):
-            rval = self.data['RNGE'][i]*10
-            tmp = rcat.sel(bearing = self.data['BEAR'][i], range = rval.astype(int))
-            ts = tmp['VELO'].data
-            if any(np.isnan(ts)):
-                    # If any points in the past radial files did not exist, set row as a not evaluated, 2, flag
-                    result[i] = 2
-            else:
-                if abs(np.diff(ts, 1)).max() < resolution:
-                    # If stuck value persisted for N-1 previous files, then set row as a failure, 4, flag
-                    result[i] = 4
+        #ts_diff = ts.diff(axis=1)
+        #ts_absdiff = ts.diff(axis=1).abs()
+        #ts_absdiffmax = ts.diff(axis=1).abs().max(axis=1)
+        is_stuck = ts.diff(axis=1).abs().max(axis=1) < resolution
+        stuck_rows_index = ts.index[is_stuck]
+        # If stuck value persisted for N-1 previous files, then set row as a failure, 4, flag
+        result[stuck_rows_index] = 4
+
+        #Need to handle lat/lon locations that do not contain data across all time steps. Set those locations to not evaluated, 2 flag
+        #It's important to do this after the above process of finding stuck rows since some of those
+        #failures may exist only due to presence of nans.
+        has_nan = ts.isna().any(axis=1)
+        nan_rows_index = ts.index[has_nan]
+        result[nan_rows_index] = 2
 
         # Add new column to dataframe
         self.data[test_str] = result
