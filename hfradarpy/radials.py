@@ -1875,32 +1875,37 @@ class Radial(CTFParser):
             prev_time_str = prev_time.strftime('%Y_%m_%d_%H')
             prev_file = f0.replace(t0_str,prev_time_str)
             filelist.append(prev_file)
-            previous_r = Radial(prev_file)
-            if previous_r.is_valid():
-                suf="_" + str(i)
-                merged = merged.merge(previous_r.data[['LOND','LATD','VELO']], on=["LOND", "LATD"], how="left", suffixes=(None, suf),
+            if os.path.isfile(prev_file):
+                previous_r = Radial(prev_file)
+                if previous_r.is_valid():
+                    suf="_" + str(i)
+                    merged = merged.merge(previous_r.data[['LOND','LATD','VELO']], on=["LOND", "LATD"], how="left", suffixes=(None, suf),
                                          indicator=False)
-                # build list of merged velocity columns
-                vlist.append('VELO'+suf)
+                    # build list of merged velocity columns
+                    vlist.append('VELO'+suf)
             i += 1
 
-        #pull out subset of data with only the velocity columns
-        ts = merged[vlist]
+        if len(vlist) < N:
+            # set all results to not evaluated
+            result = np.full(self.data['VELO'].shape, 2)
+        else:
+            #pull out subset of data with only the velocity columns
+            ts = merged[vlist]
 
-        #ts_diff = ts.diff(axis=1)
-        #ts_absdiff = ts.diff(axis=1).abs()
-        #ts_absdiffmax = ts.diff(axis=1).abs().max(axis=1)
-        is_stuck = ts.diff(axis=1).abs().max(axis=1) < resolution
-        stuck_rows_index = ts.index[is_stuck]
-        # If stuck value persisted for N-1 previous files, then set row as a failure, 4, flag
-        result[stuck_rows_index] = 4
+            #ts_diff = ts.diff(axis=1)
+            #ts_absdiff = ts.diff(axis=1).abs()
+            #ts_absdiffmax = ts.diff(axis=1).abs().max(axis=1)
+            is_stuck = ts.diff(axis=1).abs().max(axis=1) < resolution
+            stuck_rows_index = ts.index[is_stuck]
+            # If stuck value persisted for N-1 previous files, then set row as a failure, 4, flag
+            result[stuck_rows_index] = 4
 
-        #Need to handle lat/lon locations that do not contain data across all time steps. Set those locations to not evaluated, 2 flag
-        #It's important to do this after the above process of finding stuck rows since some of those
-        #failures may exist only due to presence of nans.
-        has_nan = ts.isna().any(axis=1)
-        nan_rows_index = ts.index[has_nan]
-        result[nan_rows_index] = 2
+            #Need to handle lat/lon locations that do not contain data across all time steps. Set those locations to not evaluated, 2 flag
+            #It's important to do this after the above process of finding stuck rows since some of those
+            #failures may exist only due to presence of nans.
+            has_nan = ts.isna().any(axis=1)
+            nan_rows_index = ts.index[has_nan]
+            result[nan_rows_index] = 2
 
         # Add new column to dataframe
         self.data[test_str] = result
