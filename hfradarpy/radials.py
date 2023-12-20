@@ -84,7 +84,11 @@ def qc_radial_file(radial_file, qc_values=None, export=None, save_path=None, cle
         if "qc_qartod_maximum_velocity" in qc_keys:
             r.qc_qartod_maximum_velocity(**qc_values["qc_qartod_maximum_velocity"])
 
-        r.qc_qartod_valid_location()
+        # run valid location test whether or not there is an option specified in qc_values
+        if "qc_qartod_valid_location" in qc_keys:
+            r.qc_qartod_valid_location(**qc_values["qc_qartod_valid_location"]) # allows the use_mask option to be passed to the test
+        else:
+            r.qc_qartod_valid_location()
 
         if "qc_qartod_radial_count" in qc_keys:
             r.qc_qartod_radial_count(**qc_values["qc_qartod_radial_count"])
