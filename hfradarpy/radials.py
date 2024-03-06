@@ -1378,7 +1378,21 @@ class Radial(CTFParser):
             self.append_to_tableheader(test_str, "(flag)")
 
         else:
-            logger.warning(f"qc_qartod_valid_location not run, no {flag_column} column")
+            try:
+                logger.warning(f"qc_qartod_valid_location, no {flag_column} column, applying land mask option")
+                self.data[test_str] = 1  # add new column of passing values
+                if use_mask:
+                    self.data.loc[~self.mask_over_land(), test_str] = 4  # set to 4 where land is flagged (mask_over_land)
+                    self.metadata["QCTest"].append(
+                        (
+                            f"qc_qartod_valid_location ({test_str}) - Test applies to each row. Thresholds=[{flag_column}==128]: "
+                            f"See results in column {test_str} below"
+                        )
+                    )
+                    self.append_to_tableheader(test_str, "(flag)")
+
+            except:
+                logger.warning(f"qc_qartod_valid_location did not run, no {flag_column} column, land mask either not used or not successfully applied")
 
     def qc_qartod_radial_count(self, min_count=150, low_count=300):
         """
