@@ -88,6 +88,7 @@ class CTFParser(object):
                                     "Value ": "Value_",
                                     "FOL ": "FOL_",
                                     " Floor": "_Floor",
+                                    " Error": "_Error",
                                 }
                                 rep = dict((re.escape(k), v) for k, v in rep.items())
                                 pattern = re.compile("|".join(rep.keys()))
